@@ -1,0 +1,10 @@
+# AI Dialogue TUI - зависимости
+
+# TUI фреймворк
+textual>=0.47.0
+
+# Асинхронный HTTP клиент
+aiohttp>=3.9.0
+
+# Типизация (встроен в Python 3.10+, но для совместимости)
+typing-extensions>=4.9.0; python_version < "3.10"
