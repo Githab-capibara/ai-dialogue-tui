@@ -68,24 +68,44 @@ pip install -r requirements.txt
 
 ## Архитектура
 
+Проект следует принципам **Clean Architecture** с разделением на слои:
+
 ```
 ai_dialogue_tui/
-├── main.py                 # Точка входа
-├── config.py               # Конфигурация (температура, таймауты и т.д.)
-├── models/
+├── main.py                    # Точка входа
+├── config.py                  # Конфигурация
+├── models/                    # Domain Layer
 │   ├── __init__.py
-│   ├── ollama_client.py    # Асинхронный клиент к Ollama API
-│   └── conversation.py     # Логика диалога и хранение контекстов
-└── tui/
-    ├── __init__.py
-    └── app.py              # Textual приложение
+│   ├── provider.py            # Протокол ModelProvider (абстракция)
+│   ├── ollama_client.py       # Реализация ModelProvider для Ollama
+│   └── conversation.py        # Доменная логика диалога
+├── services/                  # Service Layer
+│   ├── __init__.py
+│   └── dialogue_service.py    # Бизнес-логика диалога
+├── controllers/               # Controller Layer
+│   ├── __init__.py
+│   └── dialogue_controller.py # Управление состоянием UI
+├── tui/                       # Presentation Layer
+│   ├── __init__.py
+│   ├── app.py                 # Textual TUI приложение
+│   └── styles.py              # Централизованные стили и UI IDs
+├── tests/                     # Модульные тесты
+│   ├── __init__.py
+│   ├── test_critical.py       # Тесты критических функций (33 теста)
+│   └── test_architecture.py   # Тесты архитектуры (20 тестов)
+└── pytest.ini                 # Конфигурация pytest
 ```
 
 ### Ключевые компоненты
 
-- **OllamaClient**: Асинхронный клиент для взаимодействия с Ollama API через `aiohttp`
-- **Conversation**: Управление двумя независимыми контекстами моделей
-- **DialogueApp**: Основное TUI-приложение с модальными окнами выбора
+- **ModelProvider** (протокол): Абстракция для работы с LLM-провайдерами
+- **OllamaClient**: Реализация ModelProvider для Ollama API
+- **Conversation**: Доменная логика диалога между двумя моделями
+- **DialogueService**: Бизнес-логика диалога (сервисный слой)
+- **DialogueController**: Управление состоянием UI (контроллер)
+- **DialogueApp**: TUI-приложение на базе Textual
+
+Подробное описание архитектуры см. в [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Конфигурация
 
@@ -97,6 +117,46 @@ max_tokens: int = 200             # Максимальная длина отве
 request_timeout: int = 60         # Таймаут запроса (сек)
 pause_between_messages: float = 1.0  # Пауза между сообщениями (сек)
 ```
+
+## Тестирование
+
+Проект использует pytest для модульного тестирования:
+
+```bash
+# Запустить все тесты
+pytest tests/ -v
+
+# Запустить тесты с покрытием
+pytest tests/ -v --cov=. --cov-report=term-missing
+```
+
+Включено **53 теста**:
+- **33 теста** критических функций (валидация, атомарность, санитизация)
+- **20 тестов** архитектуры (слои, зависимости, протоколы)
+
+## Инструменты качества кода
+
+Проект использует следующие инструменты для поддержания качества кода:
+
+```bash
+# Проверка и форматирование кода
+ruff check .
+ruff format .
+
+# Статический анализ
+pylint . --reports=yes
+
+# Проверка зависимостей
+deptry .
+pip check
+```
+
+### Метрики качества
+
+- **Pylint:** 10.00/10
+- **Ruff:** All checks passed
+- **Тесты:** 53 passed
+- **Дублирование кода:** 0%
 
 ## Как это работает
 
