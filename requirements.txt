@@ -7,9 +7,6 @@ textual==0.49.0
 # Асинхронный HTTP клиент
 aiohttp==3.9.1
 
-# Типизация (встроен в Python 3.10+, но для совместимости)
-typing-extensions==4.9.0; python_version < "3.10"
-
 # Инструменты разработки (опционально)
 # pytest==7.4.4
 # pytest-asyncio==0.23.3
