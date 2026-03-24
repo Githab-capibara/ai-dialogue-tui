@@ -8,9 +8,9 @@ import pytest
 
 # Local application/library imports
 from config import Config
+from controllers.dialogue_controller import DialogueController
 from models.conversation import Conversation
 from models.ollama_client import OllamaClient
-from controllers.dialogue_controller import DialogueController
 
 
 class TestFixes:

@@ -1,10 +1,16 @@
-"""TUI приложение для диалога двух ИИ-моделей."""
+"""TUI приложение для диалога двух ИИ-моделей.
+
+Этот модуль содержит только UI-компоненты и обработчики событий.
+Бизнес-логика вынесена в сервисный слой (services/dialogue_service.py).
+"""
 
 from __future__ import annotations
 
 import asyncio
-from typing import Final
+import html
+import re
 
+import aiohttp
 from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -20,27 +26,73 @@ from textual.widgets import (
     Select,
     Static,
 )
-from textual.worker import Worker, WorkerState
 
-from config import config
+from config import Config, validate_ollama_url
+from controllers.dialogue_controller import DialogueController, UIState
 from models.conversation import Conversation
 from models.ollama_client import OllamaClient, OllamaError
+from services.dialogue_service import DialogueService, DialogueTurnResult
+from tui.styles import (
+    MESSAGE_STYLES,
+    UI_IDS,
+    generate_main_css,
+)
+
+# CSS генерируется из централизованных констант
+MAIN_CSS = generate_main_css()
 
 
-# Стили для разных типов сообщений
-STYLE_MODEL_A: Final = "bold green"
-STYLE_MODEL_B: Final = "bold blue"
-STYLE_SYSTEM: Final = "dim italic yellow"
-STYLE_ERROR: Final = "bold red"
+def sanitize_topic(topic: str) -> str:
+    """
+    Санитизировать ввод темы для предотвращения инъекции промпта.
+
+    Экранирует специальные символы и удаляет потенциально опасные конструкции.
+
+    Args:
+        topic: Исходная тема от пользователя.
+
+    Returns:
+        Очищенная тема.
+    """
+    # Удаляем потенциально опасные символы
+    topic = topic.strip()
+    # Экранируем фигурные скобки чтобы предотвратить инъекцию форматирования
+    topic = topic.replace("{", "{{").replace("}", "}}")
+    # Экранируем квадратные скобки для предотвращения markup инъекций
+    topic = re.sub(r"\[([^\]]*)\]", r"[[\1]]", topic)
+    return topic
+
+
+def sanitize_response_for_display(response: str) -> str:
+    """
+    Санитизировать ответ модели для безопасного отображения в TUI.
+
+    Экранирует markup-символы Textual для предотвращения XSS-подобных атак.
+
+    Args:
+        response: Исходный ответ от модели.
+
+    Returns:
+        Безопасный для отображения текст.
+    """
+    # Экранируем HTML-подобные конструкции которые могут интерпретироваться
+    # как markup
+    response = html.escape(response, quote=False)
+    # Заменяем newlines на пробелы для компактного отображения
+    response = response.replace("\n", " ")
+    # Обрезаем если слишком длинный
+    if len(response) > 100:
+        response = response[:100] + "..."
+    return response
 
 
 class ModelSelectionScreen(ModalScreen):
     """Модальное окно для выбора двух моделей."""
-    
+
     BINDINGS = [
         Binding("escape", "cancel", "Отмена"),
     ]
-    
+
     def __init__(
         self,
         models: list[str],
@@ -49,42 +101,53 @@ class ModelSelectionScreen(ModalScreen):
     ) -> None:
         super().__init__(*args, **kwargs)
         self._available_models = models
-    
+
     def compose(self) -> ComposeResult:
-        with Container(id="model-selection-container"):
-            yield Static("Выберите две модели для диалога", id="selection-title")
-            
-            with Horizontal(id="models-row"):
-                with Vertical(id="model-a-container"):
-                    yield Label("Модель A:", id="model-a-label")
+        with Container(id=UI_IDS.model_selection_container):
+            yield Static("Выберите две модели для диалога", id=UI_IDS.selection_title)
+
+            with Horizontal(id=UI_IDS.models_row):
+                with Vertical(id=UI_IDS.model_a_container):
+                    yield Label("Модель A:", id=UI_IDS.model_a_label)
+                    # Проверка на пустой список моделей
+                    model_a_value = (
+                        self._available_models[0] if self._available_models else None
+                    )
                     yield Select(
                         [(m, m) for m in self._available_models],
-                        id="model-a-select",
-                        value=self._available_models[0] if self._available_models else None,
+                        id=UI_IDS.model_a_select,
+                        value=model_a_value,
                     )
-                
-                with Vertical(id="model-b-container"):
-                    yield Label("Модель B:", id="model-b-label")
+
+                with Vertical(id=UI_IDS.model_b_container):
+                    yield Label("Модель B:", id=UI_IDS.model_b_label)
+                    # Проверка на достаточное количество моделей
+                    if len(self._available_models) > 1:
+                        model_b_value = self._available_models[1]
+                    elif self._available_models:
+                        model_b_value = self._available_models[0]
+                    else:
+                        model_b_value = None
                     yield Select(
                         [(m, m) for m in self._available_models],
-                        id="model-b-select",
-                        value=self._available_models[1] if len(self._available_models) > 1 else (
-                            self._available_models[0] if self._available_models else None
-                        ),
+                        id=UI_IDS.model_b_select,
+                        value=model_b_value,
                     )
-            
-            with Horizontal(id="selection-buttons"):
-                yield Button("Начать диалог", id="start-btn", variant="primary")
-                yield Button("Отмена", id="cancel-btn", variant="error")
-    
+
+            with Horizontal(id=UI_IDS.selection_buttons):
+                yield Button("Начать диалог", id=UI_IDS.start_btn, variant="primary")
+                yield Button("Отмена", id=UI_IDS.cancel_btn, variant="error")
+
     def action_cancel(self) -> None:
+        """Обработать нажатие Escape для отмены выбора модели."""
         self.dismiss(None)
-    
-    @on(Button.Pressed, "#start-btn")
+
+    @on(Button.Pressed, f"#{UI_IDS.start_btn}")
     def on_start_pressed(self) -> None:
-        model_a = self.query_one("#model-a-select", Select).value
-        model_b = self.query_one("#model-b-select", Select).value
-        
+        """Обработать нажатие кнопки начала диалога."""
+        model_a = self.query_one(f"#{UI_IDS.model_a_select}", Select).value
+        model_b = self.query_one(f"#{UI_IDS.model_b_select}", Select).value
+
         if model_a == model_b:
             self.notify(
                 "Выберите две разные модели!",
@@ -92,7 +155,7 @@ class ModelSelectionScreen(ModalScreen):
                 severity="error",
             )
             return
-        
+
         if model_a is Select.BLANK or model_b is Select.BLANK:
             self.notify(
                 "Выберите обе модели!",
@@ -100,51 +163,56 @@ class ModelSelectionScreen(ModalScreen):
                 severity="error",
             )
             return
-        
+
         self.dismiss((model_a, model_b))
-    
-    @on(Button.Pressed, "#cancel-btn")
+
+    @on(Button.Pressed, f"#{UI_IDS.cancel_btn}")
     def on_cancel_pressed(self) -> None:
+        """Обработать нажатие кнопки отмены."""
         self.dismiss(None)
 
 
 class TopicInputScreen(ModalScreen):
     """Модальное окно для ввода темы диалога."""
-    
+
     BINDINGS = [
         Binding("escape", "cancel", "Отмена"),
         Binding("enter", "submit", "OK"),
     ]
-    
+
     def compose(self) -> ComposeResult:
-        with Container(id="topic-input-container"):
-            yield Static("Введите тему диалога:", id="topic-label")
+        with Container(id=UI_IDS.topic_input_container):
+            yield Static("Введите тему диалога:", id=UI_IDS.topic_label)
             yield Input(
                 placeholder="Например: Спор о преимуществах Python перед Go",
-                id="topic-input",
+                id=UI_IDS.topic_input,
             )
-            with Horizontal(id="topic-buttons"):
-                yield Button("Начать", id="topic-start-btn", variant="primary")
-                yield Button("Отмена", id="topic-cancel-btn", variant="error")
-    
+            with Horizontal(id=UI_IDS.topic_buttons):
+                yield Button("Начать", id=UI_IDS.topic_start_btn, variant="primary")
+                yield Button("Отмена", id=UI_IDS.topic_cancel_btn, variant="error")
+
     def action_submit(self) -> None:
+        """Обработать нажатие Enter для подтверждения темы."""
         self._submit_topic()
-    
+
     def action_cancel(self) -> None:
+        """Обработать нажатие Escape для отмены ввода темы."""
         self.dismiss(None)
-    
-    @on(Button.Pressed, "#topic-start-btn")
+
+    @on(Button.Pressed, f"#{UI_IDS.topic_start_btn}")
     def on_start_pressed(self) -> None:
+        """Обработать нажатие кнопки начала диалога."""
         self._submit_topic()
-    
-    @on(Button.Pressed, "#topic-cancel-btn")
+
+    @on(Button.Pressed, f"#{UI_IDS.topic_cancel_btn}")
     def on_cancel_pressed(self) -> None:
+        """Обработать нажатие кнопки отмены."""
         self.dismiss(None)
-    
+
     def _submit_topic(self) -> None:
-        topic_input = self.query_one("#topic-input", Input)
+        topic_input = self.query_one(f"#{UI_IDS.topic_input}", Input)
         topic = topic_input.value.strip()
-        
+
         if not topic:
             self.notify(
                 "Введите тему диалога!",
@@ -152,197 +220,93 @@ class TopicInputScreen(ModalScreen):
                 severity="error",
             )
             return
-        
+
         self.dismiss(topic)
 
 
 class DialogueApp(App):
-    """Основное TUI приложение для диалога ИИ-моделей."""
-    
-    CSS = """
-    #model-selection-container {
-        align: center middle;
-        height: 100%;
-        background: $surface;
-    }
-    
-    #selection-title {
-        text-align: center;
-        text-style: bold;
-        padding: 1 2;
-        margin-bottom: 2;
-    }
-    
-    #models-row {
-        height: auto;
-        align: center middle;
-    }
-    
-    #model-a-container, #model-b-container {
-        width: 30;
-        margin: 0 2;
-        border: solid $primary;
-        padding: 1 2;
-    }
-    
-    #model-a-label, #model-b-label {
-        margin-bottom: 1;
-        text-align: center;
-    }
-    
-    #selection-buttons {
-        height: auto;
-        align: center middle;
-        margin-top: 2;
-    }
-    
-    #selection-buttons Button {
-        margin: 0 1;
-    }
-    
-    #topic-input-container {
-        align: center middle;
-        height: 100%;
-        background: $surface;
-    }
-    
-    #topic-label {
-        text-align: center;
-        text-style: bold;
-        padding: 1 2;
-        margin-bottom: 1;
-    }
-    
-    #topic-input {
-        width: 60;
-        margin-bottom: 2;
-    }
-    
-    #topic-buttons {
-        height: auto;
-        align: center middle;
-    }
-    
-    #topic-buttons Button {
-        margin: 0 1;
-    }
-    
-    #main-container {
-        height: 100%;
-    }
-    
-    #status-bar {
-        height: 3;
-        background: $surface;
-        border: solid $primary;
-        margin: 1;
-        padding: 0 2;
-    }
-    
-    #status-row {
-        height: 100%;
-        align: left middle;
-    }
-    
-    #status-label {
-        width: auto;
-        padding: 0 1;
-    }
-    
-    #dialogue-log {
-        height: 1fr;
-        margin: 0 1;
-        border: solid $secondary;
-    }
-    
-    #controls-bar {
-        height: 4;
-        background: $surface;
-        border: solid $primary;
-        margin: 1;
-        padding: 0 2;
-    }
-    
-    #controls-row {
-        height: 100%;
-        align: center middle;
-    }
-    
-    #controls-row Button {
-        margin: 0 1;
-        width: 16;
-    }
-    
-    .model-a-message {
-        color: $success;
-        text-style: bold;
-    }
-    
-    .model-b-message {
-        color: $accent;
-        text-style: bold;
-    }
-    
-    .system-message {
-        color: $warning;
-        text-style: italic;
-    }
-    
-    .error-message {
-        color: $error;
-        text-style: bold;
-    }
+    """Основное TUI приложение для диалога ИИ-моделей.
+
+    Содержит только UI-логику. Бизнес-логика вынесена в DialogueService.
     """
-    
+
+    CSS = MAIN_CSS
+
     BINDINGS = [
         Binding("ctrl+q", "quit", "Выход", priority=True),
         Binding("ctrl+p", "toggle_pause", "Пауза/Старт"),
         Binding("ctrl+r", "clear_log", "Очистить"),
         Binding("ctrl+c", "", ""),  # Отключаем стандартное поведение
     ]
-    
+
     TITLE = "AI Dialogue TUI"
-    SUB_TITLE = "Диалог двух ИИ-моделей через Ollama"
-    
-    def __init__(self) -> None:
+    sub_title = "Диалог двух ИИ-моделей через Ollama"
+
+    def __init__(self, config: Config | None = None) -> None:
+        """
+        Инициализация приложения.
+
+        Args:
+            config: Опциональная конфигурация для dependency injection.
+        """
         super().__init__()
+        self._config = config or Config()
         self._client: OllamaClient | None = None
-        self._conversation: Conversation | None = None
-        self._dialogue_task: asyncio.Task | None = None
-        self._is_paused = False
+        self._controller: DialogueController | None = None
+        self._dialogue_task: asyncio.Task[None] | None = None
         self._models: list[str] = []
-    
+
     def compose(self) -> ComposeResult:
         yield Header()
-        
-        with Container(id="main-container"):
+
+        with Container(id=UI_IDS.main_container):
             # Статус бар
-            with Container(id="status-bar"):
-                with Horizontal(id="status-row"):
-                    yield Label("Статус: ", id="status-label")
-                    yield Label("Ожидание...", id="status-value")
-            
+            with Container(id=UI_IDS.status_bar):
+                with Horizontal(id=UI_IDS.status_row):
+                    yield Label("Статус: ", id=UI_IDS.status_label)
+                    yield Label("Ожидание...", id=UI_IDS.status_value)
+
             # Лог диалога
-            yield RichLog(id="dialogue-log", highlight=True, markup=True)
-            
+            yield RichLog(id=UI_IDS.dialogue_log, highlight=True, markup=True)
+
             # Панель управления
-            with Container(id="controls-bar"):
-                with Horizontal(id="controls-row"):
-                    yield Button("▶ Старт", id="start-btn", variant="success")
-                    yield Button("⏸ Пауза", id="pause-btn", variant="warning")
-                    yield Button("🗑 Очистить", id="clear-btn", variant="default")
-                    yield Button("✕ Выход", id="exit-btn", variant="error")
-        
+            with Container(id=UI_IDS.controls_bar):
+                with Horizontal(id=UI_IDS.controls_row):
+                    yield Button("▶ Старт", id=UI_IDS.start_btn, variant="success")
+                    yield Button("⏸ Пауза", id=UI_IDS.pause_btn, variant="warning")
+                    yield Button("🗑 Очистить", id=UI_IDS.clear_btn, variant="default")
+                    yield Button("✕ Выход", id=UI_IDS.exit_btn, variant="error")
+
         yield Footer()
-    
+
+    def _on_ui_state_changed(self, state: UIState) -> None:
+        """
+        Обработчик изменения состояния UI.
+
+        Args:
+            state: Новое состояние UI от контроллера.
+        """
+        try:
+            status_label = self.query_one("#status-value", Label)
+            status_label.update(
+                f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
+            )
+        except Exception:  # pylint: disable=broad-exception-caught
+            # Игнорируем ошибки если UI ещё не готов
+            pass
+
     async def on_mount(self) -> None:
         """Инициализация при запуске приложения."""
-        self._client = OllamaClient()
-        
         try:
+            # Валидация URL перед использованием
+            if not validate_ollama_url(self._config.ollama_host):
+                raise ValueError(f"Некорректный URL Ollama: {self._config.ollama_host}")
+
+            self._client = OllamaClient(host=self._config.ollama_host)
+
             # Получаем список моделей
             self._models = await self._client.list_models()
-            
+
             if not self._models:
                 self.notify(
                     "Не найдено установленных моделей Ollama!\n"
@@ -351,217 +315,258 @@ class DialogueApp(App):
                     severity="error",
                     timeout=10,
                 )
-                self.query_one("#status-value", Label).update(
-                    "[red]Нет моделей[/red]"
-                )
+                self.query_one("#status-value", Label).update("[red]Нет моделей[/red]")
                 return
-            
+
             # Показываем окно выбора моделей
             def on_models_selected(result: tuple[str, str] | None) -> None:
                 if result is None:
                     self.exit(1)
                     return
-                
+
                 model_a, model_b = result
                 self._setup_conversation(model_a, model_b)
-            
+
             # Показываем модальное окно выбора моделей
             self.push_screen(
                 ModelSelectionScreen(self._models),
                 callback=on_models_selected,
             )
-            
-        except OllamaError as e:
+
+        except OllamaError:
+            # Не раскрываем детали ошибки пользователю
             self.notify(
-                str(e),
-                title="Ошибка подключения к Ollama",
+                "Не удалось подключиться к Ollama. Проверьте что сервис запущен.",
+                title="Ошибка подключения",
                 severity="error",
                 timeout=10,
             )
             self.query_one("#status-value", Label).update(
-                f"[red]Ошибка: {e}[/red]"
+                "[red]Ошибка подключения[/red]"
             )
-        except Exception as e:
+        except ValueError as e:
             self.notify(
-                f"Неожиданная ошибка: {e}",
+                f"Ошибка конфигурации: {e}",
                 title="Ошибка",
                 severity="error",
             )
             self.query_one("#status-value", Label).update(
-                f"[red]Ошибка: {e}[/red]"
+                "[red]Ошибка конфигурации[/red]"
             )
-    
+        except (RuntimeError, SystemError):
+            # Не раскрываем детали внутренней ошибки
+            self.notify(
+                "Произошла непредвиденная ошибка при запуске",
+                title="Ошибка",
+                severity="error",
+            )
+            self.query_one("#status-value", Label).update(
+                "[red]Неизвестная ошибка[/red]"
+            )
+
     def _setup_conversation(self, model_a: str, model_b: str) -> None:
-        """Настроить диалог после выбора моделей."""
+        """
+        Настроить диалог после выбора моделей.
+
+        Args:
+            model_a: Название первой модели.
+            model_b: Название второй модели.
+        """
+
         def on_topic_entered(topic: str | None) -> None:
             if topic is None:
                 self.exit(1)
                 return
-            
-            self._conversation = Conversation(
+
+            # Санитизация темы перед использованием
+            sanitized_topic = sanitize_topic(topic)
+
+            # Создаём объекты с dependency injection
+            conversation = Conversation(
                 model_a=model_a,
                 model_b=model_b,
-                topic=topic,
+                topic=sanitized_topic,
             )
-            
+            service = DialogueService(
+                conversation=conversation,
+                provider=self._client,
+                config=self._config,
+            )
+            self._controller = DialogueController(
+                service=service,
+                on_state_changed=self._on_ui_state_changed,
+            )
+
             # Обновляем заголовок и статус
-            self.SUB_TITLE = f"{model_a} ↔ {model_b} | Тема: {topic}"
-            self.query_one("#status-value", Label).update(
-                f"[green]Готов к запуску[/green]"
+            self.sub_title = f"{model_a} ↔ {model_b} | Тема: {sanitized_topic}"
+            self._on_ui_state_changed(
+                UIState(status_text="Готов к запуску", status_style="green")
             )
-            
+
             # Логируем начало
-            log = self.query_one("#dialogue-log", RichLog)
+            log = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
             log.write(
                 f"[bold]=== Диалог начат ===[/bold]\n"
-                f"[bold]Модель A:[/bold] [{STYLE_MODEL_A}]{model_a}[/{STYLE_MODEL_A}]\n"
-                f"[bold]Модель B:[/bold] [{STYLE_MODEL_B}]{model_b}[/{STYLE_MODEL_B}]\n"
-                f"[bold]Тема:[/bold] {topic}\n"
+                f"[bold]Модель A:[/bold] [{MESSAGE_STYLES.model_a}]"
+                f"{model_a}[/{MESSAGE_STYLES.model_a}]\n"
+                f"[bold]Модель B:[/bold] [{MESSAGE_STYLES.model_b}]"
+                f"{model_b}[/{MESSAGE_STYLES.model_b}]\n"
+                f"[bold]Тема:[/bold] {sanitized_topic}\n"
                 f"[dim]Нажмите 'Старт' для начала диалога[/dim]"
             )
-        
+
         # Показываем окно ввода темы
         self.push_screen(TopicInputScreen(), callback=on_topic_entered)
-    
-    @on(Button.Pressed, "#start-btn")
+
+    @on(Button.Pressed, f"#{UI_IDS.start_btn}")
     def on_start_pressed(self) -> None:
         """Запуск диалога."""
-        if self._conversation is None:
+        if self._controller is None:
             self.notify(
                 "Сначала выберите модели и тему!",
                 title="Ошибка",
                 severity="error",
             )
             return
-        
-        if self._dialogue_task and not self._dialogue_task.done():
-            self.notify("Диалог уже запущен!", title="Инфо", severity="information")
+
+        if not self._controller.handle_start():
+            # Ошибка уже обработана в контроллере
             return
-        
-        self._is_paused = False
+
+        # Запускаем основной цикл диалога
         self._dialogue_task = asyncio.create_task(self._run_dialogue())
-        self.query_one("#status-value", Label).update(
-            f"[green]Диалог идёт...[/green]"
-        )
         self.notify("Диалог запущен!", title="Старт", severity="information")
-    
-    @on(Button.Pressed, "#pause-btn")
+
+    @on(Button.Pressed, f"#{UI_IDS.pause_btn}")
     def on_pause_pressed(self) -> None:
         """Пауза/продолжение диалога."""
-        self.action_toggle_pause()
-    
-    @on(Button.Pressed, "#clear-btn")
+        if self._controller is None:
+            self.notify(
+                "Диалог ещё не настроен!",
+                title="Ошибка",
+                severity="error",
+            )
+            return
+        self._controller.handle_pause()
+
+    @on(Button.Pressed, f"#{UI_IDS.clear_btn}")
     def on_clear_pressed(self) -> None:
         """Очистка лога и контекстов."""
-        if self._conversation:
-            self._conversation.clear_contexts()
-        
-        log = self.query_one("#dialogue-log", RichLog)
+        if self._controller:
+            self._controller.handle_clear()
+
+        log = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
         log.clear()
         log.write("[dim]История очищена[/dim]")
-        
+
         self.notify("История очищена!", title="Очистка", severity="information")
-    
-    @on(Button.Pressed, "#exit-btn")
+
+    @on(Button.Pressed, f"#{UI_IDS.exit_btn}")
     def on_exit_pressed(self) -> None:
         """Выход из приложения."""
         self.exit()
-    
+
     def action_toggle_pause(self) -> None:
         """Переключить паузу."""
-        if self._conversation is None:
-            return
-        
-        self._is_paused = not self._is_paused
-        
-        status_label = self.query_one("#status-value", Label)
-        if self._is_paused:
-            status_label.update("[yellow]На паузе[/yellow]")
-            self.notify("Диалог приостановлен", title="Пауза", severity="warning")
-        else:
-            status_label.update("[green]Диалог идёт...[/green]")
-            self.notify("Диалог продолжен", title="Старт", severity="information")
-    
+        if self._controller:
+            self._controller.handle_pause()
+
     def action_clear_log(self) -> None:
         """Очистить лог (горячая клавиша)."""
         self.on_clear_pressed()
-    
+
+    def _get_model_info_and_style(self, service) -> tuple[str, str]:
+        """Получить информацию о текущей модели и соответствующий стиль."""
+        model_name = service.conversation.get_current_model_name()
+        model_id = service.conversation.current_turn
+        style = MESSAGE_STYLES.model_a if model_id == "A" else MESSAGE_STYLES.model_b
+        return model_name, style
+
     async def _run_dialogue(self) -> None:
         """Основной цикл диалога."""
-        if not self._client or not self._conversation:
+        if self._controller is None:
             return
-        
-        log = self.query_one("#dialogue-log", RichLog)
-        turn_count = 0
-        
+
+        log = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
+        service = self._controller.service
+
         try:
-            while not self._is_paused:
-                turn_count += 1
-                
-                # Получаем текущую модель
-                model_name = self._conversation.get_current_model_name()
-                model_id = self._conversation.current_turn
-                style = STYLE_MODEL_A if model_id == "A" else STYLE_MODEL_B
-                
-                # Обновляем статус
-                self.call_from_thread(
-                    self.query_one("#status-value", Label).update,
-                    f"[bold {style}]Ход: {model_name}[/bold {style}]",
-                )
-                
+            while service.is_running and not service.is_paused:
+                # Проверка на отмену задачи
+                if asyncio.current_task() and asyncio.current_task().cancelled():
+                    break
+
+                # Получаем информацию о текущей модели
+                model_name, style = self._get_model_info_and_style(service)
+
+                # Обновляем статус для нового хода
+                self._controller.update_for_turn(model_name, style)
+
                 try:
-                    # Генерируем ответ
-                    _, _, response = await self._conversation.process_turn(
-                        self._client
-                    )
-                    
-                    # Форматируем и выводим сообщение
-                    formatted_response = response.replace("\n", " ")
-                    if len(formatted_response) > 100:
-                        formatted_response = formatted_response[:100] + "..."
-                    
-                    message = (
-                        f"\n[{style}]Ход {turn_count}: {model_name}[/\n"
-                        f"  {formatted_response}"
-                    )
-                    self.call_from_thread(log.write, message)
-                    
-                except OllamaError as e:
-                    error_msg = f"\n[{STYLE_ERROR}]Ошибка ({model_name}): {e}[/]"
+                    # Выполняем цикл диалога
+                    result: (
+                        DialogueTurnResult | None
+                    ) = await service.run_dialogue_cycle()
+
+                    if result:
+                        # Форматируем и выводим сообщение с санитизацией
+                        formatted_response = sanitize_response_for_display(
+                            result.response
+                        )
+
+                        message = (
+                            f"\n[{style}]Ход {service.turn_count}: {
+                                result.model_name
+                            }[/]\n"
+                            f"  {formatted_response}"
+                        )
+                        self.call_from_thread(log.write, message)
+
+                except OllamaError:
+                    error_msg = f"\n[{MESSAGE_STYLES.error}]Ошибка ({model_name})[/]"
                     self.call_from_thread(log.write, error_msg)
+                    self._controller.update_for_error(model_name)
                     self.notify(
-                        f"Ошибка генерации: {e}",
+                        "Ошибка генерации ответа",
                         title="Ошибка",
                         severity="error",
                     )
-                
+                    raise  # Пробрасываем ошибку дальше для обработки
+
                 # Пауза между сообщениями
-                await asyncio.sleep(config.pause_between_messages)
-                
+                await asyncio.sleep(self._config.pause_between_messages)
+
         except asyncio.CancelledError:
             # Нормальное завершение при отмене задачи
             pass
-        except Exception as e:
+        except OllamaError:
+            # Ошибка уже была залогирована
+            pass
+        except (RuntimeError, SystemError, OSError):
             self.call_from_thread(
                 log.write,
-                f"\n[{STYLE_ERROR}]Критическая ошибка: {e}[/]",
+                f"\n[{MESSAGE_STYLES.error}]Критическая ошибка[/]",
             )
         finally:
-            self.call_from_thread(
-                self.query_one("#status-value", Label).update,
-                "[dim]Остановлен[/dim]",
-            )
-    
+            self._controller.handle_stop()
+
     async def on_unmount(self) -> None:
         """Очистка при закрытии приложения."""
-        # Отменяем задачу диалога
-        if self._dialogue_task and not self._dialogue_task.done():
-            self._dialogue_task.cancel()
-            try:
-                await self._dialogue_task
-            except asyncio.CancelledError:
-                pass
-        
-        # Закрываем клиент
-        if self._client:
-            await self._client.close()
+        try:
+            # Отменяем задачу диалога
+            if self._dialogue_task and not self._dialogue_task.done():
+                self._dialogue_task.cancel()
+                try:
+                    await self._dialogue_task
+                except asyncio.CancelledError:
+                    pass
+
+            # Очищаем контроллер и клиент
+            if self._controller:
+                await self._controller.cleanup()
+            elif self._client:
+                await self._client.close()
+
+        except (aiohttp.ClientError, asyncio.TimeoutError, OSError):
+            # Игнорируем ошибки при очистке
+            pass
