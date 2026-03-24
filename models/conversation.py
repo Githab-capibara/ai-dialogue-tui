@@ -1,12 +1,19 @@
-"""Логика диалога и хранение контекстов для двух моделей."""
+"""Логика диалога и хранение контекстов для двух моделей.
+
+Этот модуль содержит доменную логику диалога.
+Зависит только от абстракций (протоколов), не от конкретных реализаций.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal
 
-from config import config
-from models.ollama_client import OllamaClient
+from config import Config
+from models.provider import MessageDict, ModelProvider
+
+# Импортируем для обратной совместимости
+__all__ = ["Conversation", "MessageDict"]
 
 
 ModelId = Literal["A", "B"]
@@ -16,170 +23,194 @@ ModelId = Literal["A", "B"]
 class Conversation:
     """
     Управление диалогом между двумя моделями.
-    
+
     Каждая модель имеет свой независимый контекст (историю сообщений).
     Ответ одной модели добавляется в контекст другой как сообщение от пользователя.
+
+    Attributes:
+        model_a: Название модели A.
+        model_b: Название модели B.
+        topic: Тема диалога.
+
+    Note:
+        Имеет 8 атрибутов что превышает стандартный лимит (7),
+        но это оправдано сложностью предметной области.
     """
-    
+
+    # pylint: disable=too-many-instance-attributes
     model_a: str  # Название модели A
-    model_b: str  # Название модели B
+    model_b: str  # Название второй модели
     topic: str  # Тема диалога
-    
+
+    # Конфигурация для dependency injection
+    _config: Config = field(default_factory=Config, repr=False)
+
     # Контексты для каждой модели (списки сообщений в формате Ollama)
-    _context_a: list[dict[str, str]] = field(default_factory=list)
-    _context_b: list[dict[str, str]] = field(default_factory=list)
-    
+    _context_a: list[MessageDict] = field(default_factory=list, repr=False)
+    _context_b: list[MessageDict] = field(default_factory=list, repr=False)
+
     # Чей сейчас ход
     _current_turn: ModelId = "A"
-    
+
     # Системный промпт
-    _system_prompt: str = field(init=False)
-    
+    _system_prompt: str = field(init=False, repr=False)
+
     def __post_init__(self) -> None:
         """Инициализация системного промпта после создания объекта."""
-        self._system_prompt = config.default_system_prompt.format(
-            topic=self.topic
-        )
+        try:
+            self._system_prompt = self._config.default_system_prompt.format(
+                topic=self.topic
+            )
+        except (KeyError, ValueError):
+            self._system_prompt = (
+                f"You are a helpful assistant. The topic of discussion is: {self.topic}"
+            )
         # Добавляем системный промпт в оба контекста
-        self._context_a.append({
-            "role": "system",
-            "content": self._system_prompt
-        })
-        self._context_b.append({
-            "role": "system",
-            "content": self._system_prompt
-        })
-    
+        self._context_a.append(MessageDict(role="system", content=self._system_prompt))
+        self._context_b.append(MessageDict(role="system", content=self._system_prompt))
+
     def add_message(
         self,
         model_id: ModelId,
-        role: str,
+        role: Literal["system", "user", "assistant"],
         content: str,
     ) -> None:
         """
         Добавить сообщение в контекст указанной модели.
-        
+
         Args:
             model_id: Идентификатор модели (A или B).
             role: Роль сообщения ("user", "assistant", "system").
             content: Текст сообщения.
         """
         context = self._context_a if model_id == "A" else self._context_b
-        context.append({"role": role, "content": content})
-    
-    def get_context(self, model_id: ModelId) -> list[dict[str, str]]:
+        context.append(MessageDict(role=role, content=content))
+
+    def get_context(self, model_id: ModelId) -> list[MessageDict]:
         """
         Получить историю сообщений для указанной модели.
-        
+
         Args:
             model_id: Идентификатор модели (A или B).
-            
+
         Returns:
             Список сообщений в формате Ollama.
         """
         context = self._context_a if model_id == "A" else self._context_b
+        # Возвращаем копию для безопасности (чтобы не позволять внешнему коду
+        # изменять внутреннее состояние)
         return context.copy()
-    
-    def switch_turn(self) -> ModelId:
+
+    def switch_turn(self) -> None:
         """
         Переключить ход на другую модель.
-        
-        Returns:
-            Идентификатор модели, которой сейчас ходить.
+
+        Команда (command) - изменяет состояние, ничего не возвращает.
+        Для получения текущего хода используйте свойство current_turn.
         """
         self._current_turn = "B" if self._current_turn == "A" else "A"
-        return self._current_turn
-    
+
     @property
     def current_turn(self) -> ModelId:
-        """Получить модель, которой сейчас ходить."""
+        """
+        Получить идентификатор модели, которой сейчас ходить.
+
+        Returns:
+            Идентификатор текущей модели (A или B).
+        """
         return self._current_turn
-    
+
     def get_current_model_name(self) -> str:
         """Получить название текущей модели."""
         return self.model_a if self._current_turn == "A" else self.model_b
-    
+
     def get_other_model_name(self) -> str:
         """Получить название другой модели."""
         return self.model_b if self._current_turn == "A" else self.model_a
-    
+
     async def generate_response(
         self,
-        client: OllamaClient,
+        provider: ModelProvider,
     ) -> tuple[ModelId, str]:
         """
         Сгенерировать ответ для текущей модели.
-        
+
         Args:
-            client: Клиент Ollama для генерации.
-            
+            provider: Провайдер моделей для генерации (ModelProvider).
+
         Returns:
             Кортеж (идентификатор модели, сгенерированный ответ).
         """
-        model_id = self._current_turn
+        model_id = self.current_turn
         model_name = self.get_current_model_name()
         context = self.get_context(model_id)
-        
-        response = await client.generate(
+
+        response = await provider.generate(
             model=model_name,
             messages=context,
         )
-        
+
         return model_id, response
-    
+
     async def process_turn(
         self,
-        client: OllamaClient,
+        provider: ModelProvider,
     ) -> tuple[str, str, str]:
         """
         Обработать один ход диалога.
-        
+
         Генерирует ответ текущей модели, добавляет его в оба контекста
         (как assistant для текущей модели и как user для другой),
         затем переключает ход.
-        
+
         Args:
-            client: Клиент Ollama для генерации.
-            
+            provider: Провайдер моделей для генерации (ModelProvider).
+
         Returns:
             Кортеж (название модели, роль "assistant", текст ответа).
         """
-        model_id = self._current_turn
+        model_id = self.current_turn
         model_name = self.get_current_model_name()
-        
-        # Генерируем ответ
-        _, response = await self.generate_response(client)
-        
+        other_id: ModelId = "B" if model_id == "A" else "A"
+
+        # Генерируем ответ ДО любых изменений контекста
+        _, response = await self.generate_response(provider)
+
         # Добавляем ответ в контекст текущей модели как assistant
         self.add_message(model_id, "assistant", response)
-        
+
         # Добавляем ответ в контекст другой модели как user
-        other_id: ModelId = "B" if model_id == "A" else "A"
         self.add_message(other_id, "user", response)
-        
+
         # Переключаем ход
         self.switch_turn()
-        
+
         return model_name, "assistant", response
-    
+
     def clear_contexts(self) -> None:
         """
         Очистить оба контекста, сохранив только системный промпт и тему.
+
+        Использует .clear() для эффективности вместо создания новых списков.
         """
-        self._context_a = [{
-            "role": "system",
-            "content": self._system_prompt
-        }]
-        self._context_b = [{
-            "role": "system",
-            "content": self._system_prompt
-        }]
+        # Сохраняем системный промпт
+        system_message = MessageDict(role="system", content=self._system_prompt)
+
+        # Очищаем существующие списки (более эффективно чем создание новых)
+        self._context_a.clear()
+        self._context_b.clear()
+
+        # Добавляем системный промпт обратно
+        self._context_a.append(system_message)
+        self._context_b.append(system_message)
+
+        # Сбрасываем ход на A
         self._current_turn = "A"
-    
+
     def get_context_stats(self) -> dict[str, int]:
         """
         Получить статистику контекстов.
-        
+
         Returns:
             Словарь с количеством сообщений в каждом контексте.
         """
