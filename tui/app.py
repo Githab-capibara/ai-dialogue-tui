@@ -36,55 +36,16 @@ from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 from tui.styles import (
     MESSAGE_STYLES,
     UI_IDS,
-    StatusStyle,
     generate_main_css,
 )
 
 # Константа таймаута для уведомлений
 DEFAULT_NOTIFY_TIMEOUT: int = 10
 
-
-def _get_status_style_string(style: StatusStyle | str) -> str:
-    """
-    Конвертировать StatusStyle в строку для отображения в UI.
-
-    Args:
-        style: StatusStyle enum или строка.
-
-    Returns:
-        Строковое представление стиля.
-    """
-    if isinstance(style, StatusStyle):
-        mapping = {
-            StatusStyle.INFO: "dim",
-            StatusStyle.SUCCESS: "green",
-            StatusStyle.WARNING: "yellow",
-            StatusStyle.ERROR: "red",
-        }
-        return mapping.get(style, "dim")
-    return style
-
-
 # CSS генерируется из централизованных констант
 CSS = generate_main_css()
 
 log = logging.getLogger(__name__)
-
-
-def create_ollama_client(host: str) -> OllamaClient:
-    """
-    Фабрика для создания OllamaClient.
-
-    Этот метод инкапсулирует создание клиента и позволяет
-    легко заменять реализацию в будущем.
-
-    Args:
-        host: URL хоста Ollama.
-
-    Returns:
-        Настроенный экземпляр OllamaClient.
-    """
-    return OllamaClient(host=host)
 
 
 class ModelSelectionScreen(ModalScreen):
@@ -510,66 +471,72 @@ class DialogueApp(App):
 
         try:
             while service.is_running and not service.is_paused:
-                # Проверка на отмену задачи
-                current_task = asyncio.current_task()
-                if current_task and current_task.is_cancelled():
+                if self._is_task_cancelled():
                     break
 
-                # Получаем информацию о текущей модели
                 model_name, style = self._get_model_info_and_style(service)
-
-                # Обновляем статус для нового хода
                 self._controller.update_for_turn(model_name, style)
 
                 try:
-                    # Выполняем цикл диалога
-                    result: (
-                        DialogueTurnResult | None
-                    ) = await service.run_dialogue_cycle()
-
-                    if result:
-                        # Форматируем и выводим сообщение с санитизацией
-                        formatted_response = sanitize_response_for_display(
-                            result.response
-                        )
-
-                        message = (
-                            f"\n[{style}]Ход {service.turn_count}: {
-                                result.model_name
-                            }[/]\n"
-                            f"  {formatted_response}"
-                        )
-                        self.call_from_thread(log.write, message)
-
+                    await self._process_dialogue_turn(service, model_name, style)
                 except ProviderError:
-                    error_msg = f"\n[{MESSAGE_STYLES.error}]Ошибка ({model_name})[/]"
-                    self.call_from_thread(log.write, error_msg)
-                    self._controller.update_for_error(model_name)
-                    self.notify(
-                        "Ошибка генерации ответа",
-                        title="Ошибка",
-                        severity="error",
-                        timeout=DEFAULT_NOTIFY_TIMEOUT,
-                    )
-                    raise  # Пробрасываем ошибку дальше для обработки
+                    self._handle_dialogue_error(model_name)
+                    raise
 
-                # Пауза между сообщениями
                 await asyncio.sleep(self._config.pause_between_messages)
 
         except asyncio.CancelledError:
-            # Нормальное завершение при отмене задачи
             pass
         except ProviderError:
-            # Ошибка уже была залогирована
             pass
         except (RuntimeError, SystemError, OSError) as e:
-            log.exception("Критическая ошибка в цикле диалога: %s", e)
-            self.call_from_thread(
-                log.write,
-                f"\n[{MESSAGE_STYLES.error}]Критическая ошибка[/]",
-            )
+            self._handle_critical_error(e)
         finally:
             self._controller.handle_stop()
+
+    def _is_task_cancelled(self) -> bool:
+        """Проверить отменена ли текущая задача."""
+        current_task = asyncio.current_task()
+        return current_task is not None and current_task.is_cancelled()
+
+    async def _process_dialogue_turn(
+        self,
+        service: DialogueService,
+        model_name: str,
+        style: str,
+    ) -> DialogueTurnResult | None:
+        """Обработать один ход диалога и вывести результат."""
+        result = await service.run_dialogue_cycle()
+
+        if result:
+            formatted_response = sanitize_response_for_display(result.response)
+            message = (
+                f"\n[{style}]Ход {service.turn_count}: {result.model_name}[/]\n"
+                f"  {formatted_response}"
+            )
+            self.call_from_thread(log.write, message)
+
+        return result
+
+    def _handle_dialogue_error(self, model_name: str) -> None:
+        """Обработать ошибку генерации ответа."""
+        error_msg = f"\n[{MESSAGE_STYLES.error}]Ошибка ({model_name})[/]"
+        self.call_from_thread(log.write, error_msg)
+        self._controller.update_for_error(model_name)
+        self.notify(
+            "Ошибка генерации ответа",
+            title="Ошибка",
+            severity="error",
+            timeout=DEFAULT_NOTIFY_TIMEOUT,
+        )
+
+    def _handle_critical_error(self, e: Exception) -> None:
+        """Обработать критическую ошибку в цикле диалога."""
+        log.exception("Критическая ошибка в цикле диалога: %s", e)
+        self.call_from_thread(
+            log.write,
+            f"\n[{MESSAGE_STYLES.error}]Критическая ошибка[/]",
+        )
 
     async def on_unmount(self) -> None:
         """Очистка при закрытии приложения."""

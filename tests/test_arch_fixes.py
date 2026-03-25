@@ -82,10 +82,10 @@ class TestStatusStyleEnum:
         assert StatusStyle.ERROR.value == "error"
 
     def test_get_status_style_string_function_exists(self):
-        """Тест, что функция _get_status_style_string существует в app."""
-        from tui.app import _get_status_style_string
+        """Тест, что функция get_status_style_string существует в styles."""
+        from tui.styles import get_status_style_string
 
-        assert callable(_get_status_style_string)
+        assert callable(get_status_style_string)
 
 
 class TestConversationLogging:
@@ -119,13 +119,13 @@ class TestOllamaClientFactory:
 
     def test_create_ollama_client_function_exists(self):
         """Тест, что функция create_ollama_client существует."""
-        from tui.app import create_ollama_client
+        from tui.styles import create_ollama_client
 
         assert callable(create_ollama_client)
 
     def test_create_ollama_client_returns_client(self):
         """Тест, что create_ollama_client возвращает клиент."""
-        from tui.app import create_ollama_client
+        from tui.styles import create_ollama_client
 
         host = "http://localhost:11434"
         client = create_ollama_client(host)
