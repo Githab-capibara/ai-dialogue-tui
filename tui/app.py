@@ -29,7 +29,13 @@ from textual.widgets import (
 from controllers.dialogue_controller import DialogueController, UIState
 from models.config import Config
 from models.conversation import Conversation
-from models.provider import ModelProvider, ProviderError
+from models.ollama_client import OllamaClient
+from models.provider import (
+    ModelProvider,
+    ProviderConnectionError,
+    ProviderError,
+    ProviderGenerationError,
+)
 from services.dialogue_service import DialogueService, DialogueTurnResult
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 from tui.styles import (
@@ -217,7 +223,6 @@ class DialogueApp(App):
         Binding("ctrl+q", "quit", "Выход", priority=True),
         Binding("ctrl+p", "toggle_pause", "Пауза/Старт"),
         Binding("ctrl+r", "clear_log", "Очистить"),
-        Binding("ctrl+c", "", ""),  # Отключаем стандартное поведение
     ]
 
     TITLE = "AI Dialogue TUI"
@@ -278,11 +283,6 @@ class DialogueApp(App):
     async def on_mount(self) -> None:
         """Инициализация при запуске приложения."""
         try:
-            # Config уже валидирован при инициализации, создаем клиент
-            from models.ollama_client import (
-                OllamaClient,  # pylint: disable=import-outside-toplevel
-            )
-
             self._client = OllamaClient(host=self._config.ollama_host)
 
             # Получаем список моделей
@@ -314,11 +314,17 @@ class DialogueApp(App):
                 callback=on_models_selected,
             )
 
-        except ProviderError:
-            # Не раскрываем детали ошибки пользователю
+        except ProviderConnectionError:
             self.notify(
                 "Не удалось подключиться к Ollama. Проверьте что сервис запущен.",
                 title="Ошибка подключения",
+                severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
+            )
+        except ProviderGenerationError:
+            self.notify(
+                "Ошибка генерации ответа. Проверьте модель...",
+                title="Ошибка",
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
@@ -496,6 +502,8 @@ class DialogueApp(App):
             self._handle_critical_error(e)
         finally:
             self._controller.handle_stop()
+            if self._controller:
+                await self._controller.cleanup()
 
     def _is_task_cancelled(self) -> bool:
         """Проверить отменена ли текущая задача."""

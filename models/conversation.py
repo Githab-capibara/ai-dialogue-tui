@@ -105,9 +105,7 @@ class Conversation:
 
         system_message = context[0] if context else None
 
-        remaining_messages = (
-            context[-max_len:] if len(context) > max_len else context[1:]
-        )
+        remaining_messages = context[-max_len:]
 
         if system_message:
             trimmed = [system_message] + remaining_messages
@@ -128,10 +126,15 @@ class Conversation:
         role: str,
         content: str,
     ) -> None:
-        context = self._context_a if model_id == "A" else self._context_b
+        if model_id == "A":
+            context = self._context_a
+        else:
+            context = self._context_b
+
         if len(context) >= MAX_CONTEXT_LENGTH:
             context = self._trim_context_if_needed(context, MAX_CONTEXT_LENGTH - 2)
         context.append(MessageDict(role=role, content=content))
+
         if model_id == "A":
             self._context_a = context
         else:
@@ -151,12 +154,8 @@ class Conversation:
             role: Роль сообщения ("user", "assistant", "system").
             content: Текст сообщения.
         """
-        if model_id == "A":
-            self._add_message_to_context(model_id, role, content)
-            context = self._context_a
-        else:
-            self._add_message_to_context(model_id, role, content)
-            context = self._context_b
+        self._add_message_to_context(model_id, role, content)
+        context = self._context_a if model_id == "A" else self._context_b
 
         log.debug(
             "Added %s message to model %s context (total: %d)",

@@ -75,7 +75,7 @@ class DialogueController:
         Returns:
             Текущее состояние UI.
         """
-        return self._state
+        return replace(self._state)
 
     @property
     def service(self) -> DialogueService:
