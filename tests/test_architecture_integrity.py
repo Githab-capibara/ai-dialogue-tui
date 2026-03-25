@@ -137,22 +137,6 @@ class TestConfigLocation:
         assert ConfigFromConfig is not None
         assert ConfigFromConfig is Config
 
-    def test_config_importable_from_root(self) -> None:
-        """
-        Проверка что Config импортируется из корневого модуля (backward compatibility).
-
-        Это обеспечивает обратную совместимость для старого кода.
-        """
-        # Проверяем что config.py существует в корне
-        import os
-
-        assert os.path.exists("config.py")
-
-        # Импортируем из корня
-        from config import Config as RootConfig
-
-        assert RootConfig is not None
-
     def test_config_in_models_module(self) -> None:
         """
         Проверка что Config находится в models модуле.

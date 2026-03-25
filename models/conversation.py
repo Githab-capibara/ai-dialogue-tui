@@ -122,6 +122,18 @@ class Conversation:
 
         return trimmed
 
+    def _add_message_to_context(
+        self,
+        context: list[MessageDict],
+        set_context: callable,
+        role: str,
+        content: str,
+    ) -> None:
+        if len(context) >= MAX_CONTEXT_LENGTH:
+            context = self._trim_context_if_needed(context, MAX_CONTEXT_LENGTH - 2)
+        context.append(MessageDict(role=role, content=content))
+        set_context(context)
+
     def add_message(
         self,
         model_id: ModelId,
@@ -137,21 +149,21 @@ class Conversation:
             content: Текст сообщения.
         """
         if model_id == "A":
+            self._add_message_to_context(
+                self._context_a,
+                lambda c: setattr(self, "_context_a", c),
+                role,
+                content,
+            )
             context = self._context_a
-            if len(context) >= MAX_CONTEXT_LENGTH:
-                self._context_a = self._trim_context_if_needed(
-                    context, MAX_CONTEXT_LENGTH - 2
-                )
-                context = self._context_a
-            context.append(MessageDict(role=role, content=content))
         else:
+            self._add_message_to_context(
+                self._context_b,
+                lambda c: setattr(self, "_context_b", c),
+                role,
+                content,
+            )
             context = self._context_b
-            if len(context) >= MAX_CONTEXT_LENGTH:
-                self._context_b = self._trim_context_if_needed(
-                    context, MAX_CONTEXT_LENGTH - 2
-                )
-                context = self._context_b
-            context.append(MessageDict(role=role, content=content))
 
         log.debug(
             "Added %s message to model %s context (total: %d)",

@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
 
 from models.config import Config
 from models.conversation import Conversation, ModelId
@@ -31,41 +30,6 @@ class DialogueTurnResult:
     response: str
 
 
-class DialogueUICallback(Protocol):
-    """
-    Протокол для UI callback.
-
-    Позволяет сделать run_dialogue_cycle более тестируемым
-    через dependency injection UI-операций.
-    """
-
-    def on_turn_start(self, model_name: str, model_id: ModelId) -> None:
-        """
-        Вызывается перед началом хода.
-
-        Args:
-            model_name: Название модели.
-            model_id: Идентификатор модели.
-        """
-
-    def on_turn_complete(self, result: DialogueTurnResult) -> None:
-        """
-        Вызывается после завершения хода.
-
-        Args:
-            result: Результат хода.
-        """
-
-    def on_turn_error(self, model_name: str, error: Exception) -> None:
-        """
-        Вызывается при ошибке хода.
-
-        Args:
-            model_name: Название модели.
-            error: Исключение.
-        """
-
-
 class DialogueService:
     """
     Сервис для управления бизнес-логикой диалога.
@@ -87,7 +51,6 @@ class DialogueService:
         conversation: Conversation,
         provider: ModelProvider,
         config: Config | None = None,
-        ui_callback: DialogueUICallback | None = None,
     ) -> None:
         """
         Инициализация сервиса диалога.
@@ -96,12 +59,10 @@ class DialogueService:
             conversation: Объект диалога для управления контекстами.
             provider: Провайдер моделей для генерации ответов.
             config: Конфигурация для параметров (паузы, таймауты).
-            ui_callback: Опциональный callback для UI-операций.
         """
         self._conversation = conversation
         self._provider = provider
         self._config = config or Config()
-        self._ui_callback = ui_callback
         self._is_running = False
         self._is_paused = False
         self._turn_count = 0
@@ -184,26 +145,16 @@ class DialogueService:
 
         Returns:
             DialogueTurnResult с результатом хода или None если диалог не запущен.
-
-        Note:
-            Если установлен ui_callback, вызывает методы on_turn_start,
-            on_turn_complete или on_turn_error.
         """
         if not self._is_running or self._is_paused:
             return None
 
         self._turn_count += 1
 
-        # Получаем информацию о текущей модели
         model_id = self._conversation.current_turn
         model_name = self._conversation.get_current_model_name()
 
-        # Уведомляем UI о начале хода
-        if self._ui_callback:
-            self._ui_callback.on_turn_start(model_name, model_id)
-
         try:
-            # Обрабатываем ход (генерация + обновление контекстов)
             _, _, response = await self._conversation.process_turn(self._provider)
 
             result = DialogueTurnResult(
@@ -213,19 +164,9 @@ class DialogueService:
                 response=response,
             )
 
-            # Уведомляем UI о завершении хода
-            if self._ui_callback:
-                self._ui_callback.on_turn_complete(result)
-
             return result
 
         except ProviderError:
-            # Пробрасываем ошибки провайдера
-            raise
-        except Exception as e:
-            # Уведомляем UI об ошибке
-            if self._ui_callback:
-                self._ui_callback.on_turn_error(model_name, e)
             raise
 
     async def cleanup(self) -> None:
