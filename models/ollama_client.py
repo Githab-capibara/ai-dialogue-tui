@@ -309,6 +309,7 @@ class OllamaClient:
         url = f"{self.host}/api/chat"
 
         # Кэшированные дефолтные опции для производительности
+        # Note: num_predict = max_tokens в терминах Ollama API
         options = {
             "temperature": kwargs.get("temperature", _DEFAULT_OPTIONS["temperature"]),
             "num_predict": kwargs.get("max_tokens", _DEFAULT_OPTIONS["num_predict"]),

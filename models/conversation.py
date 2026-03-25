@@ -55,8 +55,15 @@ class Conversation:
     # Системный промпт
     _system_prompt: str = field(init=False, repr=False)
 
+    # Флаг для предотвращения повторной инициализации
+    _initialized: bool = field(default=False, init=False)
+
     def __post_init__(self) -> None:
         """Инициализация системного промпта после создания объекта."""
+        if self._initialized:
+            return
+        self._initialized = True
+
         try:
             self._system_prompt = self._config.default_system_prompt.format(
                 topic=self.topic

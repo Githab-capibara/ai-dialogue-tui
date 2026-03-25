@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import html
+import logging
 import re
 
 import aiohttp
@@ -40,6 +41,8 @@ from tui.styles import (
 
 # CSS генерируется из централизованных констант
 MAIN_CSS = generate_main_css()
+
+log = logging.getLogger(__name__)
 
 
 def sanitize_topic(topic: str) -> str:
@@ -292,8 +295,7 @@ class DialogueApp(App):
                 f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
             )
         except Exception:  # pylint: disable=broad-exception-caught
-            # Игнорируем ошибки если UI ещё не готов
-            pass
+            log.exception("Ошибка при обновлении UI состояния")
 
     async def on_mount(self) -> None:
         """Инициализация при запуске приложения."""
@@ -353,8 +355,9 @@ class DialogueApp(App):
             self.query_one("#status-value", Label).update(
                 "[red]Ошибка конфигурации[/red]"
             )
-        except (RuntimeError, SystemError):
+        except (RuntimeError, SystemError) as e:
             # Не раскрываем детали внутренней ошибки
+            log.exception("Внутренняя ошибка при запуске: %s", e)
             self.notify(
                 "Произошла непредвиденная ошибка при запуске",
                 title="Ошибка",
@@ -404,8 +407,8 @@ class DialogueApp(App):
             )
 
             # Логируем начало
-            log = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
-            log.write(
+            dialog_log = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
+            dialog_log.write(
                 f"[bold]=== Диалог начат ===[/bold]\n"
                 f"[bold]Модель A:[/bold] [{MESSAGE_STYLES.model_a}]"
                 f"{model_a}[/{MESSAGE_STYLES.model_a}]\n"
@@ -455,9 +458,9 @@ class DialogueApp(App):
         if self._controller:
             self._controller.handle_clear()
 
-        log = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
-        log.clear()
-        log.write("[dim]История очищена[/dim]")
+        dialog_log = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
+        dialog_log.clear()
+        dialog_log.write("[dim]История очищена[/dim]")
 
         self.notify("История очищена!", title="Очистка", severity="information")
 
@@ -475,7 +478,7 @@ class DialogueApp(App):
         """Очистить лог (горячая клавиша)."""
         self.on_clear_pressed()
 
-    def _get_model_info_and_style(self, service) -> tuple[str, str]:
+    def _get_model_info_and_style(self, service: DialogueService) -> tuple[str, str]:
         """Получить информацию о текущей модели и соответствующий стиль."""
         model_name = service.conversation.get_current_model_name()
         model_id = service.conversation.current_turn
@@ -487,7 +490,6 @@ class DialogueApp(App):
         if self._controller is None:
             return
 
-        log = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
         service = self._controller.service
 
         try:
@@ -542,7 +544,8 @@ class DialogueApp(App):
         except OllamaError:
             # Ошибка уже была залогирована
             pass
-        except (RuntimeError, SystemError, OSError):
+        except (RuntimeError, SystemError, OSError) as e:
+            log.exception("Критическая ошибка в цикле диалога: %s", e)
             self.call_from_thread(
                 log.write,
                 f"\n[{MESSAGE_STYLES.error}]Критическая ошибка[/]",
