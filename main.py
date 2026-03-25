@@ -3,9 +3,15 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 
 from tui.app import DialogueApp
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 
 
 def main() -> int:
@@ -28,6 +34,7 @@ def main() -> int:
         return 0
     except (RuntimeError, SystemError) as e:
         # Выводим понятное сообщение об ошибке
+        logging.exception("Критическая ошибка приложения: %s", e)
         print(f"Критическая ошибка приложения: {e}", file=sys.stderr)
         print(
             "Пожалуйста, проверьте логи или сообщите об ошибке разработчикам.",

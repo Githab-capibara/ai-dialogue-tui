@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 # Local application/library imports
-from config import Config
+from config import Config, validate_ollama_url
 from controllers.dialogue_controller import DialogueController
 from models.conversation import Conversation
 from models.ollama_client import OllamaClient
@@ -100,13 +100,14 @@ class TestFixes:
     def test_conversation_handles_malformed_system_prompt(self):
         """Тест, что Conversation корректно обрабатывает некорректный системный промпт."""
         # Arrange
-        # Create conversation with default config first
-        conversation = Conversation("model_a", "model_b", "тема")
-        # Then replace the config with our test config (accessing private field
-        # for testing)
-        conversation._config = Config(default_system_prompt="Привет {nonexistent}!")
-        # Re-initialize to trigger __post_init__ with new config
-        conversation.__post_init__()
+        # Create conversation with custom config directly
+        config_with_bad_prompt = Config(default_system_prompt="Привет {nonexistent}!")
+        conversation = Conversation(
+            "model_a",
+            "model_b",
+            "тема",
+            _config=config_with_bad_prompt,
+        )
 
         # Act & Assert
         # Should not raise an exception, should use fallback prompt (in English as per code)
@@ -114,7 +115,7 @@ class TestFixes:
         expected_prompt = (
             "You are a helpful assistant. The topic of discussion is: тема"
         )
-        assert conversation._system_prompt == expected_prompt
+        assert conversation._system_prompt == expected_prompt  # noqa: W0212
 
     def test_conversation_get_context_returns_copy_for_safety(self):
         """Тест, что get_context возвращает копию для безопасности, а не для эффективности."""
@@ -190,9 +191,6 @@ class TestFixes:
 
     def test_config_validate_ollama_url_has_correct_exception_handling(self):
         """Тест, что validate_ollama_url имеет правильную обработку исключений."""
-        # Arrange
-        from config import validate_ollama_url
-
         # Act & Assert
         # Should only catch ValueError, not TypeError
         # Valid URLs
