@@ -5,6 +5,9 @@
 ```
 ai-dialogue-tui/
 ├── main.py                    # Точка входа
+├── factories/                 # Фабрики для создания объектов
+│   ├── __init__.py
+│   └── provider_factory.py    # Фабрика провайдеров (DIP)
 ├── models/                    # Доменный слой
 │   ├── __init__.py
 │   ├── config.py              # Конфигурация (Config dataclass)
@@ -13,7 +16,9 @@ ai-dialogue-tui/
 │   └── conversation.py        # Доменная логика диалога
 ├── services/                  # Сервисный слой
 │   ├── __init__.py
-│   └── dialogue_service.py    # Бизнес-логика диалога
+│   ├── dialogue_service.py    # Бизнес-логика диалога
+│   ├── dialogue_runner.py     # Управление циклом диалога
+│   └── model_style_mapper.py  # Маппинг моделей на стили UI
 ├── controllers/               # Слой контроллеров
 │   ├── __init__.py
 │   └── dialogue_controller.py # Управление состоянием UI
@@ -116,6 +121,7 @@ class MessageDict(TypedDict, total=True):
 - Хранит независимые контексты для каждой модели
 - Реализует атомарные операции для предотвращения рассинхронизации
 - Зависит только от протокола `ModelProvider`, не от конкретных реализаций
+- Принимает `system_prompt` как параметр для гибкости
 
 **Оптимизации:**
 - `__slots__` в dataclass для уменьшения потребления памяти
@@ -127,6 +133,11 @@ class MessageDict(TypedDict, total=True):
 **Ограничение контекста:**
 - `MAX_CONTEXT_LENGTH = 50` — максимальное количество сообщений
 - Автоматическая обрезка старых сообщений с сохранением системного промпта
+
+**Системный промпт:**
+- Передаётся как параметр в конструктор
+- Форматируется с темой в `__post_init__`
+- При некорректном формате используется fallback на английский
 
 #### `models/ollama_client.py`
 Класс `OllamaClient` реализует протокол `ModelProvider` для Ollama API:
@@ -177,13 +188,17 @@ class MessageDict(TypedDict, total=True):
 - Управление состоянием: `_is_running`, `_is_paused`, `_turn_count`
 - Зависимости внедряются через конструктор (`ModelProvider`, `Conversation`)
 
-**Протокол `DialogueUICallback`:**
-```python
-class DialogueUICallback(Protocol):
-    async def on_turn_complete(self, result: DialogueTurnResult) -> None: ...
-    async def on_error(self, error: Exception) -> None: ...
-    async def on_status_change(self, status: str) -> None: ...
-```
+#### `services/dialogue_runner.py`
+Класс `DialogueRunner` управляет циклом диалога:
+- Инкапсулирует логику выполнения основного цикла
+- Обработка ошибок и управление задачами
+- Callback для обработки каждого хода и ошибок
+
+#### `services/model_style_mapper.py`
+Класс `ModelStyleMapper` маппит модели на стили:
+- Преобразует `ModelId` в CSS стиль (`model_a`/`model_b`)
+- Возвращает `ModelStyleInfo` с полной информацией
+- Устраняет дублирование логики маппинга в UI
 
 ### Presentation Layer
 
@@ -248,6 +263,11 @@ class DialogueApp:
         provider_factory: Callable[[], ModelProvider] | None = None,
     ) -> None: ...
 ```
+
+**Фабрика провайдеров (`factories/provider_factory.py`):**
+- `create_provider_factory(config)` создаёт фабрику для DI
+- Устраняет зависимость `main.py` от конкретной реализации
+- Позволяет легко заменять провайдеры
 
 ### 2. Protocol (Interface)
 Протоколы для абстракций:
@@ -427,15 +447,19 @@ autopep8 --in-place --aggressive --aggressive *.py
 # Проверка зависимостей
 deptry .
 pip check
+
+# Проверка циклических зависимостей
+pydeps . --show-cycles --max-bacon=2
 ```
 
 ## Метрики качества
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 307 passed
+- **Тесты:** 269 passed
 - **Дублирование кода:** 0%
 - **Циклические зависимости:** отсутствуют
+- **Зависимости:** Success (deptry)
 
 ---
 

@@ -24,7 +24,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from models.config import Config
 from models.conversation import Conversation
 from models.ollama_client import OllamaClient
 from tui.sanitizer import sanitize_response_for_display
@@ -121,28 +120,32 @@ class TestExceptionHandling:
             )
 
 
-class TestConversationConfigDefault:
-    """MEDIUM 4: Тест исправления default для Config."""
+class TestConversationSystemPrompt:
+    """MEDIUM 4: Тест исправления system_prompt в Conversation."""
 
-    def test_conversation_accepts_config(self) -> None:
-        """Тест что Conversation принимает config."""
-        custom_config = Config(temperature=0.5)
+    def test_conversation_accepts_system_prompt(self) -> None:
+        """Тест что Conversation принимает system_prompt."""
+        custom_prompt = "Custom system prompt for testing"
         conversation = Conversation(
             model_a="llama3",
             model_b="mistral",
             topic="Test",
-            _config=custom_config,
+            system_prompt=custom_prompt,
         )
-        assert conversation._config is custom_config
+        assert conversation.system_prompt == custom_prompt
 
-    def test_conversation_creates_default_config(self) -> None:
-        """Тест что Conversation создает default config если не передан."""
+    def test_conversation_formats_system_prompt_with_topic(self) -> None:
+        """Тест что Conversation форматирует system_prompt с topic в контекст."""
         conversation = Conversation(
             model_a="llama3",
             model_b="mistral",
-            topic="Test",
+            topic="Test Topic",
         )
-        assert isinstance(conversation._config, Config)
+        # Проверяем что контекст содержит отформатированный промпт
+        context_a = conversation.get_context("A")
+        assert len(context_a) > 0
+        assert context_a[0]["role"] == "system"
+        assert "Test Topic" in context_a[0]["content"]
 
 
 class TestModelIdExport:
