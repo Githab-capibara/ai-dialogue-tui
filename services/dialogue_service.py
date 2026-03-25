@@ -169,7 +169,7 @@ class DialogueService:
             return result
 
         except ProviderError:
-            log.warning("Ошибка провайдера при выполнении цикла диалога")
+            log.exception("Ошибка провайдера при выполнении цикла диалога")
             raise
 
     async def cleanup(self) -> None:

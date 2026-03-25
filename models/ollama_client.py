@@ -197,6 +197,7 @@ class _HTTPSessionManager:
         """
         self._timeout = timeout
         self._session: aiohttp.ClientSession | None = None
+        self._lock: asyncio.Lock = asyncio.Lock()
 
     async def get_session(self) -> aiohttp.ClientSession:
         """
@@ -205,11 +206,12 @@ class _HTTPSessionManager:
         Returns:
             HTTP сессия для запросов.
         """
-        if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self._timeout)
-            )
-        return self._session
+        async with self._lock:
+            if self._session is None or self._session.closed:
+                self._session = aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=self._timeout)
+                )
+            return self._session
 
     async def close(self) -> None:
         """Закрыть HTTP сессию."""
