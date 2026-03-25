@@ -1,5 +1,7 @@
 """Тесты целостности архитектуры для AI Dialogue TUI.
 
+# pylint: disable=import-outside-toplevel,missing-class-docstring,missing-function-docstring,unused-argument,reimported
+
 Этот модуль проверяет архитектурные принципы и паттерны:
 - ProviderError иерархия исключений
 - Config расположение в models модуле

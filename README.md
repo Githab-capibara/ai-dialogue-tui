@@ -158,12 +158,14 @@ pytest tests/ -v
 pytest tests/ -v --cov=. --cov-report=term-missing
 ```
 
-Включено **208 тестов**:
+Включено **222 теста**:
 - **test_critical.py** — тесты критических функций (валидация, атомарность, санитизация)
 - **test_architecture.py** — тесты архитектуры (слои, зависимости, протоколы)
 - **test_fixes.py** — тесты исправлений и оптимизаций
 - **test_arch_fixes.py** — тесты архитектурных улучшений
 - **test_audit_fixes.py** — тесты аудита кода
+- **test_architecture_integrity.py** — тесты целостности архитектуры
+- **test_audit_fixes_verification.py** — тесты верификации исправлений аудита
 
 ## Инструменты качества кода
 
@@ -186,7 +188,7 @@ pip check
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 208 passed
+- **Тесты:** 222 passed
 - **Дублирование кода:** 0%
 
 ## Как это работает

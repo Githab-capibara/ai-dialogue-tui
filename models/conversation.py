@@ -16,7 +16,7 @@ from models.provider import MessageDict, ModelProvider
 log = logging.getLogger(__name__)
 
 # Импортируем для обратной совместимости
-__all__ = ["Conversation", "MessageDict", "MAX_CONTEXT_LENGTH"]
+__all__ = ["Conversation", "MessageDict", "MAX_CONTEXT_LENGTH", "ModelId"]
 
 # Константа для ограничения длины контекста
 MAX_CONTEXT_LENGTH: int = 50
@@ -49,7 +49,7 @@ class Conversation:
     topic: str  # Тема диалога
 
     # Конфигурация для dependency injection
-    _config: Config = field(default_factory=Config, repr=False)
+    _config: Config = field(default=None, repr=False)
 
     # Контексты для каждой модели (списки сообщений в формате Ollama)
     _context_a: list[MessageDict] = field(default_factory=list, repr=False)
@@ -70,6 +70,8 @@ class Conversation:
             return
         self._initialized = True
 
+        self._config = self._config or Config()
+
         try:
             self._system_prompt = self._config.default_system_prompt.format(
                 topic=self.topic
@@ -82,31 +84,31 @@ class Conversation:
         self._context_a.append(MessageDict(role="system", content=self._system_prompt))
         self._context_b.append(MessageDict(role="system", content=self._system_prompt))
 
-    def _trim_context_if_needed(self, context: list[MessageDict]) -> list[MessageDict]:
+    def _trim_context_if_needed(
+        self, context: list[MessageDict], max_len: int = MAX_CONTEXT_LENGTH
+    ) -> list[MessageDict]:
         """
-        Обрезать контекст если он превышает MAX_CONTEXT_LENGTH.
+        Обрезать контекст если он превышает max_len.
 
         Сохраняет системный промпт (первое сообщение) и последние сообщения.
         Удаляет старые сообщения из середины контекста.
 
         Args:
             context: Контекст для проверки и возможной обрезки.
+            max_len: Максимальная длина контекста после обрезки.
 
         Returns:
             Обрезанный контекст если было превышение, иначе исходный.
         """
-        if len(context) <= MAX_CONTEXT_LENGTH:
+        if len(context) <= max_len:
             return context
 
-        # Сохраняем системный промпт (первое сообщение)
         system_message = context[0] if context else None
 
-        # Берем последние MAX_CONTEXT_LENGTH - 1 сообщений
         remaining_messages = (
-            context[-(MAX_CONTEXT_LENGTH - 1) :] if len(context) > 1 else []
+            context[-max_len:] if len(context) > max_len else context[1:]
         )
 
-        # Восстанавливаем контекст с системным промптом
         if system_message:
             trimmed = [system_message] + remaining_messages
         else:
@@ -134,15 +136,22 @@ class Conversation:
             role: Роль сообщения ("user", "assistant", "system").
             content: Текст сообщения.
         """
-        context = self._context_a if model_id == "A" else self._context_b
-        context.append(MessageDict(role=role, content=content))
-
-        # Проверяем и обрезаем контекст если нужно
-        if len(context) > MAX_CONTEXT_LENGTH:
-            if model_id == "A":
-                self._context_a = self._trim_context_if_needed(context)
-            else:
-                self._context_b = self._trim_context_if_needed(context)
+        if model_id == "A":
+            context = self._context_a
+            if len(context) >= MAX_CONTEXT_LENGTH:
+                self._context_a = self._trim_context_if_needed(
+                    context, MAX_CONTEXT_LENGTH - 2
+                )
+                context = self._context_a
+            context.append(MessageDict(role=role, content=content))
+        else:
+            context = self._context_b
+            if len(context) >= MAX_CONTEXT_LENGTH:
+                self._context_b = self._trim_context_if_needed(
+                    context, MAX_CONTEXT_LENGTH - 2
+                )
+                context = self._context_b
+            context.append(MessageDict(role=role, content=content))
 
         log.debug(
             "Added %s message to model %s context (total: %d)",
