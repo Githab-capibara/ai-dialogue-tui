@@ -22,7 +22,7 @@ __all__ = ["Conversation", "MessageDict"]
 ModelId = Literal["A", "B"]
 
 
-@dataclass
+@dataclass(slots=True)
 class Conversation:
     """
     Управление диалогом между двумя моделями.
@@ -53,7 +53,7 @@ class Conversation:
     _context_b: list[MessageDict] = field(default_factory=list, repr=False)
 
     # Чей сейчас ход
-    _current_turn: ModelId = "A"
+    _current_turn: ModelId = field(default="A", init=False)
 
     # Системный промпт
     _system_prompt: str = field(init=False, repr=False)
@@ -213,18 +213,14 @@ class Conversation:
         """
         Очистить оба контекста, сохранив только системный промпт и тему.
 
-        Использует .clear() для эффективности вместо создания новых списков.
+        Использует присваивание новых списков для простоты и читаемости.
         """
-        # Сохраняем системный промпт
+        # Создаём новый системный промпт
         system_message = MessageDict(role="system", content=self._system_prompt)
 
-        # Очищаем существующие списки (более эффективно чем создание новых)
-        self._context_a.clear()
-        self._context_b.clear()
-
-        # Добавляем системный промпт обратно
-        self._context_a.append(system_message)
-        self._context_b.append(system_message)
+        # Присваиваем новые списки (проще и понятнее чем .clear())
+        self._context_a = [system_message]
+        self._context_b = [system_message]
 
         # Сбрасываем ход на A
         self._current_turn = "A"

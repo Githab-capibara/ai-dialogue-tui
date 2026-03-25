@@ -136,6 +136,18 @@ MESSAGE_STYLES: Final = MessageStyles()
 UI_IDS: Final = UIElementIDs()
 CSS_CLASSES: Final = CSSClasses()
 
+# Экспорт публичного API модуля
+__all__ = [
+    "StatusStyle",
+    "MessageStyles",
+    "UIElementIDs",
+    "CSSClasses",
+    "MESSAGE_STYLES",
+    "UI_IDS",
+    "CSS_CLASSES",
+    "generate_main_css",
+]
+
 
 def generate_main_css() -> str:
     """

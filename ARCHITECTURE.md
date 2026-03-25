@@ -94,11 +94,38 @@ class ModelProvider(Protocol):
 - Реализует атомарные операции для предотвращения рассинхронизации
 - Зависит только от протокола `ModelProvider`, не от конкретных реализаций
 
+**Оптимизации:**
+- `__slots__` в dataclass для уменьшения потребления памяти
+- Early returns в `__post_init__` для предотвращения повторной инициализации
+- `.copy()` при возврате контекста для безопасности (защита от внешних изменений)
+- Присваивание новых списков в `clear_contexts()` для простоты и читаемости
+
 #### `models/ollama_client.py`
 Класс `OllamaClient` реализует протокол `ModelProvider` для Ollama API:
 - Асинхронный HTTP-клиент на базе aiohttp
 - Валидация ответов API
 - Обработка ошибок с сохранением цепочки исключений
+
+**Обработка исключений:**
+- Используется словарь `_EXCEPTION_HANDLERS` для маппинга типов исключений
+- Конкретные типы исключений вместо broad `Exception`:
+  - `aiohttp.ClientError` — ошибки подключения
+  - `asyncio.TimeoutError` — таймауты запросов
+  - `json.JSONDecodeError` — некорректный JSON
+  - `KeyError`, `TypeError`, `ValueError` — ошибки валидации
+- Функция `_handle_api_error()` для централизованной обработки
+- Сохранение цепочки исключений через `raise ... from`
+
+**Валидация:**
+- `_validate_messages()` — валидация структуры сообщений
+- `_validate_response_structure()` — валидация ответов API
+- `validate_ollama_url()` — валидация URL хоста
+
+**Оптимизации:**
+- Кэшированные дефолтные опции (`_DEFAULT_OPTIONS`)
+- `_HTTPSessionManager` для пулинга соединений
+- List comprehension для эффективной обработки
+- Early returns в функциях валидации
 
 ### Service Layer
 
@@ -186,7 +213,9 @@ class DialogueService:
 - `tests/test_architecture.py` — тесты архитектуры
 - `tests/test_fixes.py` — тесты исправлений
 - `tests/test_arch_fixes.py` — тесты архитектурных изменений
-- `tests/test_audit_fixes.py` — тесты аудита
+- `tests/test_audit_fixes.py` — тесты аудита кода
+
+**Всего: 163 теста**
 
 ### Архитектурные тесты проверяют:
 - Отсутствие зависимостей Domain Layer от Infrastructure
@@ -208,6 +237,31 @@ pytest tests/ -v
 - `temperature`, `max_tokens`, `request_timeout`, `pause_between_messages`
 - `default_system_prompt`, `ollama_host`
 - Валидация URL через `validate_ollama_url()`
+
+### Константы по умолчанию
+
+Модуль определяет константы для параметров конфигурации:
+- `DEFAULT_TEMPERATURE = 0.7` — температура генерации
+- `DEFAULT_MAX_TOKENS = 200` — максимальное количество токенов
+- `DEFAULT_REQUEST_TIMEOUT = 60` — таймаут запроса (сек)
+- `DEFAULT_PAUSE_BETWEEN_MESSAGES = 1.0` — пауза между сообщениями (сек)
+
+### Валидация конфигурации
+
+Класс `Config` использует `__post_init__` для автоматической валидации:
+- `_validate_temperature()` — проверка диапазона [0.0, 1.0]
+- `_validate_max_tokens()` — проверка минимального значения >= 1
+- `_validate_request_timeout()` — проверка минимального значения >= 1
+- `_validate_pause_between_messages()` — проверка минимального значения >= 0.0
+- `validate_ollama_url()` — валидация HTTP/HTTPS URL через `urllib.parse`
+
+При некорректных значениях выбрасывается `ValueError` с подробным сообщением.
+
+### Оптимизации
+
+- **`__slots__`**: Класс `Config` использует `slots=True` для уменьшения потребления памяти
+- **`frozen=True`**: Dataclass заморожен для неизменяемости экземпляров
+- **Early returns**: Функции валидации используют ранние возвраты для эффективности
 
 ## Расширяемость
 
@@ -240,7 +294,7 @@ pip check
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 92 passed
+- **Тесты:** 163 passed
 - **Дублирование кода:** 0%
 - **Циклические зависимости:** отсутствуют
 

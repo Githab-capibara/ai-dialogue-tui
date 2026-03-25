@@ -1,4 +1,7 @@
-"""Сервисный слой для управления бизнес-логикой диалога."""
+"""Сервисный слой для управления бизнес-логикой диалога.
+
+Этот модуль содержит сервис для управления диалогом между моделями.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +10,7 @@ from typing import Protocol
 
 from config import Config
 from models.conversation import Conversation, ModelId
+from models.ollama_client import OllamaError
 from models.provider import ModelProvider
 
 
@@ -144,8 +148,7 @@ class DialogueService:
         Устанавливает флаг _is_paused в True.
         Диалог остается запущенным (is_running=True).
         """
-        if self._is_running:
-            self._is_paused = True
+        self._is_paused = True
 
     def resume(self) -> None:
         """
@@ -153,8 +156,7 @@ class DialogueService:
 
         Сбрасывает флаг _is_paused в False.
         """
-        if self._is_running:
-            self._is_paused = False
+        self._is_paused = False
 
     def stop(self) -> None:
         """
@@ -218,6 +220,9 @@ class DialogueService:
 
             return result
 
+        except OllamaError:
+            # Пробрасываем ошибки Ollama
+            raise
         except Exception as e:
             # Уведомляем UI об ошибке
             if self._ui_callback:

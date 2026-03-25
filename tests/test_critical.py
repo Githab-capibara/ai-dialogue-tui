@@ -1,5 +1,5 @@
 """
-Тесты для критических проблем из отчета аудита.
+Тесты для критических проблем отчета аудита.
 
 Этот модуль содержит тесты для проверки исправлений критических проблем:
 1. Проверка пустого списка моделей в ModelSelectionScreen
@@ -12,9 +12,10 @@
 Note:
     Некоторые тесты содержат дублирующийся код что оправдано для тестирования
     изолированных сценариев.
+    Тесты используют доступ к внутренним атрибутам, что оправдано для тестирования.
 """
 
-# pylint: disable=duplicate-code
+# pylint: disable=duplicate-code,protected-access
 
 from __future__ import annotations
 
@@ -24,10 +25,91 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from aiohttp import ClientError
 
 from config import Config, validate_ollama_url
 from models.conversation import Conversation, MessageDict
 from models.ollama_client import OllamaClient, OllamaError
+from tui.app import ModelSelectionScreen, sanitize_response_for_display, sanitize_topic
+from tui.sanitizer import MAX_RESPONSE_PREVIEW_LENGTH
+
+# Helper-функции для тестов
+
+
+def create_async_mock_response(
+    status: int = 200,
+    json_data: Any = None,
+    raise_on_json: Exception | None = None,
+) -> AsyncMock:
+    """
+    Создать мок для HTTP ответа.
+
+    Args:
+        status: HTTP статус ответа.
+        json_data: Данные для JSON ответа.
+        raise_on_json: Исключение для выброса при вызове json().
+
+    Returns:
+        AsyncMock настроенный для эмуляции ответа.
+    """
+    mock_response = AsyncMock()
+    mock_response.status = status
+
+    if raise_on_json:
+
+        async def raise_error() -> None:
+            raise raise_on_json
+
+        mock_response.json = raise_error
+    else:
+
+        async def return_json() -> Any:
+            return json_data
+
+        mock_response.json = return_json
+
+    return mock_response
+
+
+def create_session_mock(
+    response: AsyncMock | None = None,
+    raise_on_enter: Exception | None = None,
+) -> AsyncMock:
+    """
+    Создать мок для HTTP сессии.
+
+    Args:
+        response: Мок ответа для get/post запросов.
+        raise_on_enter: Исключение для выброса при входе в контекст.
+
+    Returns:
+        AsyncMock настроенный для эмуляции сессии.
+    """
+    mock_context_manager = AsyncContextManagerMock(
+        response=response, raise_on_enter=raise_on_enter
+    )
+    mock_session = AsyncMock()
+    mock_session.get = MagicMock(return_value=mock_context_manager)
+    mock_session.post = MagicMock(return_value=mock_context_manager)
+    mock_session.closed = False
+    return mock_session
+
+
+def create_mock_get_session(mock_session: AsyncMock):
+    """
+    Создать функцию для мока _get_session метода.
+
+    Args:
+        mock_session: Мок сессии для возврата.
+
+    Returns:
+        Асинхронная функция для использования в patch.
+    """
+
+    async def mock_get_session(_self: OllamaClient) -> Any:  # noqa: ANN401
+        return mock_session
+
+    return mock_get_session
 
 
 class AsyncContextManagerMock:  # pylint: disable=too-few-public-methods
@@ -84,6 +166,36 @@ class TestConfigValidation:
         assert validate_ollama_url("") is False
         assert validate_ollama_url(None) is False  # type: ignore
 
+    def test_temperature_validation_min(self) -> None:
+        """Тест валидации temperature минимальное значение."""
+        config = Config(temperature=0.0)
+        assert config.temperature == 0.0
+
+    def test_temperature_validation_max(self) -> None:
+        """Тест валидации temperature максимальное значение."""
+        config = Config(temperature=1.0)
+        assert config.temperature == 1.0
+
+    def test_temperature_validation_out_of_range(self) -> None:
+        """Тест валидации temperature вне диапазона."""
+        with pytest.raises(ValueError, match="temperature"):
+            Config(temperature=1.5)
+
+    def test_max_tokens_validation(self) -> None:
+        """Тест валидации max_tokens."""
+        with pytest.raises(ValueError, match="max_tokens"):
+            Config(max_tokens=0)
+
+    def test_request_timeout_validation(self) -> None:
+        """Тест валидации request_timeout."""
+        with pytest.raises(ValueError, match="request_timeout"):
+            Config(request_timeout=0)
+
+    def test_pause_between_messages_validation(self) -> None:
+        """Тест валидации pause_between_messages."""
+        with pytest.raises(ValueError, match="pause_between_messages"):
+            Config(pause_between_messages=-1.0)
+
 
 class TestOllamaClientValidation:
     """Тесты для проблемы #2: Валидация ключей API в OllamaClient."""
@@ -102,18 +214,12 @@ class TestOllamaClientValidation:
     async def test_list_models_validates_response_structure(self) -> None:
         """Тест что list_models проверяет структуру ответа."""
         # Мок сессии с некорректным ответом (без ключа "models")
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={"invalid": "data"})
-        mock_context_manager = AsyncContextManagerMock(mock_response)
-        mock_session = AsyncMock()
-        mock_session.get = MagicMock(return_value=mock_context_manager)
-        mock_session.closed = False
+        mock_response = create_async_mock_response(json_data={"invalid": "data"})
+        mock_session = create_session_mock(response=mock_response)
 
-        async def mock_get_session(_self: OllamaClient) -> Any:  # noqa: ANN401
-            return mock_session
-
-        with patch.object(OllamaClient, "_get_session", mock_get_session):
+        with patch.object(
+            OllamaClient, "_get_session", create_mock_get_session(mock_session)
+        ):
             client = OllamaClient(host="http://localhost:11434")
             # Должен вернуть пустой список вместо ошибки
             result = await client.list_models()
@@ -123,10 +229,8 @@ class TestOllamaClientValidation:
     async def test_list_models_validates_model_name(self) -> None:
         """Тест что list_models проверяет наличие name у каждой модели."""
         # Мок сессии с моделями без name
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(
-            return_value={
+        mock_response = create_async_mock_response(
+            json_data={
                 "models": [
                     {"name": "llama3"},
                     {"invalid": "model"},  # Без name
@@ -134,15 +238,11 @@ class TestOllamaClientValidation:
                 ]
             }
         )
-        mock_context_manager = AsyncContextManagerMock(mock_response)
-        mock_session = AsyncMock()
-        mock_session.get = MagicMock(return_value=mock_context_manager)
-        mock_session.closed = False
+        mock_session = create_session_mock(response=mock_response)
 
-        async def mock_get_session(_self: OllamaClient) -> Any:  # noqa: ANN401
-            return mock_session
-
-        with patch.object(OllamaClient, "_get_session", mock_get_session):
+        with patch.object(
+            OllamaClient, "_get_session", create_mock_get_session(mock_session)
+        ):
             client = OllamaClient(host="http://localhost:11434")
             result = await client.list_models()
             # Должны быть только модели с name
@@ -151,23 +251,14 @@ class TestOllamaClientValidation:
     @pytest.mark.asyncio
     async def test_list_models_handles_json_decode_error(self) -> None:
         """Тест что list_models обрабатывает JSONDecodeError."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
+        mock_response = create_async_mock_response(
+            raise_on_json=json.JSONDecodeError("Invalid JSON", "", 0)
+        )
+        mock_session = create_session_mock(response=mock_response)
 
-        # Создаем исключение JSONDecodeError
-        async def raise_json_error() -> None:
-            raise json.JSONDecodeError("Invalid JSON", "", 0)
-
-        mock_response.json = raise_json_error
-        mock_context_manager = AsyncContextManagerMock(mock_response)
-        mock_session = AsyncMock()
-        mock_session.get = MagicMock(return_value=mock_context_manager)
-        mock_session.closed = False
-
-        async def mock_get_session(_self: OllamaClient) -> Any:  # noqa: ANN401
-            return mock_session
-
-        with patch.object(OllamaClient, "_get_session", mock_get_session):
+        with patch.object(
+            OllamaClient, "_get_session", create_mock_get_session(mock_session)
+        ):
             client = OllamaClient(host="http://localhost:11434")
             with pytest.raises(OllamaError, match="Некорректный JSON"):
                 await client.list_models()
@@ -252,8 +343,8 @@ class TestConversationAtomicity:
         result = conversation.current_turn
         assert result in ("A", "B")
 
-    def test_clear_contexts_uses_clear_method(self) -> None:
-        """Тест что clear_contexts использует .clear() для эффективности."""
+    def test_clear_contexts_uses_assignment(self) -> None:
+        """Тест что clear_contexts использует присваивание новых списков."""
         conversation = Conversation(
             model_a="llama3",
             model_b="mistral",
@@ -264,15 +355,17 @@ class TestConversationAtomicity:
         conversation.add_message("A", "user", "test")
         conversation.add_message("B", "user", "test")
 
-        context_a_id = id(conversation._context_a)  # pylint: disable=protected-access
-        context_b_id = id(conversation._context_b)  # pylint: disable=protected-access
-
         # Очищаем
         conversation.clear_contexts()
 
-        # Списки должны быть те же объекты (clear modifies in place)
-        assert id(conversation._context_a) == context_a_id  # pylint: disable=protected-access
-        assert id(conversation._context_b) == context_b_id  # pylint: disable=protected-access
+        # Контексты должны содержать только системный промпт
+        context_a = conversation.get_context("A")
+        context_b = conversation.get_context("B")
+
+        assert len(context_a) == 1
+        assert len(context_b) == 1
+        assert context_a[0]["role"] == "system"
+        assert context_b[0]["role"] == "system"
 
 
 class TestMessageTypedDict:
@@ -301,8 +394,6 @@ class TestSanitization:
 
     def test_sanitize_topic_escapes_braces(self) -> None:
         """Тест что sanitize_topic экранирует фигурные скобки."""
-        from tui.app import sanitize_topic  # pylint: disable=import-outside-toplevel
-
         # Фигурные скобки должны быть экранированы
         result = sanitize_topic("Test {injection}")
         assert "{" not in result or "{{" in result
@@ -310,37 +401,26 @@ class TestSanitization:
 
     def test_sanitize_topic_strips_whitespace(self) -> None:
         """Тест что sanitize_topic удаляет пробелы."""
-        from tui.app import sanitize_topic  # pylint: disable=import-outside-toplevel
-
         result = sanitize_topic("  Test topic  ")
         assert result == "Test topic"
 
     def test_sanitize_response_escapes_markup(self) -> None:
         """Тест что sanitize_response экранирует markup."""
-        # pylint: disable=import-outside-toplevel
-        from tui.app import sanitize_response_for_display
-
         # HTML-подобные конструкции должны быть экранированы
         result = sanitize_response_for_display("Test <b>bold</b>")
         assert "<b>" not in result
 
     def test_sanitize_response_replaces_newlines(self) -> None:
         """Тест что sanitize_response заменяет newlines."""
-        # pylint: disable=import-outside-toplevel
-        from tui.app import sanitize_response_for_display
-
         result = sanitize_response_for_display("Line1\nLine2")
         assert "\n" not in result
         assert "Line1 Line2" in result
 
     def test_sanitize_response_truncates_long_text(self) -> None:
         """Тест что sanitize_response обрезает длинный текст."""
-        # pylint: disable=import-outside-toplevel
-        from tui.app import sanitize_response_for_display
-
         long_text = "A" * 200
         result = sanitize_response_for_display(long_text)
-        assert len(result) <= 103  # 100 + "..."
+        assert len(result) <= MAX_RESPONSE_PREVIEW_LENGTH + 3  # 100 + "..."
 
 
 class TestMainExceptionHandling:
@@ -388,29 +468,39 @@ class TestModelSelectionScreen:
 
     def test_init_with_empty_models(self) -> None:
         """Тест инициализации с пустым списком моделей."""
-        # pylint: disable=import-outside-toplevel
-        from tui.app import ModelSelectionScreen
-
         # Не должно вызывать IndexError
         screen = ModelSelectionScreen(models=[])
-        assert screen._available_models == []  # pylint: disable=protected-access
+        assert screen._available_models == []
 
     def test_init_with_single_model(self) -> None:
         """Тест инициализации с одной моделью."""
-        # pylint: disable=import-outside-toplevel
-        from tui.app import ModelSelectionScreen
-
         # Не должно вызывать IndexError
         screen = ModelSelectionScreen(models=["llama3"])
-        assert screen._available_models == ["llama3"]  # pylint: disable=protected-access
+        assert screen._available_models == ["llama3"]
 
     def test_init_with_two_models(self) -> None:
         """Тест инициализации с двумя моделями."""
-        # pylint: disable=import-outside-toplevel
-        from tui.app import ModelSelectionScreen
-
         screen = ModelSelectionScreen(models=["llama3", "mistral"])
-        assert screen._available_models == ["llama3", "mistral"]  # pylint: disable=protected-access
+        assert screen._available_models == ["llama3", "mistral"]
+
+    def test_get_model_value_with_empty_list(self) -> None:
+        """Тест _get_model_value с пустым списком."""
+        screen = ModelSelectionScreen(models=[])
+        result = screen._get_model_value(0)
+        assert result is None
+
+    def test_get_model_value_with_single_model(self) -> None:
+        """Тест _get_model_value с одной моделью."""
+        screen = ModelSelectionScreen(models=["llama3"])
+        assert screen._get_model_value(0) == "llama3"
+        assert screen._get_model_value(1) == "llama3"  # Возвращает последнюю
+
+    def test_get_model_value_with_multiple_models(self) -> None:
+        """Тест _get_model_value с несколькими моделями."""
+        screen = ModelSelectionScreen(models=["llama3", "mistral"])
+        assert screen._get_model_value(0) == "llama3"
+        assert screen._get_model_value(1) == "mistral"
+        assert screen._get_model_value(2) == "mistral"  # Возвращает последнюю
 
 
 class TestOllamaClientChainedExceptions:
@@ -419,19 +509,15 @@ class TestOllamaClientChainedExceptions:
     @pytest.mark.asyncio
     async def test_list_models_preserves_exception_chain(self) -> None:
         """Тест что list_models сохраняет цепочку исключений."""
-        from aiohttp import ClientError  # pylint: disable=import-outside-toplevel
-
         mock_context_manager = AsyncContextManagerMock(
             raise_on_enter=ClientError("Connection failed")
         )
-        mock_session = AsyncMock()
+        mock_session = create_session_mock(response=None)
         mock_session.get = MagicMock(return_value=mock_context_manager)
-        mock_session.closed = False
 
-        async def mock_get_session(_self: OllamaClient) -> Any:  # noqa: ANN401
-            return mock_session
-
-        with patch.object(OllamaClient, "_get_session", mock_get_session):
+        with patch.object(
+            OllamaClient, "_get_session", create_mock_get_session(mock_session)
+        ):
             client = OllamaClient(host="http://localhost:11434")
             with pytest.raises(OllamaError) as exc_info:
                 await client.list_models()
@@ -442,19 +528,15 @@ class TestOllamaClientChainedExceptions:
     @pytest.mark.asyncio
     async def test_generate_preserves_exception_chain(self) -> None:
         """Тест что generate сохраняет цепочку исключений."""
-        from aiohttp import ClientError  # pylint: disable=import-outside-toplevel
-
         mock_context_manager = AsyncContextManagerMock(
             raise_on_enter=ClientError("Connection failed")
         )
-        mock_session = AsyncMock()
+        mock_session = create_session_mock(response=None)
         mock_session.post = MagicMock(return_value=mock_context_manager)
-        mock_session.closed = False
 
-        async def mock_get_session(_self: OllamaClient) -> Any:  # noqa: ANN401
-            return mock_session
-
-        with patch.object(OllamaClient, "_get_session", mock_get_session):
+        with patch.object(
+            OllamaClient, "_get_session", create_mock_get_session(mock_session)
+        ):
             client = OllamaClient(host="http://localhost:11434")
             with pytest.raises(OllamaError) as exc_info:
                 await client.generate("llama3", [{"role": "user", "content": "test"}])
@@ -473,7 +555,7 @@ class TestDialogueAppPauseHandling:  # pylint: disable=too-few-public-methods
         app = DialogueApp()
 
         # Если conversation нет, не должно быть ошибок
-        app._conversation = None  # pylint: disable=protected-access
+        app._controller = None  # pylint: disable=protected-access
         # Вызов не должен вызывать AttributeError
         app.on_pause_pressed()
 

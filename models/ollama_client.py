@@ -7,18 +7,62 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, Final
+from typing import Any, Callable, Final
 
 import aiohttp
 
-from config import Config, validate_ollama_url
+from config import (
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_TEMPERATURE,
+    Config,
+    validate_ollama_url,
+)
 from models.provider import MessageDict
 
 # Кэшированные дефолтные опции для производительности
 _DEFAULT_OPTIONS: Final = {
-    "temperature": 0.7,
-    "num_predict": 200,
+    "temperature": DEFAULT_TEMPERATURE,
+    "num_predict": DEFAULT_MAX_TOKENS,
 }
+
+# Маппинг исключений для обработки ошибок API
+_EXCEPTION_HANDLERS: Final[dict[type[Exception], Callable[..., str]]] = {
+    aiohttp.ClientError: lambda host, **_: f"Не удалось подключиться к Ollama ({host})",
+    asyncio.TimeoutError: lambda timeout, **_: f"Превышен таймаут запроса ({timeout}с)",
+    json.JSONDecodeError: lambda **_: "Некорректный JSON в ответе API",
+    KeyError: lambda operation, **_: f"Неожиданная ошибка при {operation}",
+    TypeError: lambda operation, **_: f"Неожиданная ошибка при {operation}",
+    ValueError: lambda **_: "Некорректный формат ответа API",
+}
+
+
+def _get_error_message(
+    exc_type: type[Exception],
+    operation: str,
+    host: str | None = None,
+    timeout: int | None = None,
+) -> str:
+    """
+    Получить сообщение об ошибке на основе типа исключения.
+
+    Args:
+        exc_type: Тип исключения.
+        operation: Название операции ("list_models" или "generate").
+        host: URL хоста (опционально).
+        timeout: Таймаут в секундах (опционально).
+
+    Returns:
+        Сообщение об ошибке.
+    """
+    # Ищем подходящий обработчик в иерархии исключений
+    for exception_class, handler in _EXCEPTION_HANDLERS.items():
+        if issubclass(exc_type, exception_class):
+            return handler(
+                operation=operation,
+                host=host,
+                timeout=timeout,
+            )
+    return f"Неожиданная ошибка при {operation}"
 
 
 def _handle_api_error(
@@ -31,6 +75,7 @@ def _handle_api_error(
     Обработать исключение API и вернуть OllamaError.
 
     Централизованная обработка ошибок для методов list_models и generate.
+    Использует словарь маппинга исключений для определения сообщения об ошибке.
 
     Args:
         operation: Название операции ("list_models" или "generate").
@@ -41,61 +86,54 @@ def _handle_api_error(
     Returns:
         OllamaError с соответствующим сообщением.
     """
-    # pylint: disable=too-many-return-statements
     # Пробрасываем наши ошибки дальше
     if isinstance(exc, OllamaError):
         return exc
 
-    # Ошибки подключения
-    if isinstance(exc, aiohttp.ClientError):
-        if operation == "list_models":
-            return OllamaError(
-                f"Не удалось подключиться к Ollama ({host})",
-                original_exception=exc,
-            )
-        return OllamaError(
-            "Ошибка подключения при генерации",
-            original_exception=exc,
-        )
-
-    # Таймауты
-    if isinstance(exc, asyncio.TimeoutError):
-        if timeout:
-            return OllamaError(
-                f"Превышен таймаут запроса ({timeout}с)",
-                original_exception=exc,
-            )
-        return OllamaError(
-            "Превышен таймаут запроса",
-            original_exception=exc,
-        )
-
-    # Ошибки JSON
-    if isinstance(exc, json.JSONDecodeError):
-        return OllamaError(
-            "Некорректный JSON в ответе API",
-            original_exception=exc,
-        )
-
-    # Ошибки структуры данных
-    if isinstance(exc, (KeyError, TypeError)):
-        return OllamaError(
-            f"Неожиданная ошибка при {operation}",
-            original_exception=exc,
-        )
-
-    # Ошибки валидации ответа
-    if isinstance(exc, ValueError):
-        return OllamaError(
-            "Некорректный формат ответа API",
-            original_exception=exc,
-        )
-
-    # Все остальные ошибки
-    return OllamaError(
-        f"Неожиданная ошибка при {operation}",
-        original_exception=exc,
+    # Получаем сообщение об ошибке через маппинг
+    message = _get_error_message(
+        type(exc),
+        operation=operation,
+        host=host,
+        timeout=timeout,
     )
+
+    return OllamaError(message, original_exception=exc)
+
+
+def _validate_messages(messages: Any) -> None:
+    """
+    Валидировать параметр messages для generate метода.
+
+    Args:
+        messages: Параметр messages для валидации.
+
+    Raises:
+        ValueError: Если messages некорректный.
+    """
+    if not isinstance(messages, list):
+        raise ValueError("messages должен быть списком")
+
+    for msg in messages:
+        if not isinstance(msg, dict):
+            raise ValueError("Каждое сообщение должно быть словарём")
+        if "role" not in msg or "content" not in msg:
+            raise ValueError("Сообщение должно содержать 'role' и 'content'")
+
+
+def _validate_response_structure(data: Any, _operation: str) -> None:
+    """
+    Валидировать структуру ответа API.
+
+    Args:
+        data: Данные ответа для валидации.
+        _operation: Название операции для сообщения об ошибке.
+
+    Raises:
+        OllamaError: Если структура некорректная.
+    """
+    if not isinstance(data, dict):
+        raise OllamaError("Некорректный формат ответа API")
 
 
 class _HTTPSessionManager:
@@ -251,8 +289,7 @@ class OllamaClient:
                     raise OllamaError("Некорректный JSON в ответе API") from e
 
                 # Валидация структуры ответа
-                if not isinstance(data, dict):
-                    raise OllamaError("Некорректный формат ответа API")
+                _validate_response_structure(data, "list_models")
 
                 # Проверка ключа "models" с дефолтным значением
                 models = data.get("models", [])
@@ -269,7 +306,14 @@ class OllamaClient:
                     and model.get("name")
                 ]
 
-        except Exception as e:
+        except (
+            aiohttp.ClientError,
+            asyncio.TimeoutError,
+            json.JSONDecodeError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as e:
             raise _handle_api_error(
                 "list_models", e, host=self.host, timeout=self._config.request_timeout
             ) from e
@@ -296,14 +340,7 @@ class OllamaClient:
             ValueError: Если messages некорректный.
         """
         # Валидация параметра messages
-        if not isinstance(messages, list):
-            raise ValueError("messages должен быть списком")
-
-        for msg in messages:
-            if not isinstance(msg, dict):
-                raise ValueError("Каждое сообщение должно быть словарём")
-            if "role" not in msg or "content" not in msg:
-                raise ValueError("Сообщение должно содержать 'role' и 'content'")
+        _validate_messages(messages)
 
         session = await self._get_session()
         url = f"{self.host}/api/chat"
@@ -338,8 +375,7 @@ class OllamaClient:
                     raise OllamaError("Некорректный JSON в ответе API") from e
 
                 # Валидация структуры ответа
-                if not isinstance(data, dict):
-                    raise OllamaError("Некорректный формат ответа API")
+                _validate_response_structure(data, "generate")
 
                 # Использование .get() с дефолтными значениями
                 message = data.get("message", {})
@@ -349,7 +385,14 @@ class OllamaClient:
                 content = message.get("content", "")
                 return content if isinstance(content, str) else ""
 
-        except Exception as e:
+        except (
+            aiohttp.ClientError,
+            asyncio.TimeoutError,
+            json.JSONDecodeError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as e:
             raise _handle_api_error(
                 "generate", e, host=self.host, timeout=self._config.request_timeout
             ) from e

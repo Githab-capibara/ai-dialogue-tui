@@ -39,6 +39,9 @@ from tui.styles import (
     generate_main_css,
 )
 
+# Константа таймаута для уведомлений
+DEFAULT_NOTIFY_TIMEOUT: int = 10
+
 
 def _get_status_style_string(style: StatusStyle | str) -> str:
     """
@@ -106,10 +109,7 @@ class ModelSelectionScreen(ModalScreen):
             with Horizontal(id=UI_IDS.models_row):
                 with Vertical(id=UI_IDS.model_a_container):
                     yield Label("Модель A:", id=UI_IDS.model_a_label)
-                    # Проверка на пустой список моделей
-                    model_a_value = (
-                        self._available_models[0] if self._available_models else None
-                    )
+                    model_a_value = self._get_model_value(0)
                     yield Select(
                         [(m, m) for m in self._available_models],
                         id=UI_IDS.model_a_select,
@@ -118,13 +118,7 @@ class ModelSelectionScreen(ModalScreen):
 
                 with Vertical(id=UI_IDS.model_b_container):
                     yield Label("Модель B:", id=UI_IDS.model_b_label)
-                    # Проверка на достаточное количество моделей
-                    if len(self._available_models) > 1:
-                        model_b_value = self._available_models[1]
-                    elif self._available_models:
-                        model_b_value = self._available_models[0]
-                    else:
-                        model_b_value = None
+                    model_b_value = self._get_model_value(1)
                     yield Select(
                         [(m, m) for m in self._available_models],
                         id=UI_IDS.model_b_select,
@@ -135,12 +129,40 @@ class ModelSelectionScreen(ModalScreen):
                 yield Button("Начать диалог", id=UI_IDS.start_btn, variant="primary")
                 yield Button("Отмена", id=UI_IDS.cancel_btn, variant="error")
 
+    def _get_model_value(self, index: int) -> str | None:
+        """
+        Получить значение модели для селектора по индексу.
+
+        Args:
+            index: Индекс модели в списке.
+
+        Returns:
+            Название модели или None если список пуст.
+        """
+        if not self._available_models:
+            return None
+        if index < len(self._available_models):
+            return self._available_models[index]
+        return self._available_models[-1]
+
     def action_cancel(self) -> None:
         """Обработать нажатие Escape для отмены выбора модели."""
         self.dismiss(None)
 
-    @on(Button.Pressed, f"#{UI_IDS.start_btn}")
-    def on_start_pressed(self) -> None:
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """
+        Обработать нажатие кнопки.
+
+        Args:
+            event: Событие нажатия кнопки.
+        """
+        button_id = event.button.id
+        if button_id == UI_IDS.start_btn:
+            self._on_start_pressed()
+        elif button_id == UI_IDS.cancel_btn:
+            self.dismiss(None)
+
+    def _on_start_pressed(self) -> None:
         """Обработать нажатие кнопки начала диалога."""
         model_a = self.query_one(f"#{UI_IDS.model_a_select}", Select).value
         model_b = self.query_one(f"#{UI_IDS.model_b_select}", Select).value
@@ -150,6 +172,7 @@ class ModelSelectionScreen(ModalScreen):
                 "Выберите две разные модели!",
                 title="Ошибка",
                 severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             return
 
@@ -158,15 +181,11 @@ class ModelSelectionScreen(ModalScreen):
                 "Выберите обе модели!",
                 title="Ошибка",
                 severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             return
 
         self.dismiss((model_a, model_b))
-
-    @on(Button.Pressed, f"#{UI_IDS.cancel_btn}")
-    def on_cancel_pressed(self) -> None:
-        """Обработать нажатие кнопки отмены."""
-        self.dismiss(None)
 
 
 class TopicInputScreen(ModalScreen):
@@ -196,15 +215,18 @@ class TopicInputScreen(ModalScreen):
         """Обработать нажатие Escape для отмены ввода темы."""
         self.dismiss(None)
 
-    @on(Button.Pressed, f"#{UI_IDS.topic_start_btn}")
-    def on_start_pressed(self) -> None:
-        """Обработать нажатие кнопки начала диалога."""
-        self._submit_topic()
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """
+        Обработать нажатие кнопки.
 
-    @on(Button.Pressed, f"#{UI_IDS.topic_cancel_btn}")
-    def on_cancel_pressed(self) -> None:
-        """Обработать нажатие кнопки отмены."""
-        self.dismiss(None)
+        Args:
+            event: Событие нажатия кнопки.
+        """
+        button_id = event.button.id
+        if button_id == UI_IDS.topic_start_btn:
+            self._submit_topic()
+        elif button_id == UI_IDS.topic_cancel_btn:
+            self.dismiss(None)
 
     def _submit_topic(self) -> None:
         topic_input = self.query_one(f"#{UI_IDS.topic_input}", Input)
@@ -215,6 +237,7 @@ class TopicInputScreen(ModalScreen):
                 "Введите тему диалога!",
                 title="Ошибка",
                 severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             return
 
@@ -288,7 +311,7 @@ class DialogueApp(App):
             status_label.update(
                 f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
             )
-        except Exception:  # pylint: disable=broad-exception-caught
+        except (AttributeError, KeyError, RuntimeError):
             log.exception("Ошибка при обновлении UI состояния")
 
     async def on_mount(self) -> None:
@@ -309,7 +332,7 @@ class DialogueApp(App):
                     "Установите модель командой: ollama pull llama3",
                     title="Ошибка",
                     severity="error",
-                    timeout=10,
+                    timeout=DEFAULT_NOTIFY_TIMEOUT,
                 )
                 self.query_one("#status-value", Label).update("[red]Нет моделей[/red]")
                 return
@@ -335,7 +358,7 @@ class DialogueApp(App):
                 "Не удалось подключиться к Ollama. Проверьте что сервис запущен.",
                 title="Ошибка подключения",
                 severity="error",
-                timeout=10,
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             self.query_one("#status-value", Label).update(
                 "[red]Ошибка подключения[/red]"
@@ -345,6 +368,7 @@ class DialogueApp(App):
                 f"Ошибка конфигурации: {e}",
                 title="Ошибка",
                 severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             self.query_one("#status-value", Label).update(
                 "[red]Ошибка конфигурации[/red]"
@@ -356,6 +380,7 @@ class DialogueApp(App):
                 "Произошла непредвиденная ошибка при запуске",
                 title="Ошибка",
                 severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             self.query_one("#status-value", Label).update(
                 "[red]Неизвестная ошибка[/red]"
@@ -423,6 +448,7 @@ class DialogueApp(App):
                 "Сначала выберите модели и тему!",
                 title="Ошибка",
                 severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             return
 
@@ -442,6 +468,7 @@ class DialogueApp(App):
                 "Диалог ещё не настроен!",
                 title="Ошибка",
                 severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             return
         self._controller.handle_pause()
@@ -489,7 +516,8 @@ class DialogueApp(App):
         try:
             while service.is_running and not service.is_paused:
                 # Проверка на отмену задачи
-                if asyncio.current_task() and asyncio.current_task().cancelled():
+                current_task = asyncio.current_task()
+                if current_task and current_task.is_cancelled():
                     break
 
                 # Получаем информацию о текущей модели
@@ -526,6 +554,7 @@ class DialogueApp(App):
                         "Ошибка генерации ответа",
                         title="Ошибка",
                         severity="error",
+                        timeout=DEFAULT_NOTIFY_TIMEOUT,
                     )
                     raise  # Пробрасываем ошибку дальше для обработки
 
@@ -564,6 +593,5 @@ class DialogueApp(App):
             elif self._client:
                 await self._client.close()
 
-        except (aiohttp.ClientError, asyncio.TimeoutError, OSError):
-            # Игнорируем ошибки при очистке
-            pass
+        except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as e:
+            log.warning("Ошибка при очистке ресурсов: %s", e)

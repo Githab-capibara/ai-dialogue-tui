@@ -1,9 +1,27 @@
-"""Конфигурация приложения AI Dialogue TUI."""
+"""Конфигурация приложения AI Dialogue TUI.
+
+Этот модуль содержит константы по умолчанию и класс конфигурации
+с полной валидацией параметров.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Final
 from urllib.parse import urlparse
+
+# Константы по умолчанию для параметров генерации
+DEFAULT_TEMPERATURE: Final = 0.7
+DEFAULT_MAX_TOKENS: Final = 200
+DEFAULT_REQUEST_TIMEOUT: Final = 60  # секунд на запрос к Ollama
+DEFAULT_PAUSE_BETWEEN_MESSAGES: Final = 1.0  # секунд между сообщениями
+
+# Диапазоны валидации
+MIN_TEMPERATURE: Final = 0.0
+MAX_TEMPERATURE: Final = 1.0
+MIN_MAX_TOKENS: Final = 1
+MIN_REQUEST_TIMEOUT: Final = 1
+MIN_PAUSE_BETWEEN_MESSAGES: Final = 0.0
 
 
 def validate_ollama_url(url: str) -> bool:
@@ -45,7 +63,73 @@ def validate_ollama_url(url: str) -> bool:
         return False
 
 
-@dataclass(frozen=True)
+def _validate_temperature(value: float) -> None:
+    """
+    Валидировать параметр temperature.
+
+    Args:
+        value: Значение temperature для валидации.
+
+    Raises:
+        ValueError: Если значение вне диапазона [0.0, 1.0].
+    """
+    if not MIN_TEMPERATURE <= value <= MAX_TEMPERATURE:
+        raise ValueError(
+            f"temperature должен быть в диапазоне [{MIN_TEMPERATURE}, {MAX_TEMPERATURE}], "
+            f"получено {value}"
+        )
+
+
+def _validate_max_tokens(value: int) -> None:
+    """
+    Валидировать параметр max_tokens.
+
+    Args:
+        value: Значение max_tokens для валидации.
+
+    Raises:
+        ValueError: Если значение меньше минимального.
+    """
+    if value < MIN_MAX_TOKENS:
+        raise ValueError(
+            f"max_tokens должен быть >= {MIN_MAX_TOKENS}, получено {value}"
+        )
+
+
+def _validate_request_timeout(value: int) -> None:
+    """
+    Валидировать параметр request_timeout.
+
+    Args:
+        value: Значение request_timeout для валидации.
+
+    Raises:
+        ValueError: Если значение меньше минимального.
+    """
+    if value < MIN_REQUEST_TIMEOUT:
+        raise ValueError(
+            f"request_timeout должен быть >= {MIN_REQUEST_TIMEOUT}, получено {value}"
+        )
+
+
+def _validate_pause_between_messages(value: float) -> None:
+    """
+    Валидировать параметр pause_between_messages.
+
+    Args:
+        value: Значение pause_between_messages для валидации.
+
+    Raises:
+        ValueError: Если значение меньше минимального.
+    """
+    if value < MIN_PAUSE_BETWEEN_MESSAGES:
+        raise ValueError(
+            f"pause_between_messages должен быть >= {MIN_PAUSE_BETWEEN_MESSAGES}, "
+            f"получено {value}"
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class Config:
     """
     Параметры конфигурации для диалога ИИ-моделей.
@@ -60,12 +144,12 @@ class Config:
     """
 
     # Параметры генерации Ollama
-    temperature: float = 0.7
-    max_tokens: int = 200
+    temperature: float = DEFAULT_TEMPERATURE
+    max_tokens: int = DEFAULT_MAX_TOKENS
 
     # Таймауты и задержки
-    request_timeout: int = 60  # секунд на запрос к Ollama
-    pause_between_messages: float = 1.0  # секунд между сообщениями
+    request_timeout: int = DEFAULT_REQUEST_TIMEOUT
+    pause_between_messages: float = DEFAULT_PAUSE_BETWEEN_MESSAGES
 
     # Системный промпт
     default_system_prompt: str = (
@@ -82,8 +166,14 @@ class Config:
         Валидация конфигурации после инициализации.
 
         Raises:
-            ValueError: Если ollama_host некорректный.
+            ValueError: Если какой-либо параметр некорректный.
         """
+        # Валидация числовых параметров
+        _validate_temperature(self.temperature)
+        _validate_max_tokens(self.max_tokens)
+        _validate_request_timeout(self.request_timeout)
+        _validate_pause_between_messages(self.pause_between_messages)
+
         # Валидация URL через urllib.parse
         if not validate_ollama_url(self.ollama_host):
             raise ValueError(f"Некорректный URL Ollama: {self.ollama_host}")
