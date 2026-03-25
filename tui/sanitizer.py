@@ -30,7 +30,14 @@ def sanitize_topic(topic: str) -> str:
 
     Returns:
         Очищенная тема.
+
+    Raises:
+        TypeError: Если topic не является строкой.
     """
+    if not isinstance(topic, str):
+        raise TypeError(f"topic должен быть строкой, получен {type(topic).__name__}")
+    if not topic:
+        return ""
     topic = topic.strip()
     topic = topic.replace("{", "{{").replace("}", "}}")
     topic = re.sub(r"\[([^\]]*)\]", r"[[\1]]", topic)
@@ -49,10 +56,36 @@ def sanitize_response_for_display(response: str) -> str:
 
     Returns:
         Безопасный для отображения текст.
+
+    Raises:
+        TypeError: Если response не является строкой.
     """
+    if not isinstance(response, str):
+        raise TypeError(
+            f"response должен быть строкой, получен {type(response).__name__}"
+        )
+    if not response:
+        return ""
+
+    # HTML экранирование базовых символов
     response = html.escape(response, quote=False)
-    response = response.replace("[", "[[").replace("]", "]]")
-    response = response.replace("\n", " ")
+
+    # Экранирование Textual markup символов
+    # Порядок важен: сначала экранируем специальные символы
+    response = response.replace("\\", "\\\\")  # Экранируем backslash
+    response = response.replace("[", "[[")  # Square brackets
+    response = response.replace("]", "]]")  # Square brackets
+    response = response.replace("{", "{{")  # Curly braces
+    response = response.replace("}", "}}")  # Curly braces
+    response = response.replace("@", "@@")  # CSS class prefix
+    response = response.replace("#", "##")  # ID prefix
+    response = response.replace("*", "\\*")  # Bold/italic marker
+    response = response.replace("_", "\\_")  # Italic marker
+    response = response.replace("`", "\\`")  # Code marker
+    response = response.replace("~", "\\~")  # Strikethrough marker
+    response = response.replace("|", "\\|")  # Table separator
+    response = response.replace("\n", " ")  # Newlines
+
     if len(response) > MAX_RESPONSE_PREVIEW_LENGTH:
         response = response[:MAX_RESPONSE_PREVIEW_LENGTH] + "..."
     return response

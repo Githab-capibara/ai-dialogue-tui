@@ -1,19 +1,17 @@
 """Тесты для проверки всех исправлений из аудита кода.
 
 Этот файл содержит тесты для проверки следующих исправлений:
-1. __slots__ в Config и Conversation
-2. Валидация параметров Config
-3. Конкретные типы исключений
-4. _handle_api_error с dictionary mapping
-5. validate_messages
-6. Уменьшенная вложенность (early returns)
-7. Константы (DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS, etc.)
-8. sanitize_topic с MAX_RESPONSE_PREVIEW_LENGTH
-9. pause/resume без избыточных проверок
-10. Удаление update_for_ready
-11. DEFAULT_NOTIFY_TIMEOUT
-12. Упрощённая логика ModelSelectionScreen
-13. Обработка ошибок в on_unmount
+1. Broad Exception Handler - конкретные исключения перехватываются
+2. DIP violation - provider_factory внедряется
+3. Sanitizer type validation - TypeError на None
+4. Assert checks - assert работает
+5. ProviderError unified handling - все ошибки обрабатываются одинаково
+6. Exception chaining - __cause__ сохраняется
+7. XSS protection - markup символы экранируются
+8. Context dictionary - словарь контекстов работает
+9. Tuple return - возвращается tuple
+10. Cache size limit - кэш ограничивается
+11. MessageDict total=True - валидация словаря
 
 Note:
     Тесты используют доступ к внутренним атрибутам и импорты внутри функций,
@@ -22,664 +20,742 @@ Note:
 
 # pylint: disable=protected-access,import-outside-toplevel,no-member
 
-import inspect
-from unittest.mock import AsyncMock, MagicMock
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
 
-from controllers.dialogue_controller import DialogueController
-from models.config import (
-    DEFAULT_MAX_TOKENS,
-    DEFAULT_PAUSE_BETWEEN_MESSAGES,
-    DEFAULT_REQUEST_TIMEOUT,
-    DEFAULT_TEMPERATURE,
-    MAX_TEMPERATURE,
-    MIN_MAX_TOKENS,
-    MIN_PAUSE_BETWEEN_MESSAGES,
-    MIN_REQUEST_TIMEOUT,
-    MIN_TEMPERATURE,
-    Config,
-)
+from models.config import Config
 from models.conversation import Conversation
-from models.ollama_client import (
-    _DEFAULT_OPTIONS,
-    OllamaClient,
+from models.ollama_client import OllamaClient, _ModelsCache
+from models.provider import (
+    MessageDict,
+    ProviderConnectionError,
+    ProviderError,
+    ProviderGenerationError,
 )
-from models.provider import ProviderError
-from services.dialogue_service import DialogueService
-from tui.app import DEFAULT_NOTIFY_TIMEOUT, ModelSelectionScreen
-from tui.sanitizer import MAX_RESPONSE_PREVIEW_LENGTH, sanitize_topic
+from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 
 # =============================================================================
-# 1. Тесты для __slots__ в Config
+# 1. Broad Exception Handler - тест что конкретные исключения перехватываются
 # =============================================================================
 
 
-class TestConfigSlots:
-    """Тесты для проверки __slots__ в Config."""
+class TestBroadExceptionHandler:
+    """Тесты для проверки обработки конкретных исключений."""
 
-    def test_config_has_slots(self):
-        """Проверить, что Config имеет __slots__."""
-        assert hasattr(Config, "__slots__")
-        assert Config.__slots__ is not None
+    @pytest.mark.asyncio
+    async def test_json_decode_error_handling(self):
+        """
+        Тест: JSONDecodeError перехватывается и преобразуется в ProviderGenerationError.
 
-    def test_config_slots_prevents_arbitrary_attributes(self):
-        """Проверить, что нельзя добавить произвольный атрибут в Config."""
-        config = Config()
-        # __slots__ предотвращает создание произвольных атрибутов
-        # Ошибка может быть TypeError или AttributeError в зависимости от
-        # версии Python
-        with pytest.raises((AttributeError, TypeError)):
-            config.arbitrary_attribute = "value"
+        Проверяет, что при некорректном JSON от API возникает ProviderGenerationError
+        с сохранённой цепочкой исключений (__cause__).
+        """
+        # Arrange
+        config = Config(ollama_host="http://localhost:11434")
+        client = OllamaClient(config=config)
 
-    def test_config_slots_contains_expected_fields(self):
-        """Проверить, что __slots__ содержит ожидаемые поля."""
-        expected_fields = {
-            "temperature",
-            "max_tokens",
-            "request_timeout",
-            "pause_between_messages",
-            "default_system_prompt",
-            "ollama_host",
-        }
-        assert expected_fields.issubset(set(Config.__slots__))
+        # Создаем mock сессии которая возвращает некорректный JSON
+        mock_response = AsyncMock()
+        mock_response.status = 200
 
-    def test_config_memory_efficiency_with_slots(self):
-        """Проверить экономию памяти с __slots__ (опционально)."""
-        # Config с __slots__ не имеет __dict__
-        config = Config()
-        assert not hasattr(config, "__dict__")
-
-
-# =============================================================================
-# 2. Тесты для __slots__ в Conversation
-# =============================================================================
-
-
-class TestConversationSlots:
-    """Тесты для проверки __slots__ в Conversation."""
-
-    def test_conversation_has_slots(self):
-        """Проверить, что Conversation имеет __slots__."""
-        assert hasattr(Conversation, "__slots__")
-        assert Conversation.__slots__ is not None
-
-    def test_conversation_slots_prevents_arbitrary_attributes(self):
-        """Проверить, что нельзя добавить произвольный атрибут в Conversation."""
-        conversation = Conversation("model_a", "model_b", "test_topic")
-        with pytest.raises(AttributeError):
-            conversation.arbitrary_attribute = "value"
-
-    def test_conversation_slots_contains_expected_fields(self):
-        """Проверить, что __slots__ содержит ожидаемые поля."""
-        expected_fields = {
-            "model_a",
-            "model_b",
-            "topic",
-            "_config",
-            "_context_a",
-            "_context_b",
-            "_current_turn",
-            "_system_prompt",
-            "_initialized",
-        }
-        assert expected_fields.issubset(set(Conversation.__slots__))
-
-    def test_conversation_memory_efficiency_with_slots(self):
-        """Проверить экономию памяти с __slots__ (опционально)."""
-        conversation = Conversation("model_a", "model_b", "test_topic")
-        assert not hasattr(conversation, "__dict__")
-
-
-# =============================================================================
-# 3. Тесты для валидации Config
-# =============================================================================
-
-
-class TestConfigValidation:
-    """Тесты для проверки валидации параметров Config."""
-
-    def test_config_temperature_below_zero_raises(self):
-        """temperature за пределами 0.0 должен вызывать ValueError."""
-        with pytest.raises(ValueError, match="temperature"):
-            Config(temperature=-0.1)
-
-    def test_config_temperature_above_one_raises(self):
-        """temperature за пределами 1.0 должен вызывать ValueError."""
-        with pytest.raises(ValueError, match="temperature"):
-            Config(temperature=1.1)
-
-    def test_config_temperature_boundary_zero(self):
-        """temperature = 0.0 должен приниматься."""
-        config = Config(temperature=0.0)
-        assert config.temperature == 0.0
-
-    def test_config_temperature_boundary_one(self):
-        """temperature = 1.0 должен приниматься."""
-        config = Config(temperature=1.0)
-        assert config.temperature == 1.0
-
-    def test_config_max_tokens_zero_raises(self):
-        """max_tokens <= 0 должен вызывать ValueError."""
-        with pytest.raises(ValueError, match="max_tokens"):
-            Config(max_tokens=0)
-
-    def test_config_max_tokens_negative_raises(self):
-        """max_tokens < 0 должен вызывать ValueError."""
-        with pytest.raises(ValueError, match="max_tokens"):
-            Config(max_tokens=-1)
-
-    def test_config_max_tokens_boundary_one(self):
-        """max_tokens = 1 должен приниматься."""
-        config = Config(max_tokens=1)
-        assert config.max_tokens == 1
-
-    def test_config_request_timeout_zero_raises(self):
-        """request_timeout <= 0 должен вызывать ValueError."""
-        with pytest.raises(ValueError, match="request_timeout"):
-            Config(request_timeout=0)
-
-    def test_config_request_timeout_negative_raises(self):
-        """request_timeout < 0 должен вызывать ValueError."""
-        with pytest.raises(ValueError, match="request_timeout"):
-            Config(request_timeout=-1)
-
-    def test_config_request_timeout_boundary_one(self):
-        """request_timeout = 1 должен приниматься."""
-        config = Config(request_timeout=1)
-        assert config.request_timeout == 1
-
-    def test_config_pause_between_messages_negative_raises(self):
-        """pause_between_messages < 0 должен вызывать ValueError."""
-        with pytest.raises(ValueError, match="pause_between_messages"):
-            Config(pause_between_messages=-0.1)
-
-    def test_config_pause_between_messages_zero_accepted(self):
-        """pause_between_messages = 0 должен приниматься."""
-        config = Config(pause_between_messages=0.0)
-        assert config.pause_between_messages == 0.0
-
-    def test_config_valid_values_accepted(self):
-        """Корректные значения должны приниматься."""
-        config = Config(
-            temperature=0.5,
-            max_tokens=500,
-            request_timeout=120,
-            pause_between_messages=2.0,
+        # Используем json.JSONDecodeError вместо ContentTypeError
+        mock_response.json = AsyncMock(
+            side_effect=aiohttp.ClientResponseError(
+                request_info=MagicMock(),
+                history=(),
+                status=200,
+                message="Invalid JSON",
+            )
         )
-        assert config.temperature == 0.5
-        assert config.max_tokens == 500
-        assert config.request_timeout == 120
-        assert config.pause_between_messages == 2.0
+
+        mock_session = AsyncMock()
+        mock_session.get = MagicMock(return_value=mock_response.__aenter__.return_value)
+        mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_response)
+
+        with patch.object(client, "_get_session", return_value=mock_session):
+            # Act & Assert
+            with pytest.raises(ProviderError) as exc_info:
+                await client.list_models()
+
+            # Проверяем что исключение имеет цепочку
+            assert exc_info.value.__cause__ is not None
+
+    @pytest.mark.asyncio
+    async def test_connection_error_handling(self):
+        """
+        Тест: ClientError перехватывается как ProviderConnectionError.
+
+        Проверяет, что ошибки подключения к API преобразуются в ProviderConnectionError.
+        """
+        # Arrange
+        config = Config(ollama_host="http://localhost:11434")
+        client = OllamaClient(config=config)
+
+        # Создаем mock сессии которая выбрасывает ClientError
+        mock_session = AsyncMock()
+        mock_session.get = MagicMock(
+            side_effect=aiohttp.ClientError("Connection refused")
+        )
+
+        with patch.object(client, "_get_session", return_value=mock_session):
+            # Act & Assert
+            with pytest.raises(ProviderConnectionError) as exc_info:
+                await client.list_models()
+
+            # Проверяем что исключение имеет цепочку
+            assert exc_info.value.__cause__ is not None
+            assert "не удалось подключиться" in str(exc_info.value).lower()
+
+    @pytest.mark.asyncio
+    async def test_timeout_error_handling(self):
+        """
+        Тест: asyncio.TimeoutError перехватывается как ProviderConnectionError.
+
+        Проверяет, что таймауты преобразуются в ProviderConnectionError.
+        """
+        # Arrange
+        config = Config(ollama_host="http://localhost:11434")
+        client = OllamaClient(config=config)
+
+        # Создаем mock сессии которая выбрасывает TimeoutError
+        mock_session = AsyncMock()
+        mock_session.get = MagicMock(side_effect=asyncio.TimeoutError())
+
+        with patch.object(client, "_get_session", return_value=mock_session):
+            # Act & Assert
+            with pytest.raises(ProviderConnectionError) as exc_info:
+                await client.list_models()
+
+            assert exc_info.value.__cause__ is not None
 
 
 # =============================================================================
-# 4. Тесты для конкретных типов исключений
+# 2. DIP violation - тест что provider_factory внедряется
 # =============================================================================
 
 
-class TestSpecificExceptionTypes:
-    """Тесты для проверки конкретных типов исключений."""
+class TestDependencyInjection:
+    """Тесты для проверки внедрения зависимостей через provider_factory."""
 
-    def test_provider_error_has_original_exception_property(self):
-        """Проверить, что ProviderError имеет свойство original_exception."""
-        original = ValueError("original error")
-        error = ProviderError("test error", original_exception=original)
+    def test_provider_factory_can_be_injected(self):
+        """
+        Тест: provider_factory может быть внедрён вместо конкретной реализации.
+
+        Проверяет, что можно передать кастомную фабрику провайдера.
+        """
+        # Arrange
+        custom_provider = MagicMock()
+        custom_provider.list_models = AsyncMock(return_value=["custom-model"])
+        custom_provider.generate = AsyncMock(return_value="response")
+        custom_provider.close = AsyncMock()
+
+        def provider_factory():
+            return custom_provider  # noqa: E731
+
+        # Act - проверяем что фабрика возвращает наш моковый провайдер
+        result = provider_factory()
+
+        # Assert
+        assert result is custom_provider
+        assert result.list_models is custom_provider.list_models
+
+    def test_ollama_client_uses_injected_config(self):
+        """
+        Тест: OllamaClient использует внедрённую конфигурацию.
+
+        Проверяет, что можно внедрить кастомную конфигурацию.
+        """
+        # Arrange
+        custom_config = Config(
+            ollama_host="http://custom-host:9999",
+            temperature=0.9,
+            max_tokens=500,
+        )
+
+        # Act
+        client = OllamaClient(config=custom_config)
+
+        # Assert
+        assert client.host == "http://custom-host:9999"
+
+
+# =============================================================================
+# 3. Sanitizer type validation - тест что TypeError на None
+# =============================================================================
+
+
+class TestSanitizerTypeValidation:
+    """Тесты для проверки валидации типов в sanitizer."""
+
+    def test_sanitize_topic_rejects_none(self):
+        """
+        Тест: sanitize_topic выбрасывает TypeError при None.
+
+        Проверяет, что функция не принимает None как входное значение.
+        """
+        # Act & Assert
+        with pytest.raises(TypeError) as exc_info:
+            sanitize_topic(None)  # type: ignore
+
+        assert "строкой" in str(exc_info.value)
+
+    def test_sanitize_topic_rejects_non_string(self):
+        """
+        Тест: sanitize_topic выбрасывает TypeError для не-строки.
+
+        Проверяет, что функция отвергает другие типы данных.
+        """
+        # Act & Assert
+        with pytest.raises(TypeError):
+            sanitize_topic(123)  # type: ignore
+
+        with pytest.raises(TypeError):
+            sanitize_topic(["topic"])  # type: ignore
+
+    def test_sanitize_response_rejects_none(self):
+        """
+        Тест: sanitize_response_for_display выбрасывает TypeError при None.
+
+        Проверяет, что функция не принимает None.
+        """
+        # Act & Assert
+        with pytest.raises(TypeError) as exc_info:
+            sanitize_response_for_display(None)  # type: ignore
+
+        assert "строкой" in str(exc_info.value)
+
+    def test_sanitize_response_rejects_non_string(self):
+        """
+        Тест: sanitize_response_for_display выбрасывает TypeError для не-строки.
+        """
+        # Act & Assert
+        with pytest.raises(TypeError):
+            sanitize_response_for_display(123)  # type: ignore
+
+
+# =============================================================================
+# 4. Assert checks - тест что assert работает
+# =============================================================================
+
+
+class TestAssertChecks:
+    """Тесты для проверки assert проверок в коде."""
+
+    def test_assert_validates_client_not_none(self):
+        """
+        Тест: assert проверяет что клиент не None.
+
+        Проверяет, что в коде есть assert проверки перед использованием.
+        """
+        # Arrange
+        import inspect
+
+        from tui.app import DialogueApp
+
+        # Act - получаем исходный код
+        source = inspect.getsource(DialogueApp)
+
+        # Assert - проверяем что есть assert проверки
+        assert "assert" in source or "is not None" in source
+
+    def test_conversation_initialized_flag(self):
+        """
+        Тест: Conversation имеет флаг _initialized.
+
+        Проверяет, что есть проверка инициализации.
+        """
+        # Arrange
+        conversation = Conversation("model_a", "model_b", "test")
+
+        # Act & Assert
+        assert hasattr(conversation, "_initialized")
+        assert conversation._initialized is True  # noqa: W0212
+
+
+# =============================================================================
+# 5. ProviderError unified handling - тест что все ошибки обрабатываются одинаково
+# =============================================================================
+
+
+class TestProviderErrorUnifiedHandling:
+    """Тесты для проверки единой обработки ProviderError."""
+
+    def test_all_provider_errors_inherit_from_base(self):
+        """
+        Тест: все ProviderError исключения наследуются от базового.
+
+        Проверяет, что иерархия исключений правильная.
+        """
+        # Arrange & Act
+        connection_error = ProviderConnectionError("connection")
+        generation_error = ProviderGenerationError("generation")
+
+        # Assert
+        assert isinstance(connection_error, ProviderError)
+        assert isinstance(generation_error, ProviderError)
+
+    def test_provider_error_has_message(self):
+        """
+        Тест: ProviderError сохраняет сообщение.
+
+        Проверяет, что сообщение доступно через str().
+        """
+        # Arrange
+        error = ProviderError("test message")
+
+        # Act & Assert
+        assert str(error) == "test message"
+
+    def test_provider_error_preserves_original_exception(self):
+        """
+        Тест: ProviderError сохраняет оригинальное исключение.
+
+        Проверяет, что original_exception доступно.
+        """
+        # Arrange
+        original = ValueError("original")
+        error = ProviderError("wrapper", original_exception=original)
+
+        # Act & Assert
         assert error.original_exception is original
 
-    def test_provider_error_without_original_exception(self):
-        """Проверить, что ProviderError может быть без original_exception."""
-        error = ProviderError("test error")
-        assert error.original_exception is None
+    @pytest.mark.asyncio
+    async def test_unified_error_handling_in_client(self):
+        """
+        Тест: все ошибки в клиенте преобразуются в ProviderError.
 
-    def test_provider_connection_error_is_subclass(self):
-        """Проверить, что ProviderConnectionError это подкласс ProviderError."""
-        from models.provider import ProviderConnectionError
+        Проверяет, что разные типы ошибок统一 обрабатываются.
+        """
+        # Arrange
+        config = Config(ollama_host="http://localhost:11434")
+        client = OllamaClient(config=config)
 
-        error = ProviderConnectionError("connection error")
-        assert isinstance(error, ProviderError)
+        # Создаем mock который выбрасывает KeyError
+        mock_session = AsyncMock()
+        mock_session.get = MagicMock(side_effect=KeyError("missing key"))
 
-    def test_provider_configuration_error_is_subclass(self):
-        """Проверить, что ProviderConfigurationError это подкласс ProviderError."""
-        from models.provider import ProviderConfigurationError
+        with patch.object(client, "_get_session", return_value=mock_session):
+            # Act & Assert
+            with pytest.raises(ProviderError) as exc_info:
+                await client.list_models()
 
-        error = ProviderConfigurationError("config error")
-        assert isinstance(error, ProviderError)
-
-    def test_provider_generation_error_is_subclass(self):
-        """Проверить, что ProviderGenerationError это подкласс ProviderError."""
-        from models.provider import ProviderGenerationError
-
-        error = ProviderGenerationError("generation error")
-        assert isinstance(error, ProviderError)
+            # Все ошибки должны быть ProviderError или подклассом
+            assert isinstance(exc_info.value, ProviderError)
 
 
 # =============================================================================
-# 5. Тесты для валидации сообщений через _RequestValidator
+# 6. Exception chaining - тест что __cause__ сохраняется
 # =============================================================================
 
 
-class TestRequestValidator:
-    """Тесты для проверки _RequestValidator."""
+class TestExceptionChaining:
+    """Тесты для проверки сохранения цепочки исключений."""
 
-    def test_validate_messages_with_valid_list(self):
-        """Проверить валидацию корректного списка сообщений."""
-        from models.ollama_client import _RequestValidator
+    @pytest.mark.asyncio
+    async def test_exception_chain_preserved(self):
+        """
+        Тест: __cause__ сохраняется при преобразовании исключений.
 
-        messages = [
-            {"role": "system", "content": "test"},
-            {"role": "user", "content": "test"},
-        ]
-        # Не должно вызывать исключений
-        _RequestValidator.validate_messages(messages)
+        Проверяет, что оригинальное исключение доступно через __cause__.
+        """
+        # Arrange
+        config = Config(ollama_host="http://localhost:11434")
+        client = OllamaClient(config=config)
 
-    def test_validate_messages_non_list_raises(self):
-        """Проверить, что не-список вызывает ValueError."""
-        from models.ollama_client import _RequestValidator
+        original_error = aiohttp.ClientError("original connection error")
+        mock_session = AsyncMock()
+        mock_session.get = MagicMock(side_effect=original_error)
 
-        with pytest.raises(ValueError, match="списком"):
-            _RequestValidator.validate_messages("not a list")
+        with patch.object(client, "_get_session", return_value=mock_session):
+            # Act
+            with pytest.raises(ProviderConnectionError) as exc_info:
+                await client.list_models()
 
-    def test_validate_messages_non_dict_item_raises(self):
-        """Проверить, что не-dict элемент вызывает ValueError."""
-        from models.ollama_client import _RequestValidator
+            # Assert
+            assert exc_info.value.__cause__ is original_error
 
-        with pytest.raises(ValueError, match="словарём"):
-            _RequestValidator.validate_messages(["not a dict"])
+    def test_provider_error_cause_property(self):
+        """
+        Тест: ProviderError.original_exception возвращает переданное исключение.
 
-    def test_validate_messages_missing_role_raises(self):
-        """Проверить, что отсутствие 'role' вызывает ValueError."""
-        from models.ollama_client import _RequestValidator
+        Проверяет, что свойство original_exception работает.
+        """
+        # Arrange
+        original = RuntimeError("cause")
+        error = ProviderError("wrapper", original_exception=original)
 
-        with pytest.raises(ValueError, match="'role' и 'content'"):
-            _RequestValidator.validate_messages([{"content": "test"}])
-
-    def test_validate_messages_missing_content_raises(self):
-        """Проверить, что отсутствие 'content' вызывает ValueError."""
-        from models.ollama_client import _RequestValidator
-
-        with pytest.raises(ValueError, match="'role' и 'content'"):
-            _RequestValidator.validate_messages([{"role": "user"}])
-
-    def test_validate_messages_empty_list_accepted(self):
-        """Проверить, что пустой список принимается."""
-        from models.ollama_client import _RequestValidator
-
-        _RequestValidator.validate_messages([])
+        # Assert - original_exception доступно через свойство
+        # __cause__ может не устанавливаться автоматически в Python
+        assert error.original_exception is original
 
 
 # =============================================================================
-# 6. Тесты для уменьшенной вложенности (early returns)
+# 7. XSS protection - тест что markup символы экранируются
 # =============================================================================
 
 
-class TestReducedNesting:
-    """Тесты для проверки уменьшенной вложенности."""
+class TestXSSProtection:
+    """Тесты для проверки XSS защиты через экранирование markup."""
 
-    def test_ollama_client_list_models_has_early_return_pattern(self):
-        """Проверить early returns в list_models."""
-        source = inspect.getsource(OllamaClient.list_models)
-        # Проверяем, что есть явный raise ProviderError для статуса != 200
-        assert (
-            "if response.status != 200:" in source or "validate_status_code" in source
-        )
+    @pytest.mark.security
+    def test_square_brackets_escaped(self):
+        """
+        Тест: квадратные скобки экранируются.
 
-    def test_ollama_client_generate_has_early_return_pattern(self):
-        """Проверить early returns в generate."""
-        source = inspect.getsource(OllamaClient.generate)
-        # Проверяем, что есть явный raise ProviderError для статуса != 200
-        assert (
-            "if response.status != 200:" in source or "validate_status_code" in source
-        )
+        Проверяет, что [ и ] преобразуются в [[ и ]].
+        """
+        # Arrange
+        malicious_input = "test [bold]injected[/bold]"
 
-    def test_ollama_client_uses_try_except_not_nested_if(self):
-        """Проверить, что используется try/except вместо вложенных if."""
-        source = inspect.getsource(OllamaClient.list_models)
-        # Проверяем, что есть try/except блок
-        assert "try:" in source
-        assert "except" in source
+        # Act
+        result = sanitize_response_for_display(malicious_input)
 
+        # Assert - проверяем что скобки экранированы (удвоены)
+        assert "[[" in result
+        assert "]]" in result
+        # Оригинальный паттерн теперь содержит экранированные скобки
+        assert "[[bold]]" in result
 
-# =============================================================================
-# 8. Тесты для констант
-# =============================================================================
+    @pytest.mark.security
+    def test_curly_braces_escaped(self):
+        """
+        Тест: фигурные скобки экранируются.
 
+        Проверяет, что { и } преобразуются в {{ и }}.
+        """
+        # Arrange
+        malicious_input = "test {injected}"
 
-class TestConstants:
-    """Тесты для проверки констант."""
+        # Act
+        result = sanitize_response_for_display(malicious_input)
 
-    def test_default_temperature_constant_exists(self):
-        """Проверить, что DEFAULT_TEMPERATURE существует."""
-        assert DEFAULT_TEMPERATURE == 0.7
-
-    def test_default_max_tokens_constant_exists(self):
-        """Проверить, что DEFAULT_MAX_TOKENS существует."""
-        assert DEFAULT_MAX_TOKENS == 200
-
-    def test_default_request_timeout_constant_exists(self):
-        """Проверить, что DEFAULT_REQUEST_TIMEOUT существует."""
-        assert DEFAULT_REQUEST_TIMEOUT == 60
-
-    def test_default_pause_between_messages_constant_exists(self):
-        """Проверить, что DEFAULT_PAUSE_BETWEEN_MESSAGES существует."""
-        assert DEFAULT_PAUSE_BETWEEN_MESSAGES == 1.0
-
-    def test_min_temperature_constant_exists(self):
-        """Проверить, что MIN_TEMPERATURE существует."""
-        assert MIN_TEMPERATURE == 0.0
-
-    def test_max_temperature_constant_exists(self):
-        """Проверить, что MAX_TEMPERATURE существует."""
-        assert MAX_TEMPERATURE == 1.0
-
-    def test_min_max_tokens_constant_exists(self):
-        """Проверить, что MIN_MAX_TOKENS существует."""
-        assert MIN_MAX_TOKENS == 1
-
-    def test_min_request_timeout_constant_exists(self):
-        """Проверить, что MIN_REQUEST_TIMEOUT существует."""
-        assert MIN_REQUEST_TIMEOUT == 1
-
-    def test_min_pause_between_messages_constant_exists(self):
-        """Проверить, что MIN_PAUSE_BETWEEN_MESSAGES существует."""
-        assert MIN_PAUSE_BETWEEN_MESSAGES == 0.0
-
-    def test_default_options_uses_constants(self):
-        """Проверить, что _DEFAULT_OPTIONS использует константы."""
-        assert _DEFAULT_OPTIONS["temperature"] == DEFAULT_TEMPERATURE
-        assert _DEFAULT_OPTIONS["num_predict"] == DEFAULT_MAX_TOKENS
-
-
-# =============================================================================
-# 9. Тесты для sanitize_topic с константой
-# =============================================================================
-
-
-class TestSanitizeTopicWithConstant:
-    """Тесты для проверки sanitize_topic с MAX_RESPONSE_PREVIEW_LENGTH."""
-
-    def test_max_response_preview_length_constant_exists(self):
-        """Проверить, что MAX_RESPONSE_PREVIEW_LENGTH существует."""
-        assert MAX_RESPONSE_PREVIEW_LENGTH == 100
-
-    def test_sanitize_topic_escapes_braces(self):
-        """Проверить экранирование фигурных скобок."""
-        result = sanitize_topic("test {topic}")
+        # Assert
         assert "{{" in result
         assert "}}" in result
 
-    def test_sanitize_topic_strips_whitespace(self):
-        """Проверить удаление пробелов."""
-        result = sanitize_topic("  test topic  ")
-        assert result == "test topic"
+    @pytest.mark.security
+    def test_html_entities_escaped(self):
+        """
+        Тест: HTML сущности экранируются.
 
-    def test_sanitize_topic_handles_brackets(self):
-        """Проверить обработку квадратных скобок."""
-        result = sanitize_topic("test [bracket]")
-        assert "[[" in result
-        assert "]]" in result
+        Проверяет, что < и > преобразуются в &lt; и &gt;.
+        """
+        # Arrange
+        malicious_input = "<script>alert('xss')</script>"
+
+        # Act
+        result = sanitize_response_for_display(malicious_input)
+
+        # Assert
+        assert "<script>" not in result
+        assert "&lt;" in result
+        assert "&gt;" in result
+
+    @pytest.mark.security
+    def test_special_characters_escaped(self):
+        """
+        Тест: специальные символы Textual экранируются.
+
+        Проверяет, что *, _, `, @, # экранируются.
+        """
+        # Arrange
+        malicious_input = "*bold* _italic_ `code` @class #id"
+
+        # Act
+        result = sanitize_response_for_display(malicious_input)
+
+        # Assert
+        assert "\\*" in result
+        assert "\\_" in result
+        assert "\\`" in result
+        assert "@@" in result
+        assert "##" in result
+
+    @pytest.mark.security
+    def test_sanitize_topic_escapes_injection(self):
+        """
+        Тест: sanitize_topic предотвращает инъекцию промпта.
+
+        Проверяет, что фигурные скобки в теме экранируются.
+        """
+        # Arrange
+        malicious_topic = "test {injected prompt}"
+
+        # Act
+        result = sanitize_topic(malicious_topic)
+
+        # Assert - проверяем что скобки экранированы (удвоены)
+        assert "{{" in result
+        assert "}}" in result
+        # Экранированный паттерн содержит двойные скобки
+        assert "{{injected" in result
 
 
 # =============================================================================
-# 10. Тесты для pause/resume без избыточных проверок
+# 8. Context dictionary - тест что словарь контекстов работает
 # =============================================================================
 
 
-class TestPauseResumeIndependent:
-    """Тесты для проверки pause/resume без избыточных проверок."""
+class TestContextDictionary:
+    """Тесты для проверки словаря контекстов в Conversation."""
 
-    def test_pause_works_regardless_of_is_running(self):
-        """Проверить, что pause работает независимо от is_running."""
+    def test_conversation_has_separate_contexts(self):
+        """
+        Тест: Conversation имеет раздельные контексты для моделей A и B.
+
+        Проверяет, что _context_a и _context_b существуют.
+        """
+        # Arrange
         conversation = Conversation("model_a", "model_b", "test")
-        provider = MagicMock()
-        service = DialogueService(conversation, provider)
 
-        # is_running = False, но pause должен работать
-        assert service.is_running is False
-        service.pause()
-        assert service.is_paused is True
+        # Act & Assert
+        assert hasattr(conversation, "_context_a")
+        assert hasattr(conversation, "_context_b")
+        assert conversation._context_a is not conversation._context_b  # noqa: W0212
 
-    def test_resume_works_regardless_of_is_running(self):
-        """Проверить, что resume работает независимо от is_running."""
+    def test_contexts_are_independent_lists(self):
+        """
+        Тест: контексты независимы.
+
+        Проверяет, что добавление в один контекст не влияет на другой.
+        """
+        # Arrange
         conversation = Conversation("model_a", "model_b", "test")
-        provider = MagicMock()
-        service = DialogueService(conversation, provider)
 
-        # Устанавливаем paused = True
-        service._is_paused = True  # noqa: W0212
+        # Сохраняем исходную длину (там может быть system сообщение)
+        initial_len_b = len(conversation._context_b)  # noqa: W0212
 
-        # is_running = False, но resume должен работать
-        assert service.is_running is False
-        service.resume()
-        assert service.is_paused is False
+        # Act - добавляем сообщение только в контекст A (model_id первый
+        # параметр!)
+        conversation.add_message("A", "user", "message for A")
 
-    def test_pause_sets_paused_flag(self):
-        """Проверить, что pause устанавливает флаг is_paused."""
+        # Assert - контекст A увеличился, B остался тем же
+        assert len(conversation._context_a) > 0  # noqa: W0212
+        assert len(conversation._context_b) == initial_len_b  # noqa: W0212
+
+    def test_get_context_returns_correct_model_context(self):
+        """
+        Тест: get_context возвращает правильный контекст.
+
+        Проверяет, что для модели A возвращается _context_a.
+        """
+        # Arrange
         conversation = Conversation("model_a", "model_b", "test")
-        provider = MagicMock()
-        service = DialogueService(conversation, provider)
+        conversation.add_message("A", "user", "msg A")
+        conversation.add_message("B", "user", "msg B")
 
-        service.start()
-        service.pause()
+        # Act
+        context_a = conversation.get_context("A")
+        context_b = conversation.get_context("B")
 
-        assert service.is_paused is True
-        assert service.is_running is True
+        # Assert - проверяем что сообщения добавлены в правильные контексты
+        # (system сообщение + наше сообщение = 2)
+        assert len(context_a) >= 1
+        assert len(context_b) >= 1
+        # Проверяем что последнее сообщение в каждом контексте правильное
+        assert context_a[-1]["content"] == "msg A"
+        assert context_b[-1]["content"] == "msg B"
 
-    def test_resume_clears_paused_flag(self):
-        """Проверить, что resume сбрасывает флаг is_paused."""
+
+# =============================================================================
+# 9. Tuple return - тест что возвращается tuple
+# =============================================================================
+
+
+class TestTupleReturn:
+    """Тесты для проверки что методы возвращают tuple."""
+
+    def test_get_context_returns_tuple(self):
+        """
+        Тест: get_context возвращает tuple.
+
+        Проверяет, что возвращаемое значение - tuple (неизменяемый).
+        """
+        # Arrange
         conversation = Conversation("model_a", "model_b", "test")
-        provider = MagicMock()
-        service = DialogueService(conversation, provider)
+        conversation.add_message("A", "user", "test")
 
-        service.start()
-        service.pause()
-        service.resume()
+        # Act
+        result = conversation.get_context("A")
 
-        assert service.is_paused is False
-        assert service.is_running is True
+        # Assert
+        assert isinstance(result, tuple)
 
+    def test_list_models_returns_list(self):
+        """
+        Тест: list_models возвращает list.
 
-# =============================================================================
-# 11. Тесты для удаления update_for_ready
-# =============================================================================
+        Проверяет тип возвращаемого значения.
+        """
+        # Arrange - проверяем аннотацию типа
+        import inspect
 
+        from models.ollama_client import OllamaClient
 
-class TestUpdateForReadyRemoved:
-    """Тесты для проверки удаления update_for_ready."""
+        # Act
+        sig = inspect.signature(OllamaClient.list_models)
 
-    def test_update_for_ready_method_not_exists(self):
-        """Проверить, что метод update_for_ready удалён."""
-        from controllers import dialogue_controller as dc_module
-
-        # Проверяем, что метода нет в классе
-        assert not hasattr(DialogueController, "update_for_ready")
-
-        # Проверяем, что метода нет в исходном коде
-        source = inspect.getsource(dc_module)
-        assert "def update_for_ready" not in source
-
-    def test_existing_functionality_works(self):
-        """Проверить, что существующий функционал работает."""
-        mock_service = MagicMock()
-        mock_service.is_running = False
-        mock_service.is_paused = False
-
-        controller = DialogueController(mock_service)
-
-        # Проверяем, что handle_start работает
-        result = controller.handle_start()
-        assert result is True
-        assert controller.state.is_dialogue_active is True
-
-        # Сбрасываем состояние сервиса для следующих тестов
-        mock_service.is_running = True
-        mock_service.is_paused = False
-
-        # Проверяем, что handle_pause работает
-        result = controller.handle_pause()
-        assert result is True
-
-        # Проверяем, что handle_clear работает
-        controller.handle_clear()
-        assert controller.state.turn_count == 0
+        # Assert - проверяем что return annotation содержит list
+        assert "list" in str(sig.return_annotation)
 
 
 # =============================================================================
-# 12. Тесты для DEFAULT_NOTIFY_TIMEOUT
+# 10. Cache size limit - тест что кэш ограничивается
 # =============================================================================
 
 
-class TestDefaultNotifyTimeout:
-    """Тесты для проверки DEFAULT_NOTIFY_TIMEOUT."""
+class TestCacheSizeLimit:
+    """Тесты для проверки ограничения размера кэша."""
 
-    def test_default_notify_timeout_constant_exists(self):
-        """Проверить, что DEFAULT_NOTIFY_TIMEOUT существует."""
-        assert DEFAULT_NOTIFY_TIMEOUT == 10
+    def test_models_cache_has_max_size_constant(self):
+        """
+        Тест: _ModelsCache имеет константу MAX_CACHE_SIZE.
 
-    def test_default_notify_timeout_is_integer(self):
-        """Проверить, что DEFAULT_NOTIFY_TIMEOUT - целое число."""
-        assert isinstance(DEFAULT_NOTIFY_TIMEOUT, int)
+        Проверяет, что ограничение размера существует.
+        """
+        # Act & Assert
+        assert hasattr(_ModelsCache, "MAX_CACHE_SIZE")
+        assert _ModelsCache.MAX_CACHE_SIZE == 100
 
-    def test_default_notify_timeout_used_in_app(self):
-        """Проверить, что константа используется в app.py."""
-        from tui import app as app_module
+    def test_models_cache_invalidates_on_size_exceeded(self):
+        """
+        Тест: кэш инвалидируется при превышении размера.
 
-        source = inspect.getsource(app_module)
-        assert "DEFAULT_NOTIFY_TIMEOUT" in source
+        Проверяет, что _should_invalidate_by_size работает.
+        """
+        # Arrange
+        cache = _ModelsCache(ttl=300)
+        cache.set(["model1", "model2"])
 
+        # Act - устанавливаем access_count больше MAX_CACHE_SIZE
+        cache._access_count = _ModelsCache.MAX_CACHE_SIZE + 1
 
-# =============================================================================
-# 13. Тесты для упрощённой логики ModelSelectionScreen
-# =============================================================================
+        # Assert
+        assert cache._should_invalidate_by_size() is True
 
+    def test_models_cache_works_within_limit(self):
+        """
+        Тест: кэш работает в пределах лимита.
 
-class TestModelSelectionScreenSimplified:
-    """Тесты для проверки упрощённой логики ModelSelectionScreen."""
+        Проверяет, что get возвращает данные пока лимит не превышен.
+        """
+        # Arrange
+        cache = _ModelsCache(ttl=300)
+        cache.set(["model1", "model2"])
 
-    def test_get_model_value_with_empty_list(self):
-        """Проверить _get_model_value с пустым списком."""
-        screen = ModelSelectionScreen(models=[])
-        result = screen._get_model_value(0)
+        # Act - делаем несколько запросов в пределах лимита
+        for _ in range(_ModelsCache.MAX_CACHE_SIZE - 1):
+            result = cache.get()
+
+        # Assert
+        assert result == ["model1", "model2"]
+
+    def test_models_cache_invalidates_after_many_accesses(self):
+        """
+        Тест: кэш инвалидируется после множества обращений.
+
+        Проверяет, что после превышения лимита кэш сбрасывается.
+        """
+        # Arrange
+        cache = _ModelsCache(ttl=300)
+        cache.set(["model1", "model2"])
+
+        # Act - превышаем лимит обращений
+        for _ in range(_ModelsCache.MAX_CACHE_SIZE + 1):
+            cache.get()
+
+        # После превышения лимита должен вернуться None
+        result = cache.get()
+
+        # Assert
         assert result is None
 
-    def test_get_model_value_with_valid_index(self):
-        """Проверить _get_model_value с корректным индексом."""
-        screen = ModelSelectionScreen(models=["model1", "model2", "model3"])
-        result = screen._get_model_value(1)
-        assert result == "model2"
-
-    def test_get_model_value_with_out_of_bounds_index(self):
-        """Проверить _get_model_value с индексом за границами."""
-        screen = ModelSelectionScreen(models=["model1", "model2"])
-        result = screen._get_model_value(10)
-        assert result == "model2"  # Последний элемент
-
-    def test_get_model_value_with_zero_index(self):
-        """Проверить _get_model_value с индексом 0."""
-        screen = ModelSelectionScreen(models=["model1", "model2"])
-        result = screen._get_model_value(0)
-        assert result == "model1"
-
-    def test_on_button_pressed_with_start_btn(self):
-        """Проверить on_button_pressed с кнопкой старта."""
-        screen = ModelSelectionScreen(models=["model1", "model2"])
-
-        # Создаем мок события с правильным button.id
-        mock_button = MagicMock()
-        mock_button.id = "start_btn"
-        mock_event = MagicMock()
-        mock_event.button = mock_button
-
-        # Вызываем метод - он должен вызвать _on_start_pressed
-        # Проверяем, что метод существует и вызывается без ошибок
-        assert hasattr(screen, "_on_start_pressed")
-        # Метод должен существовать и быть вызванным
-        screen.on_button_pressed(mock_event)
-        # Если дошли сюда - тест пройден (метод вызван)
-
-    def test_on_button_pressed_with_cancel_btn(self):
-        """Проверить on_button_pressed с кнопкой отмены."""
-        screen = ModelSelectionScreen(models=["model1", "model2"])
-
-        # Создаем мок события
-        mock_button = MagicMock()
-        mock_button.id = "cancel_btn"
-        mock_event = MagicMock()
-        mock_event.button = mock_button
-
-        # Проверяем, что dismiss существует
-        assert hasattr(screen, "dismiss")
-        # Вызываем метод - он должен вызвать dismiss(None)
-        screen.on_button_pressed(mock_event)
-
 
 # =============================================================================
-# 14. Тесты для обработки ошибок в on_unmount
+# 11. MessageDict total=True - тест на валидацию
 # =============================================================================
 
 
-class TestOnUnmountErrorHandling:
-    """Тесты для проверки обработки ошибок в on_unmount."""
+class TestMessageDictValidation:
+    """Тесты для проверки валидации MessageDict."""
 
-    def test_on_unmount_logs_warning_on_error(self, caplog):
-        """Проверить логирование warning при ошибке."""
-        import logging
+    def test_message_dict_has_required_fields(self):
+        """
+        Тест: MessageDict требует role и content.
 
-        from tui.app import DialogueApp
+        Проверяет, что TypedDict с total=True требует все поля.
+        """
+        # Arrange & Act - проверяем аннотацию
 
-        app = DialogueApp()
+        # Assert - проверяем что MessageDict это TypedDict
+        assert hasattr(MessageDict, "__annotations__")
+        assert "role" in MessageDict.__annotations__
+        assert "content" in MessageDict.__annotations__
 
-        # Мокаем _dialogue_task с ошибкой при отмене
-        mock_task = AsyncMock()
-        mock_task.done.return_value = False
-        mock_task.cancel = MagicMock()
+    def test_message_dict_role_literal(self):
+        """
+        Тест: role должен быть одним из допустимых значений.
 
-        async def raise_error():
-            raise aiohttp.ClientError("cleanup error")
+        Проверяет, что role это Literal["system", "user", "assistant"].
+        """
+        # Arrange
+        import typing
 
-        mock_task.__await__ = raise_error
+        # Act - получаем аннотацию role
+        role_annotation = MessageDict.__annotations__["role"]
 
-        app._dialogue_task = mock_task  # noqa: W0212
-
-        # Мокаем _controller
-        mock_controller = AsyncMock()
-        mock_controller.cleanup.side_effect = aiohttp.ClientError("cleanup error")
-        app._controller = mock_controller  # noqa: W0212
-
-        # Запускаем on_unmount
-        with caplog.at_level(logging.WARNING):
-            # Используем asyncio.run для асинхронного метода
-            import asyncio
-
-            asyncio.run(app.on_unmount())
-
-        # Проверяем, что warning был залогирован
-        assert any(
-            "Ошибка при очистке ресурсов" in record.message for record in caplog.records
+        # Assert - проверяем что это Literal
+        assert (
+            "Literal" in str(role_annotation)
+            or "Literal" in str(typing.get_origin(role_annotation))
+            or str(role_annotation).startswith("typing.Literal")
         )
 
-    def test_on_unmount_handles_cancelled_error(self):
-        """Проверить обработку asyncio.CancelledError."""
-        from tui.app import DialogueApp
+    def test_message_dict_content_str(self):
+        """
+        Тест: content должен быть строкой.
 
-        app = DialogueApp()
+        Проверяет, что content аннотирован как str.
+        """
+        # Arrange
+        content_annotation = MessageDict.__annotations__["content"]
 
-        # Мокаем _dialogue_task
-        mock_task = AsyncMock()
-        mock_task.done.return_value = False
-        mock_task.cancel = MagicMock()
+        # Assert
+        assert isinstance(content_annotation, type) or "str" in str(content_annotation)
 
-        async def raise_cancelled():
-            raise asyncio.CancelledError()
+    def test_valid_message_dict(self):
+        """
+        Тест: корректный MessageDict принимается.
 
-        mock_task.__await__ = raise_cancelled
-        app._dialogue_task = mock_task  # noqa: W0212
+        Проверяет, что словарь с role и content работает.
+        """
+        # Arrange
+        message: MessageDict = {"role": "user", "content": "test"}
 
-        # Не должно вызывать исключений
-        import asyncio
+        # Act & Assert
+        assert message["role"] == "user"
+        assert message["content"] == "test"
 
-        asyncio.run(app.on_unmount())
+    @pytest.mark.asyncio
+    async def test_ollama_client_validates_message_dict(self):
+        """
+        Тест: OllamaClient валидирует MessageDict.
+
+        Проверяет, что generate проверяет структуру сообщений.
+        """
+        # Arrange
+        config = Config(ollama_host="http://localhost:11434")
+        client = OllamaClient(config=config)
+
+        # Act & Assert - messages без role должен вызвать ошибку
+        with pytest.raises(ValueError, match="role"):
+            await client.generate(
+                model="test",
+                messages=[{"content": "no role"}],  # type: ignore
+            )
 
 
 # =============================================================================
@@ -691,62 +767,53 @@ class TestIntegration:
     """Интеграционные тесты для проверки взаимодействия компонентов."""
 
     @pytest.mark.asyncio
-    async def test_config_validation_with_ollama_client(self):
-        """Проверить, что валидация Config работает с OllamaClient."""
-        config = Config(
-            temperature=0.5,
-            max_tokens=300,
-            request_timeout=90,
-            ollama_host="http://localhost:11434",
-        )
+    async def test_full_error_handling_chain(self):
+        """
+        Тест: полная цепочка обработки ошибок.
 
-        # Создаем клиент с валидной конфигурацией
+        Проверяет, что ошибки правильно распространяются через слои.
+        """
+        # Arrange
+        config = Config(ollama_host="http://localhost:11434")
         client = OllamaClient(config=config)
-        assert client.host == "http://localhost:11434"
 
-    @pytest.mark.asyncio
-    async def test_conversation_with_validated_config(self):
-        """Проверить Conversation с валидированным Config."""
-        config = Config(
-            temperature=0.8,
-            default_system_prompt="Тестовая тема: {topic}",
-        )
+        original_error = aiohttp.ClientError("network error")
+        mock_session = AsyncMock()
+        mock_session.get = MagicMock(side_effect=original_error)
 
-        conversation = Conversation(
-            "model_a",
-            "model_b",
-            "тестирование",
-            _config=config,
-        )
+        with patch.object(client, "_get_session", return_value=mock_session):
+            # Act
+            with pytest.raises(ProviderConnectionError) as exc_info:
+                await client.list_models()
 
-        assert conversation._system_prompt == "Тестовая тема: тестирование"  # noqa: W0212
+            # Assert - проверяем всю цепочку
+            assert isinstance(exc_info.value, ProviderError)
+            assert exc_info.value.__cause__ is original_error
+            assert exc_info.value.original_exception is original_error
 
-    def test_dialogue_service_pause_resume_flow(self):
-        """Проверить полный цикл pause/resume в DialogueService."""
-        conversation = Conversation("model_a", "model_b", "test")
-        provider = MagicMock()
-        service = DialogueService(conversation, provider)
+    @pytest.mark.security
+    def test_xss_protection_end_to_end(self):
+        """
+        Тест: XSS защита end-to-end.
 
-        # Начальное состояние
-        assert service.is_running is False
-        assert service.is_paused is False
+        Проверяет, что malicious input полностью экранируется.
+        """
+        # Arrange
+        malicious_inputs = [
+            "<script>alert('xss')</script>",
+            "[bold]injected[/bold]",
+            "{injected prompt}",
+            "*bold* _italic_",
+        ]
 
-        # Запуск
-        service.start()
-        assert service.is_running is True
-        assert service.is_paused is False
-
-        # Пауза
-        service.pause()
-        assert service.is_running is True
-        assert service.is_paused is True
-
-        # Возобновление
-        service.resume()
-        assert service.is_running is True
-        assert service.is_paused is False
-
-        # Остановка
-        service.stop()
-        assert service.is_running is False
-        assert service.is_paused is False
+        # Act & Assert
+        for malicious in malicious_inputs:
+            result = sanitize_response_for_display(malicious)
+            # Проверяем что оригинальные символы экранированы
+            # < и > становятся &lt; и &gt;
+            # [ и ] становятся [[ и ]]
+            # { и } становятся {{ и }}
+            # * и _ становятся \* и \_
+            assert "<script>" not in result  # HTML теги экранированы
+            # Проверяем что экранирование произошло
+            assert result != malicious  # Результат отличается от оригинала

@@ -125,7 +125,7 @@ class TestFixes:
         assert conversation._system_prompt == expected_prompt  # noqa: W0212
 
     def test_conversation_get_context_returns_copy_for_safety(self):
-        """Тест, что get_context возвращает копию для безопасности, а не для эффективности."""
+        """Тест, что get_context возвращает tuple для безопасности и производительности."""
         # Arrange
         conversation = Conversation("model_a", "model_b", "тема")
         conversation.add_message("A", "user", "test message")
@@ -134,20 +134,15 @@ class TestFixes:
         context = conversation.get_context("A")
 
         # Assert
-        # Should return a copy (different object)
-        # We test that two calls return different objects
-        context2 = conversation.get_context("A")
-        assert context is not context2
+        # Should return a tuple (immutable)
+        assert isinstance(context, tuple)
         # But with the same content
         # Note: Context includes system message + our added message
         assert len(context) == 2
         assert context[0]["role"] == "system"  # System message
         assert context[1]["content"] == "test message"  # Our message
-        # Additionally, modifying the returned copy should not affect
-        # the conversation's internal state
-        context.append({"role": "test", "content": "test"})
-        context_after = conversation.get_context("A")
-        assert len(context_after) == 2  # Should still be 2, not 3
+        # Tuple is immutable, so we can't modify it - this is the desired
+        # behavior
 
     def test_tui_app_uses_ui_constants_not_hardcoded_strings(self):
         """Тест, что TUI приложение использует константы UI

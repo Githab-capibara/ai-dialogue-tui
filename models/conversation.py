@@ -126,19 +126,20 @@ class Conversation:
         role: str,
         content: str,
     ) -> None:
-        if model_id == "A":
-            context = self._context_a
-        else:
-            context = self._context_b
+        """Добавить сообщение в контекст модели."""
+        # Используем словарь для выбора контекста
+        contexts: dict[ModelId, list[MessageDict]] = {
+            "A": self._context_a,
+            "B": self._context_b,
+        }
+        context = contexts[model_id]
 
         if len(context) >= MAX_CONTEXT_LENGTH:
             context = self._trim_context_if_needed(context, MAX_CONTEXT_LENGTH - 2)
         context.append(MessageDict(role=role, content=content))
 
-        if model_id == "A":
-            self._context_a = context
-        else:
-            self._context_b = context
+        # Обновляем ссылку в словаре
+        contexts[model_id] = context
 
     def add_message(
         self,
@@ -164,7 +165,7 @@ class Conversation:
             len(context),
         )
 
-    def get_context(self, model_id: ModelId) -> list[MessageDict]:
+    def get_context(self, model_id: ModelId) -> tuple[MessageDict, ...]:
         """
         Получить историю сообщений для указанной модели.
 
@@ -172,12 +173,11 @@ class Conversation:
             model_id: Идентификатор модели (A или B).
 
         Returns:
-            Список сообщений в формате Ollama.
+            Кортеж сообщений в формате Ollama (неизменяемый).
         """
         context = self._context_a if model_id == "A" else self._context_b
-        # Возвращаем копию для безопасности (чтобы не позволять внешнему коду
-        # изменять внутреннее состояние)
-        return context.copy()
+        # Возвращаем tuple для безопасности и производительности
+        return tuple(context)
 
     def switch_turn(self) -> None:
         """
