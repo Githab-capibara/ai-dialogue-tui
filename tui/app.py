@@ -486,9 +486,9 @@ class DialogueApp(App):
                 await asyncio.sleep(self._config.pause_between_messages)
 
         except asyncio.CancelledError:
-            pass
+            log.debug("Диалог отменён")
         except ProviderError:
-            pass
+            log.warning("Ошибка провайдера в цикле диалога")
         except (RuntimeError, SystemError, OSError) as e:
             self._handle_critical_error(e)
         finally:
@@ -499,7 +499,7 @@ class DialogueApp(App):
         current_task = asyncio.current_task()
         return current_task is not None and current_task.is_cancelled()
 
-    async def _process_dialogue_turn(
+    async def _process_dialogue_turn(  # pylint: disable=unused-argument
         self,
         service: DialogueService,
         model_name: str,

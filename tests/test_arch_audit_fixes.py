@@ -26,7 +26,7 @@ class TestDRYFix:
     def test_add_message_no_duplication(self) -> None:
         """Тест что add_message не содержит дублирующегося кода."""
         conversation_file = Path("models/conversation.py")
-        content = conversation_file.read_text()
+        content = conversation_file.read_text(encoding="utf-8")
 
         tree = ast.parse(content)
 
@@ -63,13 +63,13 @@ class TestDRYFix:
         assert hasattr(conversation, "_add_message_to_context")
 
 
-class TestKISSFix:
+class TestKISSFix:  # pylint: disable=too-few-public-methods
     """Тест: разделение _run_dialogue на меньшие методы."""
 
     def test_run_dialogue_split(self) -> None:
         """Тест что _run_dialogue разделен на меньшие методы."""
         app_file = Path("tui/app.py")
-        content = app_file.read_text()
+        content = app_file.read_text(encoding="utf-8")
 
         tree = ast.parse(content)
 
@@ -79,11 +79,14 @@ class TestKISSFix:
             "_handle_critical_error",
         ]
 
-        class MethodFinder(ast.NodeVisitor):
+        class MethodFinder(ast.NodeVisitor):  # pylint: disable=too-few-public-methods
+            """AST visitor для поиска методов в файле."""
+
             def __init__(self) -> None:
                 self.methods: set[str] = set()
 
-            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # pylint: disable=invalid-name
+                """Посетить определение функции и записать её имя."""
                 self.methods.add(node.name)
                 self.generic_visit(node)
 
@@ -100,7 +103,7 @@ class TestYAGNIFix:
     def test_dialogue_ui_callback_removed(self) -> None:
         """Тест что DialogueUICallback удален из сервиса."""
         service_file = Path("services/dialogue_service.py")
-        content = service_file.read_text()
+        content = service_file.read_text(encoding="utf-8")
 
         assert "class DialogueUICallback" not in content
         assert "ui_callback" not in content.lower()
@@ -109,24 +112,24 @@ class TestYAGNIFix:
         """Тест что DialogueService не принимает ui_callback."""
 
         source_file = Path("services/dialogue_service.py")
-        content = source_file.read_text()
+        content = source_file.read_text(encoding="utf-8")
 
         assert "def __init__" in content
 
 
-class TestSRPFix:
+class TestSRPFix:  # pylint: disable=too-few-public-methods
     """Тест: вынесение утилит из app.py."""
 
     def test_utility_functions_moved(self) -> None:
         """Тест что утилиты вынесены из app.py."""
         styles_file = Path("tui/styles.py")
-        content = styles_file.read_text()
+        content = styles_file.read_text(encoding="utf-8")
 
         assert "_get_status_style_string" in content or "get_status" in content
         assert "create_ollama_client" in content or "ollama" in content.lower()
 
 
-class TestConfigWrapperRemoval:
+class TestConfigWrapperRemoval:  # pylint: disable=too-few-public-methods
     """Тест: удаление config.py wrapper."""
 
     def test_config_wrapper_removed(self) -> None:
@@ -134,7 +137,7 @@ class TestConfigWrapperRemoval:
         config_file = Path("config.py")
 
         if config_file.exists():
-            content = config_file.read_text()
+            content = config_file.read_text(encoding="utf-8")
             assert (
                 "from models.config import Config" not in content or len(content) < 50
             )
@@ -162,7 +165,6 @@ class TestArchitectureIntegrity:
 
     def test_conversation_uses_protocol(self) -> None:
         """Тест что Conversation использует Protocol для DI."""
-        from models.conversation import Conversation
 
         conversation = Conversation(
             model_a="llama3",
@@ -179,8 +181,7 @@ class TestArchitectureIntegrity:
 
     def test_service_uses_abstractions(self) -> None:
         """Тест что сервис использует абстракции."""
-        from services.dialogue_service import DialogueService
-        from models.conversation import Conversation
+        from services.dialogue_service import DialogueService  # pylint: disable=import-outside-toplevel
 
         conversation = Conversation(
             model_a="llama3",

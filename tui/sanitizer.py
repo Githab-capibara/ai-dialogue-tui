@@ -48,7 +48,7 @@ class Sanitizer(Protocol):
         Returns:
             Очищенная тема.
         """
-        ...
+        ...  # pylint: disable=unnecessary-ellipsis
 
     def sanitize_response_for_display(self, response: str) -> str:
         """
@@ -60,7 +60,7 @@ class Sanitizer(Protocol):
         Returns:
             Безопасный для отображения текст.
         """
-        ...
+        ...  # pylint: disable=unnecessary-ellipsis
 
 
 def sanitize_topic(topic: str) -> str:

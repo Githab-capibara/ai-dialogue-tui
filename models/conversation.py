@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Callable, Literal
 
 from models.config import Config
 from models.provider import MessageDict, ModelProvider
@@ -49,7 +49,7 @@ class Conversation:
     topic: str  # Тема диалога
 
     # Конфигурация для dependency injection
-    _config: Config = field(default=None, repr=False)
+    _config: Config | None = field(default=None, repr=False)
 
     # Контексты для каждой модели (списки сообщений в формате Ollama)
     _context_a: list[MessageDict] = field(default_factory=list, repr=False)
@@ -125,7 +125,7 @@ class Conversation:
     def _add_message_to_context(
         self,
         context: list[MessageDict],
-        set_context: callable,
+        set_context: Callable[[list[MessageDict]], None],
         role: str,
         content: str,
     ) -> None:
@@ -285,12 +285,9 @@ class Conversation:
 
         Использует присваивание новых списков для простоты и читаемости.
         """
-        # Создаём новый системный промпт
-        system_message = MessageDict(role="system", content=self._system_prompt)
-
-        # Присваиваем новые списки (проще и понятнее чем .clear())
-        self._context_a = [system_message]
-        self._context_b = [system_message]
+        # Присваиваем новые списки с отдельными копиями system_message
+        self._context_a = [MessageDict(role="system", content=self._system_prompt)]
+        self._context_b = [MessageDict(role="system", content=self._system_prompt)]
 
         # Сбрасываем ход на A
         self._current_turn = "A"
