@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Callable
 
 import aiohttp
 from textual import on
@@ -225,15 +226,24 @@ class DialogueApp(App):
     TITLE = "AI Dialogue TUI"
     sub_title = "Диалог двух ИИ-моделей через Ollama"
 
-    def __init__(self, config: Config | None = None) -> None:
+    def __init__(
+        self,
+        config: Config | None = None,
+        provider_factory: Callable[[], ModelProvider] | None = None,
+    ) -> None:
         """
         Инициализация приложения.
 
         Args:
             config: Опциональная конфигурация для dependency injection.
+            provider_factory: Фабрика для создания ModelProvider.
+                              Если не указана, используется OllamaClient по умолчанию.
         """
         super().__init__()
         self._config = config or Config()
+        self._provider_factory = provider_factory or (
+            lambda: OllamaClient(host=self._config.ollama_host)
+        )
         self._client: ModelProvider | None = None
         self._controller: DialogueController | None = None
         self._dialogue_task: asyncio.Task[None] | None = None
@@ -280,7 +290,8 @@ class DialogueApp(App):
     async def on_mount(self) -> None:
         """Инициализация при запуске приложения."""
         try:
-            self._client = OllamaClient(host=self._config.ollama_host)
+            # Используем factory для создания провайдера (DIP)
+            self._client = self._provider_factory()
 
             # Получаем список моделей
             self._models = await self._client.list_models()
@@ -408,14 +419,8 @@ class DialogueApp(App):
     @on(Button.Pressed, f"#{UI_IDS.start_btn}")
     def on_start_pressed(self) -> None:
         """Запуск диалога."""
-        if self._controller is None:
-            self.notify(
-                "Сначала выберите модели и тему!",
-                title="Ошибка",
-                severity="error",
-                timeout=DEFAULT_NOTIFY_TIMEOUT,
-            )
-            return
+        # Проверяем инициализацию через assert для type safety
+        assert self._controller is not None, "Controller not initialized"
 
         if not self._controller.handle_start():
             # Ошибка уже обработана в контроллере
@@ -428,14 +433,8 @@ class DialogueApp(App):
     @on(Button.Pressed, f"#{UI_IDS.pause_btn}")
     def on_pause_pressed(self) -> None:
         """Пауза/продолжение диалога."""
-        if self._controller is None:
-            self.notify(
-                "Диалог ещё не настроен!",
-                title="Ошибка",
-                severity="error",
-                timeout=DEFAULT_NOTIFY_TIMEOUT,
-            )
-            return
+        # Проверяем инициализацию через assert для type safety
+        assert self._controller is not None, "Controller not initialized"
         self._controller.handle_pause()
 
     @on(Button.Pressed, f"#{UI_IDS.clear_btn}")
@@ -473,8 +472,9 @@ class DialogueApp(App):
 
     async def _run_dialogue(self) -> None:
         """Основной цикл диалога."""
-        if self._controller is None:
-            return
+        # Проверяем инициализацию через assert для type safety
+        assert self._controller is not None, "Controller not initialized"
+        assert self._client is not None, "Client not initialized"
 
         service = self._controller.service
 
@@ -488,7 +488,9 @@ class DialogueApp(App):
 
                 try:
                     await self._process_dialogue_turn(service, model_name, style)
-                except ProviderError:
+                except ProviderError as e:
+                    # Унифицированная обработка всех ProviderError
+                    log.warning("Ошибка провайдера в цикле диалога: %s", e)
                     self._handle_dialogue_error(model_name)
                     raise
 
@@ -497,7 +499,8 @@ class DialogueApp(App):
         except asyncio.CancelledError:
             log.debug("Диалог отменён")
         except ProviderError:
-            log.warning("Ошибка провайдера в цикле диалога")
+            # ProviderError уже обработан в _handle_dialogue_error выше
+            pass
         except (RuntimeError, SystemError, OSError) as e:
             self._handle_critical_error(e)
         finally:

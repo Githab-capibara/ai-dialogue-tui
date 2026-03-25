@@ -15,7 +15,8 @@
 Всего: 42 теста
 """
 
-# pylint: disable=import-outside-toplevel,missing-class-docstring,missing-function-docstring,unused-argument,reimported,duplicate-code,line-too-long
+# pylint:
+# disable=import-outside-toplevel,missing-class-docstring,missing-function-docstring,unused-argument,reimported,duplicate-code,line-too-long
 
 from __future__ import annotations
 
@@ -880,8 +881,16 @@ class TestConversationContextIsolation:
         context = conversation.get_context("A")
         original_len = len(context)
 
-        # Пытаемся изменить возвращённый контекст
-        context.append({"role": "user", "content": "Injected"})
+        # Проверяем что возвращён tuple (неизменяемый)
+        assert isinstance(context, tuple)
+
+        # Пытаемся изменить возвращённый контекст - должно вызвать ошибку
+        try:
+            # type: ignore
+            context.append({"role": "user", "content": "Injected"})
+            assert False, "Ожидается AttributeError для tuple"
+        except AttributeError:
+            pass  # Ожидаемое поведение
 
         # Оригинальный контекст не должен измениться
         assert len(conversation.get_context("A")) == original_len

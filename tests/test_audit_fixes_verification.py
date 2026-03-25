@@ -14,7 +14,8 @@
 - LOW 4: Форматирование f-строки
 """
 
-# pylint: disable=protected-access,too-few-public-methods,import-outside-toplevel
+# pylint:
+# disable=protected-access,too-few-public-methods,import-outside-toplevel
 
 from __future__ import annotations
 

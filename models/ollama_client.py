@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 from typing import Any, Final
 
@@ -24,6 +25,8 @@ from models.provider import (
     ProviderError,
     ProviderGenerationError,
 )
+
+_logger = logging.getLogger(__name__)
 
 # Кэшированные дефолтные опции для производительности
 _DEFAULT_OPTIONS: Final = {
@@ -230,6 +233,9 @@ class _ModelsCache:
     Реализует простой TTL-кэш для результата list_models.
     """
 
+    # Максимальный размер кэша для защиты от переполнения памяти
+    MAX_CACHE_SIZE: int = 100
+
     def __init__(self, ttl: int = _MODELS_CACHE_TTL) -> None:
         """
         Инициализация кэша.
@@ -240,6 +246,7 @@ class _ModelsCache:
         self._ttl = ttl
         self._models: list[str] | None = None
         self._cache_timestamp: float | None = None
+        self._access_count: int = 0
 
     def _is_cache_valid(self) -> bool:
         """
@@ -254,6 +261,15 @@ class _ModelsCache:
         current_time = time.time()
         return (current_time - self._cache_timestamp) < self._ttl
 
+    def _should_invalidate_by_size(self) -> bool:
+        """
+        Проверить нужно ли инвалидировать кэш по размеру.
+
+        Returns:
+            True если кэш превышает максимальный размер.
+        """
+        return self._access_count > self.MAX_CACHE_SIZE
+
     def get(self) -> list[str] | None:
         """
         Получить закэшированные модели если кэш валиден.
@@ -261,7 +277,8 @@ class _ModelsCache:
         Returns:
             Список моделей или None если кэш не валиден.
         """
-        if self._is_cache_valid():
+        if self._is_cache_valid() and not self._should_invalidate_by_size():
+            self._access_count += 1
             return self._models
         return None
 
@@ -274,11 +291,13 @@ class _ModelsCache:
         """
         self._models = models
         self._cache_timestamp = time.time()
+        self._access_count = 0
 
     def invalidate(self) -> None:
         """Очистить кэш."""
         self._models = None
         self._cache_timestamp = None
+        self._access_count = 0
 
 
 class OllamaClient:
@@ -381,12 +400,15 @@ class OllamaClient:
                 f"Не удалось подключиться к Ollama ({self.host})",
                 original_exception=e,
             ) from e
-        except ProviderError:
-            # Пробрасываем наши ошибки дальше
+        except ProviderError as e:
+            # Логируем и пробрасываем наши ошибки дальше
+            _logger.debug("ProviderError при получении списка моделей: %s", e)
             raise
-        except Exception as e:
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            raise ProviderGenerationError(f"Ошибка валидации ответа API: {e}") from e
+        except (OSError, IOError) as e:
             raise ProviderGenerationError(
-                f"Ошибка получения списка моделей: {e}"
+                f"Ошибка ввода-вывода при получении списка моделей: {e}"
             ) from e
 
     async def generate(
@@ -454,8 +476,13 @@ class OllamaClient:
                 f"Не удалось подключиться к Ollama ({self.host})",
                 original_exception=e,
             ) from e
-        except ProviderError:
-            # Пробрасываем наши ошибки дальше
+        except ProviderError as e:
+            # Логируем и пробрасываем наши ошибки дальше
+            _logger.debug("ProviderError при генерации ответа: %s", e)
             raise
-        except Exception as e:
-            raise ProviderGenerationError(f"Ошибка генерации ответа: {e}") from e
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            raise ProviderGenerationError(f"Ошибка валидации ответа API: {e}") from e
+        except (OSError, IOError) as e:
+            raise ProviderGenerationError(
+                f"Ошибка ввода-вывода при генерации ответа: {e}"
+            ) from e

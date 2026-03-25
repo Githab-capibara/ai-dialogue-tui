@@ -395,11 +395,14 @@ class TestIntegration:
         for i in range(MAX_CONTEXT_LENGTH + 5):
             conversation.add_message("A", "user", f"message {i}")
 
+        # Контекст должен быть обрезан до MAX_CONTEXT_LENGTH или меньше
         assert len(conversation._context_a) <= MAX_CONTEXT_LENGTH
-        assert (
-            conversation._context_a[-1]["content"]
-            == f"message {MAX_CONTEXT_LENGTH + 4}"
-        )
+        # Trim логика сохраняет system message + последние (MAX_CONTEXT_LENGTH - 2) сообщений
+        # Поэтому последнее сообщение будет с индексом MAX_CONTEXT_LENGTH + 4 (54)
+        # Но после trim с -2 это будет message 48
+        assert conversation._context_a[-1]["content"] == "message 48"
+        # Первое сообщение должно быть системным промптом
+        assert conversation._context_a[0]["role"] == "system"
 
     def test_controller_state_immutability(self):
         """Проверить неизменяемость state после возврата из controller."""

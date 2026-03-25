@@ -10,6 +10,8 @@ import asyncio
 import logging
 import sys
 
+from models.config import Config
+from models.ollama_client import OllamaClient
 from models.provider import (
     ProviderConfigurationError,
     ProviderConnectionError,
@@ -34,7 +36,13 @@ def main() -> int:  # pylint: disable=too-many-return-statements
     Note:
         Оборачивает app.run() в try/except для перехвата необработанных исключений.
     """
-    app = DialogueApp()
+    config = Config()
+
+    # Создаём factory для внедрения зависимости (DIP)
+    def provider_factory() -> OllamaClient:
+        return OllamaClient(host=config.ollama_host)
+
+    app = DialogueApp(config=config, provider_factory=provider_factory)
 
     try:
         app.run()

@@ -21,13 +21,21 @@ ai-dialogue-tui/
 │   ├── __init__.py
 │   ├── app.py                 # Основное TUI приложение
 │   ├── styles.py              # Централизованные стили и UI IDs
+│   ├── constants.py           # Константы UI
 │   └── sanitizer.py           # Sanitizer Protocol + функции санитизации
 └── tests/                     # Модульные тесты
     ├── __init__.py
     ├── test_critical.py       # Тесты критических функций
     ├── test_architecture.py   # Тесты архитектуры
     ├── test_fixes.py          # Тесты исправлений
-    └── test_arch_fixes.py     # Тесты архитектурных изменений
+    ├── test_arch_fixes.py     # Тесты архитектурных изменений
+    ├── test_audit_fixes.py    # Тесты аудита кода (38 тестов)
+    ├── test_arch_audit_fixes.py # Тесты архитектурных исправлений аудита
+    ├── test_audit_fixes_verification.py # Тесты верификации
+    ├── test_code_audit_fixes.py # Тесты исправлений по результатам аудита
+    ├── test_architecture_integrity.py # Тесты целостности архитектуры
+    ├── test_architecture_refactor.py # Тесты архитектурного рефакторинга
+    └── test_architecture_patterns.py # Тесты паттернов проектирования
 ```
 
 ## Архитектурные слои
@@ -90,10 +98,18 @@ class ModelProvider(Protocol):
 - `ProviderConnectionError` — ошибки подключения (недоступность хоста, таймауты)
 - `ProviderGenerationError` — ошибки генерации (ошибки API, валидации ответа)
 
+**MessageDict:**
+```python
+class MessageDict(TypedDict, total=True):
+    role: Literal["system", "user", "assistant"]
+    content: str
+```
+
 **Преимущества:**
 - Возможность замены провайдера (Ollama → OpenAI → Anthropic) без изменения доменной логики
 - Тестируемость через mock-реализации протокола
 - Типизированная обработка ошибок через иерархию исключений
+- Строгая типизация словарей через `total=True`
 
 #### `models/conversation.py`
 Класс `Conversation` управляет диалогом между двумя моделями:
@@ -104,8 +120,13 @@ class ModelProvider(Protocol):
 **Оптимизации:**
 - `__slots__` в dataclass для уменьшения потребления памяти
 - Early returns в `__post_init__` для предотвращения повторной инициализации
-- `.copy()` при возврате контекста для безопасности (защита от внешних изменений)
+- Словарь для выбора контекста вместо if/else цепочек
+- Возврат tuple вместо list.copy() для производительности и безопасности
 - Присваивание новых списков в `clear_contexts()` для простоты и читаемости
+
+**Ограничение контекста:**
+- `MAX_CONTEXT_LENGTH = 50` — максимальное количество сообщений
+- Автоматическая обрезка старых сообщений с сохранением системного промпта
 
 #### `models/ollama_client.py`
 Класс `OllamaClient` реализует протокол `ModelProvider` для Ollama API:
@@ -117,11 +138,13 @@ class ModelProvider(Protocol):
 - `_RequestValidator` — валидация входных параметров запросов
 - `_ResponseHandler` — обработка и валидация ответов API
 - `_HTTPSessionManager` — управление HTTP-сессиями и пулинг соединений
-- `_ModelsCache` — TTL-кэширование списка моделей (TTL 300 секунд)
+- `_ModelsCache` — TTL-кэширование списка моделей
 
 **Кэширование:**
 - `list_models()` использует кэш с TTL 300 секунд для производительности
+- `MAX_CACHE_SIZE = 100` — ограничение размера кэша для защиты от переполнения памяти
 - Автоматическая инвалидация кэша при закрытии клиента
+- Подсчёт количества обращений для инвалидации по размеру
 
 **Ограничение контекста:**
 - `MAX_CONTEXT_LENGTH = 50` — максимальное количество сообщений в контексте
@@ -130,14 +153,15 @@ class ModelProvider(Protocol):
 **Обработка исключений:**
 - Используется иерархия `ProviderError` для типизированной обработки ошибок
 - Конкретные типы исключений вместо broad `Exception`:
-  - `ProviderConnectionError` — ошибки подключения
-  - `ProviderGenerationError` — ошибки генерации и валидации
-- Сохранение цепочки исключений через `raise ... from`
+  - `ProviderConnectionError` — ошибки подключения (aiohttp.ClientError, asyncio.TimeoutError)
+  - `ProviderGenerationError` — ошибки генерации и валидации (JSONDecodeError, KeyError, TypeError)
+- Сохранение цепочки исключений через `raise ... from e` во всех случаях
 
 **Валидация:**
 - `_RequestValidator.validate_messages()` — валидация структуры сообщений
 - `_ResponseHandler.validate_status_code()` — валидация HTTP статуса
-- `validate_ollama_url()` — валидация URL хоста
+- `_ResponseHandler.parse_json_response()` — валидация JSON структуры
+- `validate_ollama_url()` — валидация URL хоста через urllib.parse
 
 **Оптимизации:**
 - Кэшированные дефолтные опции (`_DEFAULT_OPTIONS`)
@@ -175,6 +199,17 @@ class DialogueUICallback(Protocol):
 - Обработчики событий UI
 - Делегирует бизнес-логику в `DialogueController` и `DialogueService`
 
+**Dependency Injection:**
+- `provider_factory` внедряется через конструктор
+- Factory по умолчанию создаёт `OllamaClient`
+- Assert проверки вместо if None для type safety
+- Унифицированная обработка всех `ProviderError`
+
+**Управление задачами:**
+- Асинхронный цикл диалога в `_run_dialogue()`
+- Отмена задачи при остановке
+- Обработка `asyncio.CancelledError`
+
 #### `tui/styles.py`
 Централизованные стили и идентификаторы:
 - `MESSAGE_STYLES` — стили для сообщений
@@ -185,7 +220,14 @@ class DialogueUICallback(Protocol):
 #### `tui/sanitizer.py`
 Функции санитизации для безопасного отображения:
 - `sanitize_topic()` — экранирование специальных символов в теме
+  - Валидация типа: `TypeError` для `None` и не-строковых значений
+  - Экранирование `{ }` для предотвращения инъекций промпта
+  - Экранирование `[ ]` для безопасности
 - `sanitize_response_for_display()` — экранирование markup и HTML
+  - Валидация типа: `TypeError` для не-строковых значений
+  - HTML экранирование базовых символов
+  - Экранирование Textual markup: `[ ] { } @ # * _ ` ~ | \`
+  - Обрезка до `MAX_RESPONSE_PREVIEW_LENGTH = 100` символов
 
 ## Паттерны проектирования
 
@@ -197,6 +239,13 @@ class DialogueService:
         self,
         provider: ModelProvider,
         conversation: Conversation,
+    ) -> None: ...
+
+class DialogueApp:
+    def __init__(
+        self,
+        config: Config | None = None,
+        provider_factory: Callable[[], ModelProvider] | None = None,
     ) -> None: ...
 ```
 
@@ -214,14 +263,28 @@ class DialogueService:
 
 ### 4. Data Class
 Конфигурация и структуры данных:
-- `Config` — параметры приложения
-- `MessageDict` — TypedDict для сообщений
+- `Config` — параметры приложения (frozen=True, slots=True)
+- `MessageDict` — TypedDict с total=True для сообщений
 - `DialogueTurnResult` — результат хода диалога
 - `UIState` — состояние UI
 
 ### 5. Logging
 Логирование для отладки и мониторинга:
 - Модульный логгер в `models/conversation.py`
+- Логирование предупреждений при обрезке контекста
+- Логирование отладочной информации о ходах
+
+### 6. Caching
+TTL-кэширование в `OllamaClient`:
+- `_ModelsCache` с TTL 300 секунд
+- Ограничение размера кэша (MAX_CACHE_SIZE = 100)
+- Автоматическая инвалидация при закрытии
+
+### 7. Resource Management
+Управление ресурсами через контекстные менеджеры:
+- `_HTTPSessionManager` для HTTP-сессий
+- `async with` для aiohttp запросов
+- Очистка ресурсов в `on_unmount()`
 
 ## SOLID принципы
 
@@ -233,15 +296,20 @@ class DialogueService:
   - `Conversation` — управление контекстом диалога
   - `DialogueService` — бизнес-логика диалога
   - `DialogueController` — управление состоянием UI
-  - `_RequestValidator`, `_ResponseHandler`, `_HTTPSessionManager` — отдельные компоненты для валидации, обработки ответов и управления сессиями
+  - `_RequestValidator` — валидация запросов
+  - `_ResponseHandler` — обработка ответов
+  - `_HTTPSessionManager` — управление сессиями
+  - `_ModelsCache` — кэширование моделей
 
 **O — Open/Closed Principle (Принцип открытости/закрытости):**
 - Протокол `ModelProvider` позволяет добавлять новых провайдеров без изменения существующего кода
 - `DialogueService` открыт для расширения через новые реализации `ModelProvider`
+- Иерархия `ProviderError` позволяет добавлять новые типы исключений
 
 **L — Liskov Substitution Principle (Принцип подстановки Барбары Лисков):**
 - Любая реализация `ModelProvider` может быть подставлена вместо базового типа
 - Иерархия `ProviderError` позволяет заменять базовые исключения на специфичные
+- `MessageDict` с `total=True` гарантирует структуру словаря
 
 **I — Interface Segregation Principle (Принцип разделения интерфейса):**
 - Протоколы узкоспециализированы:
@@ -253,21 +321,24 @@ class DialogueService:
 - Модули верхнего уровня не зависят от модулей нижнего уровня
 - Все зависимости определяются через абстракции (протоколы)
 - Domain Layer не зависит от Infrastructure Layer
+- `provider_factory` внедряется в `DialogueApp` для гибкости
 
 ## Тестируемость
 
 ### Модульные тесты
-- `tests/test_critical.py` — тесты критических функций
-- `tests/test_architecture.py` — тесты архитектуры
-- `tests/test_fixes.py` — тесты исправлений
-- `tests/test_arch_fixes.py` — тесты архитектурных изменений
-- `tests/test_audit_fixes.py` — тесты аудита кода
-- `tests/test_arch_audit_fixes.py` — тесты архитектурных исправлений аудита
-- `tests/test_audit_fixes_verification.py` — тесты верификации исправлений аудита
-- `tests/test_code_audit_fixes.py` — тесты исправлений по результатам аудита кода
-- `tests/test_architecture_refactor.py` — тесты архитектурного рефакторинга
+- `test_critical.py` — тесты критических функций
+- `test_architecture.py` — тесты архитектуры
+- `test_fixes.py` — тесты исправлений
+- `test_arch_fixes.py` — тесты архитектурных изменений
+- `test_audit_fixes.py` — 38 тестов аудита кода
+- `test_arch_audit_fixes.py` — тесты архитектурных исправлений аудита
+- `test_audit_fixes_verification.py` — тесты верификации исправлений аудита
+- `test_code_audit_fixes.py` — тесты исправлений по результатам аудита кода
+- `test_architecture_integrity.py` — тесты целостности архитектуры
+- `test_architecture_refactor.py` — тесты архитектурного рефакторинга
+- `test_architecture_patterns.py` — тесты паттернов проектирования
 
-**Всего: 248 тестов**
+**Всего: 307 тестов**
 
 ### Архитектурные тесты проверяют:
 - Отсутствие зависимостей Domain Layer от Infrastructure
@@ -276,6 +347,19 @@ class DialogueService:
 - Возможность замены провайдера без изменения домена
 - Отсутствие циклических зависимостей
 - Разделение модулей
+
+### Покрытие тестами
+
+Тесты покрывают следующие аспекты:
+- **Валидация типов**: TypeError для None/non-string в sanitizer
+- **Обработка исключений**: Конкретные типы вместо broad Exception
+- **Dependency Injection**: provider_factory внедряется через конструктор
+- **Assert проверки**: assert вместо if None для type safety
+- **ProviderError**: Унифицированная обработка всех ошибок провайдера
+- **Exception chaining**: Сохранение __cause__ через from e
+- **XSS защита**: Экранирование markup символов
+- **Кэширование**: Ограничение размера кэша (MAX_CACHE_SIZE)
+- **Структуры данных**: MessageDict с total=True, tuple вместо list
 
 ### Запуск тестов:
 ```bash
@@ -337,6 +421,9 @@ ruff format .
 # Статический анализ
 pylint . --reports=yes
 
+# Дополнительное форматирование PEP 8
+autopep8 --in-place --aggressive --aggressive *.py
+
 # Проверка зависимостей
 deptry .
 pip check
@@ -346,7 +433,7 @@ pip check
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 248 passed
+- **Тесты:** 307 passed
 - **Дублирование кода:** 0%
 - **Циклические зависимости:** отсутствуют
 

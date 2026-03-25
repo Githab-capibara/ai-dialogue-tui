@@ -73,7 +73,7 @@ class ProviderGenerationError(ProviderError):
     """
 
 
-class MessageDict(TypedDict):
+class MessageDict(TypedDict, total=True):
     """
     Структура сообщения в формате совместимом с Ollama.
 
