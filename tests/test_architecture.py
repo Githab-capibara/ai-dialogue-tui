@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 # pylint: disable=duplicate-code
-
 import ast
 import inspect
 from unittest.mock import AsyncMock

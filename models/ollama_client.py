@@ -8,15 +8,14 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from dataclasses import dataclass
 from typing import Any, Final
 
 import aiohttp
 
 from models.config import (
-    Config,
     DEFAULT_MAX_TOKENS,
     DEFAULT_TEMPERATURE,
+    Config,
     validate_ollama_url,
 )
 from models.provider import (
@@ -34,16 +33,6 @@ _DEFAULT_OPTIONS: Final = {
 
 # TTL для кэша моделей (5 минут)
 _MODELS_CACHE_TTL: Final = 300
-
-
-@dataclass
-class _RequestConfig:
-    """Конфигурация для HTTP запроса."""
-
-    url: str
-    method: str
-    json_payload: dict[str, Any] | None = None
-    timeout: int = 60
 
 
 class _RequestValidator:

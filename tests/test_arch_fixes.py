@@ -60,34 +60,6 @@ class TestSanitizerModule:
         assert len(result) <= 110
 
 
-class TestStatusStyleEnum:
-    """Тесты для проверки StatusStyle enum."""
-
-    def test_status_style_enum_exists(self):
-        """Тест, что StatusStyle enum существует."""
-        from tui.styles import StatusStyle
-
-        assert hasattr(StatusStyle, "INFO")
-        assert hasattr(StatusStyle, "SUCCESS")
-        assert hasattr(StatusStyle, "WARNING")
-        assert hasattr(StatusStyle, "ERROR")
-
-    def test_status_style_values(self):
-        """Тест, что StatusStyle имеет правильные строковые значения."""
-        from tui.styles import StatusStyle
-
-        assert StatusStyle.INFO.value == "info"
-        assert StatusStyle.SUCCESS.value == "success"
-        assert StatusStyle.WARNING.value == "warning"
-        assert StatusStyle.ERROR.value == "error"
-
-    def test_get_status_style_string_function_exists(self):
-        """Тест, что функция get_status_style_string существует в styles."""
-        from tui.styles import get_status_style_string
-
-        assert callable(get_status_style_string)
-
-
 class TestConversationLogging:
     """Тесты для проверки логирования в Conversation."""
 
@@ -112,27 +84,6 @@ class TestConversationLogging:
             conv.add_message("A", "user", "test message")
 
         assert any("Added" in record.message for record in caplog.records)
-
-
-class TestOllamaClientFactory:
-    """Тест для проверки фабрики OllamaClient."""
-
-    def test_create_ollama_client_function_exists(self):
-        """Тест, что функция create_ollama_client существует."""
-        from tui.styles import create_ollama_client
-
-        assert callable(create_ollama_client)
-
-    def test_create_ollama_client_returns_client(self):
-        """Тест, что create_ollama_client возвращает клиент."""
-        from tui.styles import create_ollama_client
-
-        host = "http://localhost:11434"
-        client = create_ollama_client(host)
-
-        assert client is not None
-        assert hasattr(client, "list_models")
-        assert hasattr(client, "generate")
 
 
 class TestArchitecturalBoundaries:

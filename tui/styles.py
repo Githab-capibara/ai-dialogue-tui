@@ -7,17 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import Final
-
-
-class StatusStyle(Enum):
-    """Enum для стилей статусных сообщений."""
-
-    INFO = "info"
-    SUCCESS = "success"
-    WARNING = "warning"
-    ERROR = "error"
 
 
 @dataclass(frozen=True)
@@ -138,7 +128,6 @@ CSS_CLASSES: Final = CSSClasses()
 
 # Экспорт публичного API модуля
 __all__ = [
-    "StatusStyle",
     "MessageStyles",
     "UIElementIDs",
     "CSSClasses",
@@ -146,45 +135,7 @@ __all__ = [
     "UI_IDS",
     "CSS_CLASSES",
     "generate_main_css",
-    "get_status_style_string",
-    "create_ollama_client",
 ]
-
-
-def create_ollama_client(host: str):
-    """
-    Фабрика для создания OllamaClient.
-
-    Args:
-        host: URL хоста Ollama.
-
-    Returns:
-        Настроенный экземпляр OllamaClient.
-    """
-    from models.ollama_client import OllamaClient  # pylint: disable=import-outside-toplevel
-
-    return OllamaClient(host=host)
-
-
-def get_status_style_string(style: StatusStyle | str) -> str:
-    """
-    Конвертировать StatusStyle в строку для отображения в UI.
-
-    Args:
-        style: StatusStyle enum или строка.
-
-    Returns:
-        Строковое представление стиля.
-    """
-    if isinstance(style, StatusStyle):
-        mapping = {
-            StatusStyle.INFO: "dim",
-            StatusStyle.SUCCESS: "green",
-            StatusStyle.WARNING: "yellow",
-            StatusStyle.ERROR: "red",
-        }
-        return mapping.get(style, "dim")
-    return style
 
 
 def generate_main_css() -> str:

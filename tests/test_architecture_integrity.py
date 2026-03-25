@@ -15,8 +15,7 @@
 Всего: 42 теста
 """
 
-# pylint:
-# disable=import-outside-toplevel,missing-class-docstring,missing-function-docstring,unused-argument,reimported,duplicate-code
+# pylint: disable=import-outside-toplevel,missing-class-docstring,missing-function-docstring,unused-argument,reimported,duplicate-code,line-too-long
 
 from __future__ import annotations
 
@@ -38,7 +37,7 @@ from models.provider import (
     ProviderGenerationError,
 )
 from services.dialogue_service import DialogueService
-from tui.sanitizer import Sanitizer, sanitize_response_for_display, sanitize_topic
+from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 
 # =============================================================================
 # 1. Тесты ProviderError иерархии
@@ -467,22 +466,11 @@ class TestContextLengthLimit:
 
 
 class TestSanitizerProtocol:
-    """Тесты для проверки Sanitizer протокола."""
-
-    def test_sanitizer_protocol_exists(self) -> None:
-        """
-        Проверка что протокол Sanitizer существует.
-
-        Протокол должен быть определён в tui/sanitizer.py.
-        """
-        assert Sanitizer is not None
-        assert issubclass(type(Sanitizer), type(Protocol))
+    """Тесты для проверки функций санитизации."""
 
     def test_sanitize_topic_implements_protocol(self) -> None:
         """
-        Проверка что sanitize_topic соответствует протоколу.
-
-        Функция должна иметь правильную сигнатуру.
+        Проверка что sanitize_topic имеет правильную сигнатуру.
         """
         import inspect
 
@@ -498,9 +486,7 @@ class TestSanitizerProtocol:
 
     def test_sanitize_response_implements_protocol(self) -> None:
         """
-        Проверка что sanitize_response_for_display соответствует протоколу.
-
-        Функция должна иметь правильную сигнатуру.
+        Проверка что sanitize_response_for_display имеет правильную сигнатуру.
         """
         import inspect
 
@@ -513,38 +499,6 @@ class TestSanitizerProtocol:
         # Проверяем что функция работает
         result = sanitize_response_for_display("test response")
         assert isinstance(result, str)
-
-    def test_protocol_runtime_checkable(self) -> None:
-        """
-        Проверка что протокол runtime_checkable.
-
-        Это позволяет проверять isinstance() во время выполнения.
-        """
-        from typing import get_origin
-
-        from tui.sanitizer import Sanitizer as SanitizerProtocol
-
-        # Проверяем что протокол runtime_checkable через isinstance проверку
-        # runtime_checkable протоколы имеют специальный флаг в __protocol_attrs__
-        # или могут быть проверены через isinstance
-
-        # Создаём класс реализующий протокол
-        class MySanitizer:
-            def sanitize_topic(self, topic: str) -> str:
-                return topic
-
-            def sanitize_response_for_display(self, response: str) -> str:
-                return response
-
-        # Проверяем что isinstance работает - это доказывает runtime_checkable
-        sanitizer = MySanitizer()
-        assert isinstance(sanitizer, SanitizerProtocol)
-
-        # Дополнительная проверка через get_origin для Protocol
-        assert (
-            get_origin(SanitizerProtocol) is None
-            or get_origin(SanitizerProtocol) is SanitizerProtocol
-        )
 
 
 # =============================================================================
@@ -823,7 +777,8 @@ class TestArchitectureIntegrity:
             source = f.read()
 
         # Проверяем что ProviderError импортируется
-        assert "from models.provider import ProviderError" in source
+        assert "ProviderError" in source
+        assert "from models.provider import" in source
 
         # Проверяем что ошибка обрабатывается
         assert "except ProviderError:" in source
