@@ -88,8 +88,9 @@ ai_dialogue_tui/
 ├── tui/                       # Presentation Layer
 │   ├── __init__.py
 │   ├── app.py                 # Textual TUI приложение
-│   ├── styles.py              # Централизованные стили и UI IDs
-│   └── sanitizer.py           # Sanitizer Protocol + функции санитизации
+│   ├── constants.py           # UI константы (UI_IDS, MESSAGE_STYLES)
+│   ├── styles.py              # Генерация CSS стилей
+│   └── sanitizer.py           # Функции санитизации
 ├── tests/                     # Модульные тесты
 │   ├── __init__.py
 │   ├── test_critical.py       # Тесты критических функций
@@ -165,7 +166,7 @@ pytest tests/ -v
 pytest tests/ -v --cov=. --cov-report=term-missing
 ```
 
-Включено **284 теста**:
+Включено **300 тестов**:
 - **test_critical.py** — тесты критических функций (валидация, атомарность, санитизация)
 - **test_architecture.py** — тесты архитектуры (слои, зависимости, протоколы)
 - **test_fixes.py** — тесты исправлений и оптимизаций
@@ -177,6 +178,7 @@ pytest tests/ -v --cov=. --cov-report=term-missing
 - **test_architecture_refactor.py** — тесты архитектурного рефакторинга
 - **test_arch_audit_fixes.py** — тесты архитектурных исправлений аудита
 - **test_new_audit_fixes.py** — тесты новых исправлений по результатам аудита
+- **test_architecture_patterns.py** — тесты паттернов проектирования
 
 ## Инструменты качества кода
 
@@ -199,7 +201,7 @@ pip check
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 284 passed
+- **Тесты:** 300 passed
 - **Дублирование кода:** 0%
 
 ## Как это работает

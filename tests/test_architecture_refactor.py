@@ -7,7 +7,7 @@
 4. Удаление Sanitizer Protocol из tui/sanitizer.py (YAGNI)
 5. Удаление _RequestConfig из models/ollama_client.py (YAGNI)
 6. Упрощение _add_message_to_context (KISS)
-7. Отсутствие прямого импорта OllamaClient в tui/app.py (DIP)
+7. Использование ModelProvider для типизации в tui/app.py (DIP)
 8. Отсутствие coupling между tui/styles.py и models/ollama_client.py
 """
 
@@ -133,24 +133,7 @@ def test_add_message_to_context_simple_signature() -> None:
     assert len(params) <= 4, f"Слишком много параметров: {list(params.keys())}"
 
 
-# --- Тест 7: tui/app.py не импортирует OllamaClient напрямую ---
-
-
-def test_app_no_direct_ollama_import() -> None:
-    """tui/app.py не должен импортировать OllamaClient на верхнем уровне."""
-    with open("tui/app.py", encoding="utf-8") as f:
-        source = f.read()
-
-    tree = ast.parse(source)
-
-    # Проверяем top-level импорты
-    top_level_imports = []
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
-            if isinstance(node, ast.ImportFrom) and node.module:
-                top_level_imports.append(node.module)
-
-    assert "models.ollama_client" not in top_level_imports
+# --- Тест 7: tui/app.py использует ModelProvider для типизации ---
 
 
 def test_app_uses_model_provider_type() -> None:

@@ -12,7 +12,6 @@
 from __future__ import annotations
 
 # pylint: disable=import-outside-toplevel
-
 import ast
 from pathlib import Path
 from unittest.mock import AsyncMock
