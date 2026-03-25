@@ -12,9 +12,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 # Third party imports
 import pytest
 
-# Local application/library imports
-from config import Config, validate_ollama_url
 from controllers.dialogue_controller import DialogueController
+
+# Local application/library imports
+from models.config import Config, validate_ollama_url
 from models.conversation import Conversation
 from models.ollama_client import OllamaClient
 

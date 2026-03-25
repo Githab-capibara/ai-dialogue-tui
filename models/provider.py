@@ -9,6 +9,70 @@ from __future__ import annotations
 from typing import Any, Literal, Protocol, TypedDict, runtime_checkable
 
 
+class ProviderError(Exception):
+    """
+    Базовое исключение для ошибок провайдера моделей.
+
+    Используется как базовый класс для специфичных исключений провайдера.
+    Содержит информацию об оригинальном исключении для отладки.
+
+    Attributes:
+        message: Сообщение об ошибке.
+        original_exception: Оригинальное исключение для цепочки.
+    """
+
+    def __init__(
+        self, message: str, original_exception: Exception | None = None
+    ) -> None:
+        """
+        Инициализация исключения.
+
+        Args:
+            message: Сообщение об ошибке.
+            original_exception: Оригинальное исключение для цепочки.
+        """
+        super().__init__(message)
+        self._original_exception = original_exception
+
+    @property
+    def original_exception(self) -> Exception | None:
+        """Получить оригинальное исключение."""
+        return self._original_exception
+
+
+class ProviderConfigurationError(ProviderError):
+    """
+    Исключение для ошибок конфигурации провайдера.
+
+    Возникает при некорректной конфигурации провайдера:
+    - Некорректный URL хоста
+    - Неверные параметры аутентификации
+    - Отсутствующие обязательные настройки
+    """
+
+
+class ProviderConnectionError(ProviderError):
+    """
+    Исключение для ошибок подключения к провайдеру.
+
+    Возникает при проблемах с сетевым подключением:
+    - Недоступность хоста
+    - Таймауты соединения
+    - Ошибки сети
+    """
+
+
+class ProviderGenerationError(ProviderError):
+    """
+    Исключение для ошибок генерации ответа.
+
+    Возникает при проблемах с генерацией ответа моделью:
+    - Ошибки API провайдера
+    - Некорректный формат ответа
+    - Ошибки валидации ответа
+    """
+
+
 class MessageDict(TypedDict):
     """
     Структура сообщения в формате совместимом с Ollama.

@@ -27,9 +27,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from aiohttp import ClientError
 
-from config import Config, validate_ollama_url
+from models.config import Config, validate_ollama_url
 from models.conversation import Conversation, MessageDict
-from models.ollama_client import OllamaClient, OllamaError
+from models.ollama_client import OllamaClient
+from models.provider import ProviderError
 from tui.app import ModelSelectionScreen, sanitize_response_for_display, sanitize_topic
 from tui.sanitizer import MAX_RESPONSE_PREVIEW_LENGTH
 
@@ -260,7 +261,7 @@ class TestOllamaClientValidation:
             OllamaClient, "_get_session", create_mock_get_session(mock_session)
         ):
             client = OllamaClient(host="http://localhost:11434")
-            with pytest.raises(OllamaError, match="Некорректный JSON"):
+            with pytest.raises(ProviderError, match="Некорректный JSON"):
                 await client.list_models()
 
     @pytest.mark.asyncio
@@ -297,10 +298,10 @@ class TestConversationAtomicity:
 
         # Мок клиента который выбрасывает ошибку
         mock_client = AsyncMock()
-        mock_client.generate.side_effect = OllamaError("Test error")
+        mock_client.generate.side_effect = ProviderError("Test error")
 
         # Ошибка должна быть проброшена
-        with pytest.raises(OllamaError):
+        with pytest.raises(ProviderError):
             asyncio.run(conversation.process_turn(mock_client))
 
         # Контексты должны остаться неизменными (атомарность)
@@ -519,7 +520,7 @@ class TestOllamaClientChainedExceptions:
             OllamaClient, "_get_session", create_mock_get_session(mock_session)
         ):
             client = OllamaClient(host="http://localhost:11434")
-            with pytest.raises(OllamaError) as exc_info:
+            with pytest.raises(ProviderError) as exc_info:
                 await client.list_models()
 
             # Проверяем что оригинальное исключение сохранено
@@ -538,7 +539,7 @@ class TestOllamaClientChainedExceptions:
             OllamaClient, "_get_session", create_mock_get_session(mock_session)
         ):
             client = OllamaClient(host="http://localhost:11434")
-            with pytest.raises(OllamaError) as exc_info:
+            with pytest.raises(ProviderError) as exc_info:
                 await client.generate("llama3", [{"role": "user", "content": "test"}])
 
             # Проверяем что оригинальное исключение сохранено

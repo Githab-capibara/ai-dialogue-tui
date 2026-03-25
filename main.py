@@ -9,6 +9,12 @@ from __future__ import annotations
 import logging
 import sys
 
+from models.provider import (
+    ProviderConfigurationError,
+    ProviderConnectionError,
+    ProviderError,
+    ProviderGenerationError,
+)
 from tui.app import DialogueApp
 
 logging.basicConfig(
@@ -35,6 +41,30 @@ def main() -> int:
     except KeyboardInterrupt:
         # Нормальное завершение по Ctrl+C
         return 0
+    except ProviderConfigurationError as e:
+        # Ошибка конфигурации
+        logging.exception("Ошибка конфигурации: %s", e)
+        print(f"Ошибка конфигурации: {e}", file=sys.stderr)
+        return 1
+    except ProviderConnectionError as e:
+        # Ошибка подключения
+        logging.exception("Ошибка подключения: %s", e)
+        print(
+            f"Ошибка подключения к Ollama: {e}\n"
+            "Убедитесь, что Ollama запущен и доступен.",
+            file=sys.stderr,
+        )
+        return 1
+    except ProviderGenerationError as e:
+        # Ошибка генерации
+        logging.exception("Ошибка генерации: %s", e)
+        print(f"Ошибка генерации ответа: {e}", file=sys.stderr)
+        return 1
+    except ProviderError as e:
+        # Общая ошибка провайдера
+        logging.exception("Ошибка провайдера: %s", e)
+        print(f"Ошибка провайдера моделей: {e}", file=sys.stderr)
+        return 1
     except (RuntimeError, SystemError) as e:
         # Выводим понятное сообщение об ошибке
         logging.exception("Критическая ошибка приложения: %s", e)

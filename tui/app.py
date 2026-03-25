@@ -26,10 +26,11 @@ from textual.widgets import (
     Static,
 )
 
-from config import Config, validate_ollama_url
 from controllers.dialogue_controller import DialogueController, UIState
+from models.config import Config
 from models.conversation import Conversation
-from models.ollama_client import OllamaClient, OllamaError
+from models.ollama_client import OllamaClient
+from models.provider import ProviderError
 from services.dialogue_service import DialogueService, DialogueTurnResult
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 from tui.styles import (
@@ -317,10 +318,7 @@ class DialogueApp(App):
     async def on_mount(self) -> None:
         """Инициализация при запуске приложения."""
         try:
-            # Валидация URL перед использованием
-            if not validate_ollama_url(self._config.ollama_host):
-                raise ValueError(f"Некорректный URL Ollama: {self._config.ollama_host}")
-
+            # Config уже валидирован при инициализации, создаем клиент
             self._client = OllamaClient(host=self._config.ollama_host)
 
             # Получаем список моделей
@@ -352,7 +350,7 @@ class DialogueApp(App):
                 callback=on_models_selected,
             )
 
-        except OllamaError:
+        except ProviderError:
             # Не раскрываем детали ошибки пользователю
             self.notify(
                 "Не удалось подключиться к Ollama. Проверьте что сервис запущен.",
@@ -501,10 +499,7 @@ class DialogueApp(App):
 
     def _get_model_info_and_style(self, service: DialogueService) -> tuple[str, str]:
         """Получить информацию о текущей модели и соответствующий стиль."""
-        model_name = service.conversation.get_current_model_name()
-        model_id = service.conversation.current_turn
-        style = MESSAGE_STYLES.model_a if model_id == "A" else MESSAGE_STYLES.model_b
-        return model_name, style
+        return service.get_model_info_and_style()
 
     async def _run_dialogue(self) -> None:
         """Основной цикл диалога."""
@@ -546,7 +541,7 @@ class DialogueApp(App):
                         )
                         self.call_from_thread(log.write, message)
 
-                except OllamaError:
+                except ProviderError:
                     error_msg = f"\n[{MESSAGE_STYLES.error}]Ошибка ({model_name})[/]"
                     self.call_from_thread(log.write, error_msg)
                     self._controller.update_for_error(model_name)
@@ -564,7 +559,7 @@ class DialogueApp(App):
         except asyncio.CancelledError:
             # Нормальное завершение при отмене задачи
             pass
-        except OllamaError:
+        except ProviderError:
             # Ошибка уже была залогирована
             pass
         except (RuntimeError, SystemError, OSError) as e:
