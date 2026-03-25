@@ -315,9 +315,7 @@ class OllamaClient:
         # Выносим HTTP-логику в отдельный класс
         self._http_manager = _HTTPSessionManager(timeout=self._config.request_timeout)
 
-        # Компоненты для обработки запросов
-        self._request_validator = _RequestValidator()
-        self._response_handler = _ResponseHandler()
+        # Компоненты для обработки запросов (используем класс напрямую)
 
         # Кэш для списка моделей
         self._models_cache = _ModelsCache(ttl=_MODELS_CACHE_TTL)
@@ -417,7 +415,7 @@ class OllamaClient:
             ValueError: Если messages некорректный.
         """
         # Валидация параметра messages
-        self._request_validator.validate_messages(messages)
+        _RequestValidator.validate_messages(messages)
 
         session = await self._get_session()
         url = f"{self.host}/api/chat"

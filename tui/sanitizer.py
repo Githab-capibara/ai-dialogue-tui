@@ -95,6 +95,7 @@ def sanitize_response_for_display(response: str) -> str:
         Безопасный для отображения текст.
     """
     response = html.escape(response, quote=False)
+    response = response.replace("[", "[[").replace("]", "]]")
     response = response.replace("\n", " ")
     if len(response) > MAX_RESPONSE_PREVIEW_LENGTH:
         response = response[:MAX_RESPONSE_PREVIEW_LENGTH] + "..."

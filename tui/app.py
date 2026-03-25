@@ -66,7 +66,7 @@ def _get_status_style_string(style: StatusStyle | str) -> str:
 
 
 # CSS генерируется из централизованных констант
-MAIN_CSS = generate_main_css()
+CSS = generate_main_css()
 
 log = logging.getLogger(__name__)
 
@@ -251,7 +251,7 @@ class DialogueApp(App):
     Содержит только UI-логику. Бизнес-логика вынесена в DialogueService.
     """
 
-    CSS = MAIN_CSS
+    CSS = CSS
 
     BINDINGS = [
         Binding("ctrl+q", "quit", "Выход", priority=True),
@@ -312,7 +312,7 @@ class DialogueApp(App):
             status_label.update(
                 f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
             )
-        except (AttributeError, KeyError, RuntimeError):
+        except (LookupError, RuntimeError):
             log.exception("Ошибка при обновлении UI состояния")
 
     async def on_mount(self) -> None:

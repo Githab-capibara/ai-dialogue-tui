@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 
@@ -23,7 +24,7 @@ logging.basicConfig(
 )
 
 
-def main() -> int:
+def main() -> int:  # pylint: disable=too-many-return-statements
     """
     Запустить TUI приложение с обработкой исключений.
 
@@ -37,6 +38,8 @@ def main() -> int:
 
     try:
         app.run()
+        return 0
+    except asyncio.CancelledError:
         return 0
     except KeyboardInterrupt:
         # Нормальное завершение по Ctrl+C
