@@ -27,11 +27,10 @@ import aiohttp
 import pytest
 
 from controllers.dialogue_controller import DialogueController
-from models.conversation import Conversation, MAX_CONTEXT_LENGTH
+from models.conversation import MAX_CONTEXT_LENGTH, Conversation
 from models.ollama_client import _HTTPSessionManager
 from services.dialogue_service import DialogueService
 from tui.app import DialogueApp
-
 
 # =============================================================================
 # 1. Тест: models/conversation.py:108-110 - remaining_messages = context[-max_len:]

@@ -179,17 +179,3 @@ class DialogueService:
         Закрывает соединение с провайдером моделей.
         """
         await self._provider.close()
-
-    def get_model_info_and_style(self) -> tuple[str, str]:
-        """
-        Получить информацию о текущей модели и стиль для отображения.
-
-        Returns:
-            Кортеж (название модели, стиль для отображения).
-            Стиль определяется по идентификатору модели (A или B).
-        """
-        model_name = self._conversation.get_current_model_name()
-        model_id = self._conversation.current_turn
-        # Стиль определяется по модели - для A один, для B другой
-        style = "model_a" if model_id == "A" else "model_b"
-        return model_name, style

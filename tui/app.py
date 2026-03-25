@@ -37,12 +37,9 @@ from models.provider import (
     ProviderGenerationError,
 )
 from services.dialogue_service import DialogueService, DialogueTurnResult
+from tui.constants import MESSAGE_STYLES, UI_IDS
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
-from tui.styles import (
-    MESSAGE_STYLES,
-    UI_IDS,
-    generate_main_css,
-)
+from tui.styles import generate_main_css
 
 # Константа таймаута для уведомлений
 DEFAULT_NOTIFY_TIMEOUT: int = 10
@@ -469,7 +466,10 @@ class DialogueApp(App):
 
     def _get_model_info_and_style(self, service: DialogueService) -> tuple[str, str]:
         """Получить информацию о текущей модели и соответствующий стиль."""
-        return service.get_model_info_and_style()
+        model_name = service.conversation.get_current_model_name()
+        model_id = service.conversation.current_turn
+        style = "model_a" if model_id == "A" else "model_b"
+        return model_name, style
 
     async def _run_dialogue(self) -> None:
         """Основной цикл диалога."""
