@@ -112,11 +112,33 @@ ai_dialogue_tui/
 Параметры можно изменить в `config.py`:
 
 ```python
-temperature: float = 0.7          # Температура генерации
-max_tokens: int = 200             # Максимальная длина ответа
-request_timeout: int = 60         # Таймаут запроса (сек)
-pause_between_messages: float = 1.0  # Пауза между сообщениями (сек)
+# Константы по умолчанию
+DEFAULT_TEMPERATURE: float = 0.7           # Температура генерации (0.0-1.0)
+DEFAULT_MAX_TOKENS: int = 200              # Максимальная длина ответа
+DEFAULT_REQUEST_TIMEOUT: int = 60          # Таймаут запроса (сек)
+DEFAULT_PAUSE_BETWEEN_MESSAGES: float = 1.0  # Пауза между сообщениями (сек)
+
+# Класс Config использует __slots__ для оптимизации памяти
+@dataclass(frozen=True, slots=True)
+class Config:
+    temperature: float = DEFAULT_TEMPERATURE
+    max_tokens: int = DEFAULT_MAX_TOKENS
+    request_timeout: int = DEFAULT_REQUEST_TIMEOUT
+    pause_between_messages: float = DEFAULT_PAUSE_BETWEEN_MESSAGES
+    default_system_prompt: str = "..."
+    ollama_host: str = "http://localhost:11434"
 ```
+
+### Валидация конфигурации
+
+Класс `Config` включает автоматическую валидацию в `__post_init__`:
+- **temperature**: диапазон [0.0, 1.0]
+- **max_tokens**: >= 1
+- **request_timeout**: >= 1
+- **pause_between_messages**: >= 0.0
+- **ollama_host**: валидный HTTP/HTTPS URL
+
+При некорректных значениях выбрасывается `ValueError`.
 
 ## Тестирование
 
@@ -130,9 +152,12 @@ pytest tests/ -v
 pytest tests/ -v --cov=. --cov-report=term-missing
 ```
 
-Включено **53 теста**:
-- **33 теста** критических функций (валидация, атомарность, санитизация)
-- **20 тестов** архитектуры (слои, зависимости, протоколы)
+Включено **163 теста**:
+- **test_critical.py** — тесты критических функций (валидация, атомарность, санитизация)
+- **test_architecture.py** — тесты архитектуры (слои, зависимости, протоколы)
+- **test_fixes.py** — тесты исправлений и оптимизаций
+- **test_arch_fixes.py** — тесты архитектурных улучшений
+- **test_audit_fixes.py** — тесты аудита кода
 
 ## Инструменты качества кода
 
@@ -155,7 +180,7 @@ pip check
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 60 passed
+- **Тесты:** 163 passed
 - **Дублирование кода:** 0%
 
 ## Как это работает

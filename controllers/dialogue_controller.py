@@ -1,4 +1,7 @@
-"""Контроллеры для управления состоянием UI приложения AI Dialogue TUI."""
+"""Контроллеры для управления состоянием UI приложения AI Dialogue TUI.
+
+Этот модуль содержит контроллеры для связи бизнес-логики с UI.
+"""
 
 from __future__ import annotations
 
@@ -41,6 +44,11 @@ class DialogueController:
 
     Note:
         Этот класс не содержит UI-компонентов, только логику управления состоянием.
+
+    Example:
+        >>> controller = DialogueController(service, on_state_changed=callback)
+        >>> controller.handle_start()  # Запуск диалога
+        >>> controller.handle_pause()  # Пауза
     """
 
     def __init__(
@@ -61,16 +69,26 @@ class DialogueController:
 
     @property
     def state(self) -> UIState:
-        """Получить текущее состояние UI."""
+        """
+        Получить текущее состояние UI.
+
+        Returns:
+            Текущее состояние UI.
+        """
         return self._state
 
     @property
     def service(self) -> DialogueService:
-        """Получить сервис диалога."""
+        """
+        Получить сервис диалога.
+
+        Returns:
+            Сервис диалога.
+        """
         return self._service
 
     def _notify_state_changed(self) -> None:
-        """Уведомить об изменении состояния UI."""
+        """Уведомить об изменении состояния UI через callback."""
         if self._on_state_changed:
             self._on_state_changed(self._state)
 
@@ -127,13 +145,21 @@ class DialogueController:
         return True
 
     def handle_clear(self) -> None:
-        """Обработать команду очистки истории."""
+        """
+        Обработать команду очистки истории.
+
+        Очищает контексты диалога и сбрасывает счетчик ходов.
+        """
         self._service.clear_history()
         self._state = replace(self._state, turn_count=0)
         self._update_status("История очищена", "dim")
 
     def handle_stop(self) -> None:
-        """Обработать команду остановки диалога."""
+        """
+        Обработать команду остановки диалога.
+
+        Устанавливает флаги is_running и is_paused в False.
+        """
         self._service.stop()
         self._state = replace(self._state, is_dialogue_active=False)
         self._update_status("Остановлен", "dim")
@@ -148,7 +174,7 @@ class DialogueController:
 
         Args:
             model_name: Название модели которая делает ход.
-            style: Стиль для отображения ( STYLE_MODEL_A или STYLE_MODEL_B).
+            style: Стиль для отображения (STYLE_MODEL_A или STYLE_MODEL_B).
         """
         self._state = replace(
             self._state, current_model=model_name, turn_count=self._service.turn_count
@@ -164,17 +190,13 @@ class DialogueController:
         """
         self._update_status(f"Ошибка: {model_name}", "red")
 
-    def update_for_ready(self, _model_a: str, _model_b: str, _topic: str) -> None:
-        """
-        Обновить состояние когда диалог готов к запуску.
-
-        Args:
-            _model_a: Название модели A.
-            _model_b: Название модели B.
-            _topic: Тема диалога.
-        """
-        self._update_status("Готов к запуску", "green")
-
     async def cleanup(self) -> None:
-        """Очистить ресурсы контроллера и сервиса."""
+        """
+        Очистить ресурсы контроллера и сервиса.
+
+        Вызывает cleanup сервиса диалога для освобождения ресурсов.
+        """
         await self._service.cleanup()
+
+
+__all__ = ["DialogueController", "UIState"]

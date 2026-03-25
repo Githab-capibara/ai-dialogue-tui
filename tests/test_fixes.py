@@ -1,4 +1,10 @@
-"""Тесты для проверки исправлений, внесенных в код."""
+"""Тесты для проверки исправлений, внесенных в код.
+
+Note:
+    Тесты используют доступ к внутренним атрибутам, что оправдано для тестирования.
+"""
+
+# pylint: disable=protected-access
 
 # Standard library imports
 from unittest.mock import AsyncMock, MagicMock, patch
