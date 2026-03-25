@@ -456,7 +456,7 @@ pydeps . --show-cycles --max-bacon=2
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 269 passed
+- **Тесты:** 277 passed
 - **Дублирование кода:** 0%
 - **Циклические зависимости:** отсутствуют
 - **Зависимости:** Success (deptry)

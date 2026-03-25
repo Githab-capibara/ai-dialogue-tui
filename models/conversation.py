@@ -10,6 +10,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Literal
 
+from models.config import Config
 from models.provider import MessageDict, ModelProvider
 
 log = logging.getLogger(__name__)
@@ -47,15 +48,13 @@ class Conversation:
     model_a: str  # Название модели A
     model_b: str  # Название второй модели
     topic: str  # Тема диалога
-    system_prompt: str = field(
-        default="Ты участвуешь в диалоге на тему '{topic}'. "
-        "Отвечай кратко и по существу. Не повторяйся. "
-        "Веди себя как живой собеседник."
-    )
 
     # Контексты для каждой модели (списки сообщений в формате Ollama)
     _context_a: list[MessageDict] = field(default_factory=list, repr=False)
     _context_b: list[MessageDict] = field(default_factory=list, repr=False)
+
+    # Системный промпт по умолчанию из Config
+    system_prompt: str = field(default_factory=lambda: Config().default_system_prompt)
 
     # Чей сейчас ход
     _current_turn: ModelId = field(default="A", init=False)
@@ -68,6 +67,16 @@ class Conversation:
         if self._initialized:
             return
         self._initialized = True
+
+        # Валидация обязательных параметров
+        if not self.model_a or not isinstance(self.model_a, str):
+            raise ValueError("model_a должен быть непустой строкой")
+        if not self.model_b or not isinstance(self.model_b, str):
+            raise ValueError("model_b должен быть непустой строкой")
+        if not self.topic or not isinstance(self.topic, str):
+            raise ValueError("topic должен быть непустой строкой")
+        if self.model_a == self.model_b:
+            raise ValueError("model_a и model_b должны быть разными")
 
         # Форматируем системный промпт с темой
         try:
@@ -123,19 +132,18 @@ class Conversation:
         content: str,
     ) -> None:
         """Добавить сообщение в контекст модели."""
-        # Используем словарь для выбора контекста
-        contexts: dict[ModelId, list[MessageDict]] = {
-            "A": self._context_a,
-            "B": self._context_b,
-        }
-        context = contexts[model_id]
+        # Прямой доступ к контексту без избыточного создания словаря
+        context = self._context_a if model_id == "A" else self._context_b
 
         if len(context) >= MAX_CONTEXT_LENGTH:
             context = self._trim_context_if_needed(context, MAX_CONTEXT_LENGTH - 2)
-        context.append(MessageDict(role=role, content=content))
+            # Обновляем ссылку на обрезанный контекст
+            if model_id == "A":
+                self._context_a = context
+            else:
+                self._context_b = context
 
-        # Обновляем ссылку в словаре
-        contexts[model_id] = context
+        context.append(MessageDict(role=role, content=content))
 
     def add_message(
         self,
@@ -253,19 +261,32 @@ class Conversation:
         model_name = self.get_current_model_name()
         other_id: ModelId = "B" if model_id == "A" else "A"
 
-        # Генерируем ответ ДО любых изменений контекста
-        _, response = await self.generate_response(provider)
+        # Сохраняем состояние контекстов для rollback при ошибке
+        context_a_snapshot = list(self._context_a)
+        context_b_snapshot = list(self._context_b)
+        turn_snapshot = self._current_turn
 
-        # Добавляем ответ в контекст текущей модели как assistant
-        self.add_message(model_id, "assistant", response)
+        try:
+            # Генерируем ответ ДО любых изменений контекста
+            _, response = await self.generate_response(provider)
 
-        # Добавляем ответ в контекст другой модели как user
-        self.add_message(other_id, "user", response)
+            # Добавляем ответ в контекст текущей модели как assistant
+            self.add_message(model_id, "assistant", response)
 
-        # Переключаем ход
-        self.switch_turn()
+            # Добавляем ответ в контекст другой модели как user
+            self.add_message(other_id, "user", response)
 
-        return model_name, "assistant", response
+            # Переключаем ход
+            self.switch_turn()
+
+            return model_name, "assistant", response
+
+        except Exception:
+            # Rollback состояния контекстов при ошибке
+            self._context_a = context_a_snapshot
+            self._context_b = context_b_snapshot
+            self._current_turn = turn_snapshot
+            raise
 
     def clear_contexts(self) -> None:
         """

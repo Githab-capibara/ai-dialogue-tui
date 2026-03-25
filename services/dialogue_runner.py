@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Callable
 
 from models.config import Config
 from models.provider import ProviderError
@@ -58,8 +59,8 @@ class DialogueRunner:
 
     async def start(
         self,
-        on_turn: callable[[DialogueTurnResult], None] | None = None,
-        on_error: callable[[str], None] | None = None,
+        on_turn: Callable[[DialogueTurnResult], None] | None = None,
+        on_error: Callable[[str], None] | None = None,
     ) -> None:
         """
         Запустить цикл диалога в фоновой задаче.
@@ -87,8 +88,8 @@ class DialogueRunner:
 
     async def _run_loop(
         self,
-        on_turn: callable[[DialogueTurnResult], None] | None = None,
-        on_error: callable[[str], None] | None = None,
+        on_turn: Callable[[DialogueTurnResult], None] | None = None,
+        on_error: Callable[[str], None] | None = None,
     ) -> None:
         """
         Основной цикл диалога.
@@ -117,6 +118,7 @@ class DialogueRunner:
 
         except asyncio.CancelledError:
             log.debug("Диалог отменён")
+            raise
         except ProviderError:
             pass
         except (RuntimeError, SystemError, OSError) as e:

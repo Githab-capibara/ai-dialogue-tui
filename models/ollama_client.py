@@ -191,16 +191,25 @@ class _HTTPSessionManager:
         - Кэширование ответов моделей
     """
 
-    def __init__(self, timeout: int = 60) -> None:
+    def __init__(
+        self,
+        timeout: int = 60,
+        conn_timeout: int = 10,
+        sock_read_timeout: int = 60,
+    ) -> None:
         """
         Инициализация менеджера сессий.
 
         Args:
-            timeout: Таймаут запросов в секундах.
+            timeout: Общий таймаут запросов в секундах.
+            conn_timeout: Таймаут подключения в секундах.
+            sock_read_timeout: Таймаут чтения сокета в секундах.
         """
         self._timeout = timeout
+        self._conn_timeout = conn_timeout
+        self._sock_read_timeout = sock_read_timeout
         self._session: aiohttp.ClientSession | None = None
-        self._lock: asyncio.Lock = asyncio.Lock()
+        self._lock = asyncio.Lock()
 
     async def get_session(self) -> aiohttp.ClientSession:
         """
@@ -212,7 +221,11 @@ class _HTTPSessionManager:
         async with self._lock:
             if self._session is None or self._session.closed:
                 self._session = aiohttp.ClientSession(
-                    timeout=aiohttp.ClientTimeout(total=self._timeout)
+                    timeout=aiohttp.ClientTimeout(
+                        total=self._timeout,
+                        connect=self._conn_timeout,
+                        sock_read=self._sock_read_timeout,
+                    )
                 )
             return self._session
 
@@ -233,9 +246,6 @@ class _ModelsCache:
     Реализует простой TTL-кэш для результата list_models.
     """
 
-    # Максимальный размер кэша для защиты от переполнения памяти
-    MAX_CACHE_SIZE: int = 100
-
     def __init__(self, ttl: int = _MODELS_CACHE_TTL) -> None:
         """
         Инициализация кэша.
@@ -246,7 +256,6 @@ class _ModelsCache:
         self._ttl = ttl
         self._models: list[str] | None = None
         self._cache_timestamp: float | None = None
-        self._access_count: int = 0
 
     def _is_cache_valid(self) -> bool:
         """
@@ -261,15 +270,6 @@ class _ModelsCache:
         current_time = time.time()
         return (current_time - self._cache_timestamp) < self._ttl
 
-    def _should_invalidate_by_size(self) -> bool:
-        """
-        Проверить нужно ли инвалидировать кэш по размеру.
-
-        Returns:
-            True если кэш превышает максимальный размер.
-        """
-        return self._access_count > self.MAX_CACHE_SIZE
-
     def get(self) -> list[str] | None:
         """
         Получить закэшированные модели если кэш валиден.
@@ -277,8 +277,7 @@ class _ModelsCache:
         Returns:
             Список моделей или None если кэш не валиден.
         """
-        if self._is_cache_valid() and not self._should_invalidate_by_size():
-            self._access_count += 1
+        if self._is_cache_valid():
             return self._models
         return None
 
@@ -291,13 +290,11 @@ class _ModelsCache:
         """
         self._models = models
         self._cache_timestamp = time.time()
-        self._access_count = 0
 
     def invalidate(self) -> None:
         """Очистить кэш."""
         self._models = None
         self._cache_timestamp = None
-        self._access_count = 0
 
 
 class OllamaClient:
@@ -406,7 +403,8 @@ class OllamaClient:
             raise
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             raise ProviderGenerationError(f"Ошибка валидации ответа API: {e}") from e
-        except (OSError, IOError) as e:
+        except OSError as e:
+            _logger.warning("Игнорируемое OSError при получении списка моделей: %s", e)
             raise ProviderGenerationError(
                 f"Ошибка ввода-вывода при получении списка моделей: {e}"
             ) from e
@@ -482,7 +480,8 @@ class OllamaClient:
             raise
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             raise ProviderGenerationError(f"Ошибка валидации ответа API: {e}") from e
-        except (OSError, IOError) as e:
+        except OSError as e:
+            _logger.warning("Игнорируемое OSError при генерации ответа: %s", e)
             raise ProviderGenerationError(
                 f"Ошибка ввода-вывода при генерации ответа: {e}"
             ) from e
