@@ -20,11 +20,14 @@ ai-dialogue-tui/
 ├── tui/                       # Презентационный слой (Textual TUI)
 │   ├── __init__.py
 │   ├── app.py                 # Основное TUI приложение
-│   └── styles.py              # Централизованные стили и UI IDs
+│   ├── styles.py              # Централизованные стили и UI IDs
+│   └── sanitizer.py           # Функции санитизации
 └── tests/                     # Модульные тесты
     ├── __init__.py
     ├── test_critical.py       # Тесты критических функций
-    └── test_architecture.py   # Тесты архитектуры
+    ├── test_architecture.py   # Тесты архитектуры
+    ├── test_fixes.py          # Тесты исправлений
+    └── test_arch_fixes.py     # Тесты архитектурных изменений
 ```
 
 ## Архитектурные слои
@@ -126,13 +129,20 @@ class DialogueUICallback(Protocol):
 - Композиция виджетов
 - Обработчики событий UI
 - Делегирует бизнес-логику в `DialogueController` и `DialogueService`
+- Фабрика `create_ollama_client()` для создания клиента
 
 #### `tui/styles.py`
 Централизованные стили и идентификаторы:
 - `MESSAGE_STYLES` — стили для сообщений
 - `UI_IDS` — идентификаторы UI элементов (устраняет magic strings)
+- `StatusStyle` — Enum для статусных сообщений
 - `CSS_CLASSES` — CSS-классы
 - `generate_main_css()` — генерация CSS из констант
+
+#### `tui/sanitizer.py`
+Функции санитизации для безопасного отображения:
+- `sanitize_topic()` — экранирование специальных символов в теме
+- `sanitize_response_for_display()` — экранирование markup и HTML
 
 ## Паттерны проектирования
 
@@ -163,18 +173,28 @@ class DialogueService:
 - `Config` — параметры приложения
 - `MessageDict` — TypedDict для сообщений
 - `DialogueTurnResult` — результат хода диалога
+- `UIState` — состояние UI
+
+### 5. Logging
+Логирование для отладки и мониторинга:
+- Модульный логгер в `models/conversation.py`
 
 ## Тестируемость
 
 ### Модульные тесты
-- `tests/test_critical.py` — 33 теста критических функций
-- `tests/test_architecture.py` — 20 тестов архитектуры
+- `tests/test_critical.py` — тесты критических функций
+- `tests/test_architecture.py` — тесты архитектуры
+- `tests/test_fixes.py` — тесты исправлений
+- `tests/test_arch_fixes.py` — тесты архитектурных изменений
+- `tests/test_audit_fixes.py` — тесты аудита
 
 ### Архитектурные тесты проверяют:
 - Отсутствие зависимостей Domain Layer от Infrastructure
 - Реализацию протокола `ModelProvider` в `OllamaClient`
 - Внедрение зависимостей через конструкторы
 - Возможность замены провайдера без изменения домена
+- Отсутствие циклических зависимостей
+- Разделение модулей
 
 ### Запуск тестов:
 ```bash
@@ -220,10 +240,10 @@ pip check
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 60 passed
+- **Тесты:** 92 passed
 - **Дублирование кода:** 0%
 - **Циклические зависимости:** отсутствуют
 
 ---
 
-*Документ обновлён: 24 марта 2026 г.*
+*Документ обновлён: 25 марта 2026 г.*

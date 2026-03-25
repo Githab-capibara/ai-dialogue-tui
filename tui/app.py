@@ -7,9 +7,7 @@
 from __future__ import annotations
 
 import asyncio
-import html
 import logging
-import re
 
 import aiohttp
 from textual import on
@@ -33,11 +31,35 @@ from controllers.dialogue_controller import DialogueController, UIState
 from models.conversation import Conversation
 from models.ollama_client import OllamaClient, OllamaError
 from services.dialogue_service import DialogueService, DialogueTurnResult
+from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 from tui.styles import (
     MESSAGE_STYLES,
     UI_IDS,
+    StatusStyle,
     generate_main_css,
 )
+
+
+def _get_status_style_string(style: StatusStyle | str) -> str:
+    """
+    Конвертировать StatusStyle в строку для отображения в UI.
+
+    Args:
+        style: StatusStyle enum или строка.
+
+    Returns:
+        Строковое представление стиля.
+    """
+    if isinstance(style, StatusStyle):
+        mapping = {
+            StatusStyle.INFO: "dim",
+            StatusStyle.SUCCESS: "green",
+            StatusStyle.WARNING: "yellow",
+            StatusStyle.ERROR: "red",
+        }
+        return mapping.get(style, "dim")
+    return style
+
 
 # CSS генерируется из централизованных констант
 MAIN_CSS = generate_main_css()
@@ -45,48 +67,20 @@ MAIN_CSS = generate_main_css()
 log = logging.getLogger(__name__)
 
 
-def sanitize_topic(topic: str) -> str:
+def create_ollama_client(host: str) -> OllamaClient:
     """
-    Санитизировать ввод темы для предотвращения инъекции промпта.
+    Фабрика для создания OllamaClient.
 
-    Экранирует специальные символы и удаляет потенциально опасные конструкции.
+    Этот метод инкапсулирует создание клиента и позволяет
+    легко заменять реализацию в будущем.
 
     Args:
-        topic: Исходная тема от пользователя.
+        host: URL хоста Ollama.
 
     Returns:
-        Очищенная тема.
+        Настроенный экземпляр OllamaClient.
     """
-    # Удаляем потенциально опасные символы
-    topic = topic.strip()
-    # Экранируем фигурные скобки чтобы предотвратить инъекцию форматирования
-    topic = topic.replace("{", "{{").replace("}", "}}")
-    # Экранируем квадратные скобки для предотвращения markup инъекций
-    topic = re.sub(r"\[([^\]]*)\]", r"[[\1]]", topic)
-    return topic
-
-
-def sanitize_response_for_display(response: str) -> str:
-    """
-    Санитизировать ответ модели для безопасного отображения в TUI.
-
-    Экранирует markup-символы Textual для предотвращения XSS-подобных атак.
-
-    Args:
-        response: Исходный ответ от модели.
-
-    Returns:
-        Безопасный для отображения текст.
-    """
-    # Экранируем HTML-подобные конструкции которые могут интерпретироваться
-    # как markup
-    response = html.escape(response, quote=False)
-    # Заменяем newlines на пробелы для компактного отображения
-    response = response.replace("\n", " ")
-    # Обрезаем если слишком длинный
-    if len(response) > 100:
-        response = response[:100] + "..."
-    return response
+    return OllamaClient(host=host)
 
 
 class ModelSelectionScreen(ModalScreen):

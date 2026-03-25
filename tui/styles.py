@@ -7,7 +7,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Final
+
+
+class StatusStyle(Enum):
+    """Enum для стилей статусных сообщений."""
+
+    INFO = "info"
+    SUCCESS = "success"
+    WARNING = "warning"
+    ERROR = "error"
 
 
 @dataclass(frozen=True)

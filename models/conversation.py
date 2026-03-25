@@ -6,11 +6,14 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Literal
 
 from config import Config
 from models.provider import MessageDict, ModelProvider
+
+log = logging.getLogger(__name__)
 
 # Импортируем для обратной совместимости
 __all__ = ["Conversation", "MessageDict"]
@@ -92,6 +95,12 @@ class Conversation:
         """
         context = self._context_a if model_id == "A" else self._context_b
         context.append(MessageDict(role=role, content=content))
+        log.debug(
+            "Added %s message to model %s context (total: %d)",
+            role,
+            model_id,
+            len(context),
+        )
 
     def get_context(self, model_id: ModelId) -> list[MessageDict]:
         """
@@ -115,7 +124,13 @@ class Conversation:
         Команда (command) - изменяет состояние, ничего не возвращает.
         Для получения текущего хода используйте свойство current_turn.
         """
+        previous_turn = self._current_turn
         self._current_turn = "B" if self._current_turn == "A" else "A"
+        log.debug(
+            "Turn switched: model %s -> model %s",
+            previous_turn,
+            self._current_turn,
+        )
 
     @property
     def current_turn(self) -> ModelId:
