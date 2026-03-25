@@ -11,6 +11,8 @@
 
 from __future__ import annotations
 
+# pylint: disable=import-outside-toplevel
+
 import ast
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -121,12 +123,12 @@ class TestSRPFix:  # pylint: disable=too-few-public-methods
     """Тест: вынесение утилит из app.py."""
 
     def test_utility_functions_moved(self) -> None:
-        """Тест что утилиты вынесены из app.py."""
+        """Тест что утилиты удалены из app.py и styles.py."""
         styles_file = Path("tui/styles.py")
         content = styles_file.read_text(encoding="utf-8")
 
-        assert "_get_status_style_string" in content or "get_status" in content
-        assert "create_ollama_client" in content or "ollama" in content.lower()
+        assert "_get_status_style_string" not in content
+        assert "create_ollama_client" not in content
 
 
 class TestConfigWrapperRemoval:  # pylint: disable=too-few-public-methods
@@ -181,7 +183,9 @@ class TestArchitectureIntegrity:
 
     def test_service_uses_abstractions(self) -> None:
         """Тест что сервис использует абстракции."""
-        from services.dialogue_service import DialogueService  # pylint: disable=import-outside-toplevel
+        from services.dialogue_service import (
+            DialogueService,  # pylint: disable=import-outside-toplevel
+        )
 
         conversation = Conversation(
             model_a="llama3",

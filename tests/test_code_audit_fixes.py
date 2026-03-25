@@ -19,25 +19,24 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from models.config import Config, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
+from models.config import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, Config
 from models.conversation import Conversation
 from models.ollama_client import OllamaClient
 from services.dialogue_service import DialogueService
-
 
 # --- Тест 1: Callable аннотация ---
 
 
 def test_add_message_to_context_accepts_callable() -> None:
-    """set_context параметр _add_message_to_context имеет аннотацию Callable."""
+    """model_id параметр _add_message_to_context имеет аннотацию ModelId."""
     sig = inspect.signature(Conversation._add_message_to_context)
-    param = sig.parameters["set_context"]
+    param = sig.parameters["model_id"]
     annotation = param.annotation
 
-    # Аннотация должна быть Callable или его вариацией
+    # Аннотация должна быть ModelId или его вариацией
     assert annotation is not inspect.Parameter.empty
     annotation_str = str(annotation)
-    assert "Callable" in annotation_str or "collections.abc.Callable" in annotation_str
+    assert "Literal" in annotation_str or "ModelId" in annotation_str
 
 
 # --- Тест 2: Константы из config.py ---

@@ -29,8 +29,7 @@ from textual.widgets import (
 from controllers.dialogue_controller import DialogueController, UIState
 from models.config import Config
 from models.conversation import Conversation
-from models.ollama_client import OllamaClient
-from models.provider import ProviderError
+from models.provider import ModelProvider, ProviderError
 from services.dialogue_service import DialogueService, DialogueTurnResult
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 from tui.styles import (
@@ -233,7 +232,7 @@ class DialogueApp(App):
         """
         super().__init__()
         self._config = config or Config()
-        self._client: OllamaClient | None = None
+        self._client: ModelProvider | None = None
         self._controller: DialogueController | None = None
         self._dialogue_task: asyncio.Task[None] | None = None
         self._models: list[str] = []
@@ -280,6 +279,10 @@ class DialogueApp(App):
         """Инициализация при запуске приложения."""
         try:
             # Config уже валидирован при инициализации, создаем клиент
+            from models.ollama_client import (
+                OllamaClient,  # pylint: disable=import-outside-toplevel
+            )
+
             self._client = OllamaClient(host=self._config.ollama_host)
 
             # Получаем список моделей

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import html
 import re
-from typing import Protocol, runtime_checkable
 
 # Константа для ограничения длины превью ответа
 MAX_RESPONSE_PREVIEW_LENGTH: int = 100
@@ -17,50 +16,7 @@ __all__ = [
     "sanitize_topic",
     "sanitize_response_for_display",
     "MAX_RESPONSE_PREVIEW_LENGTH",
-    "Sanitizer",
 ]
-
-
-@runtime_checkable
-class Sanitizer(Protocol):
-    """
-    Протокол для санитизации данных.
-
-    Определяет интерфейс для компонентов санитизации ввода и вывода.
-    Позволяет использовать dependency injection для тестируемости.
-
-    Example:
-        >>> class MySanitizer:
-        ...     def sanitize_topic(self, topic: str) -> str:
-        ...         return topic.strip()
-        ...     def sanitize_response_for_display(self, response: str) -> str:
-        ...         return response
-        >>> sanitizer: Sanitizer = MySanitizer()  # Типизация работает
-    """
-
-    def sanitize_topic(self, topic: str) -> str:
-        """
-        Санитизировать ввод темы для предотвращения инъекции промпта.
-
-        Args:
-            topic: Исходная тема от пользователя.
-
-        Returns:
-            Очищенная тема.
-        """
-        ...  # pylint: disable=unnecessary-ellipsis
-
-    def sanitize_response_for_display(self, response: str) -> str:
-        """
-        Санитизировать ответ модели для безопасного отображения в TUI.
-
-        Args:
-            response: Исходный ответ от модели.
-
-        Returns:
-            Безопасный для отображения текст.
-        """
-        ...  # pylint: disable=unnecessary-ellipsis
 
 
 def sanitize_topic(topic: str) -> str:

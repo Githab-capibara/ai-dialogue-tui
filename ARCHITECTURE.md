@@ -174,13 +174,11 @@ class DialogueUICallback(Protocol):
 - Композиция виджетов
 - Обработчики событий UI
 - Делегирует бизнес-логику в `DialogueController` и `DialogueService`
-- Фабрика `create_ollama_client()` для создания клиента
 
 #### `tui/styles.py`
 Централизованные стили и идентификаторы:
 - `MESSAGE_STYLES` — стили для сообщений
 - `UI_IDS` — идентификаторы UI элементов (устраняет magic strings)
-- `StatusStyle` — Enum для статусных сообщений
 - `CSS_CLASSES` — CSS-классы
 - `generate_main_css()` — генерация CSS из констант
 
@@ -188,16 +186,6 @@ class DialogueUICallback(Protocol):
 Функции санитизации для безопасного отображения:
 - `sanitize_topic()` — экранирование специальных символов в теме
 - `sanitize_response_for_display()` — экранирование markup и HTML
-
-**Sanitizer Protocol:**
-```python
-@runtime_checkable
-class Sanitizer(Protocol):
-    def sanitize_topic(self, topic: str) -> str: ...
-    def sanitize_response_for_display(self, response: str) -> str: ...
-```
-- Позволяет использовать dependency injection для тестируемости
-- Определяет интерфейс для компонентов санитизации
 
 ## Паттерны проектирования
 
@@ -277,8 +265,9 @@ class DialogueService:
 - `tests/test_arch_audit_fixes.py` — тесты архитектурных исправлений аудита
 - `tests/test_audit_fixes_verification.py` — тесты верификации исправлений аудита
 - `tests/test_code_audit_fixes.py` — тесты исправлений по результатам аудита кода
+- `tests/test_architecture_refactor.py` — тесты архитектурного рефакторинга
 
-**Всего: 241 тест**
+**Всего: 248 тестов**
 
 ### Архитектурные тесты проверяют:
 - Отсутствие зависимостей Domain Layer от Infrastructure
@@ -357,7 +346,7 @@ pip check
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 241 passed
+- **Тесты:** 248 passed
 - **Дублирование кода:** 0%
 - **Циклические зависимости:** отсутствуют
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Callable, Literal
+from typing import Literal
 
 from models.config import Config
 from models.provider import MessageDict, ModelProvider
@@ -124,15 +124,18 @@ class Conversation:
 
     def _add_message_to_context(
         self,
-        context: list[MessageDict],
-        set_context: Callable[[list[MessageDict]], None],
+        model_id: ModelId,
         role: str,
         content: str,
     ) -> None:
+        context = self._context_a if model_id == "A" else self._context_b
         if len(context) >= MAX_CONTEXT_LENGTH:
             context = self._trim_context_if_needed(context, MAX_CONTEXT_LENGTH - 2)
         context.append(MessageDict(role=role, content=content))
-        set_context(context)
+        if model_id == "A":
+            self._context_a = context
+        else:
+            self._context_b = context
 
     def add_message(
         self,
@@ -149,20 +152,10 @@ class Conversation:
             content: Текст сообщения.
         """
         if model_id == "A":
-            self._add_message_to_context(
-                self._context_a,
-                lambda c: setattr(self, "_context_a", c),
-                role,
-                content,
-            )
+            self._add_message_to_context(model_id, role, content)
             context = self._context_a
         else:
-            self._add_message_to_context(
-                self._context_b,
-                lambda c: setattr(self, "_context_b", c),
-                role,
-                content,
-            )
+            self._add_message_to_context(model_id, role, content)
             context = self._context_b
 
         log.debug(
