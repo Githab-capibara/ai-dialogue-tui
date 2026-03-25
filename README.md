@@ -93,7 +93,14 @@ ai_dialogue_tui/
 ├── tests/                     # Модульные тесты
 │   ├── __init__.py
 │   ├── test_critical.py       # Тесты критических функций
-│   └── test_architecture.py   # Тесты архитектуры
+│   ├── test_architecture.py   # Тесты архитектуры
+│   ├── test_fixes.py          # Тесты исправлений
+│   ├── test_arch_fixes.py     # Тесты архитектурных изменений
+│   ├── test_audit_fixes.py    # Тесты аудита кода
+│   ├── test_arch_audit_fixes.py # Тесты архитектурных исправлений аудита
+│   ├── test_audit_fixes_verification.py # Тесты верификации исправлений аудита
+│   ├── test_architecture_integrity.py # Тесты целостности архитектуры
+│   └── test_code_audit_fixes.py # Тесты исправлений по результатам аудита
 └── pytest.ini                 # Конфигурация pytest
 ```
 
@@ -158,7 +165,7 @@ pytest tests/ -v
 pytest tests/ -v --cov=. --cov-report=term-missing
 ```
 
-Включено **222 теста**:
+Включено **241 тест**:
 - **test_critical.py** — тесты критических функций (валидация, атомарность, санитизация)
 - **test_architecture.py** — тесты архитектуры (слои, зависимости, протоколы)
 - **test_fixes.py** — тесты исправлений и оптимизаций
@@ -188,7 +195,7 @@ pip check
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 231 passed
+- **Тесты:** 241 passed
 - **Дублирование кода:** 0%
 
 ## Как это работает

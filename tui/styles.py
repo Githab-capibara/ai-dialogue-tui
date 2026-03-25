@@ -148,7 +148,6 @@ __all__ = [
     "generate_main_css",
     "get_status_style_string",
     "create_ollama_client",
-    "generate_main_css",
 ]
 
 
@@ -162,7 +161,7 @@ def create_ollama_client(host: str):
     Returns:
         Настроенный экземпляр OllamaClient.
     """
-    from models.ollama_client import OllamaClient
+    from models.ollama_client import OllamaClient  # pylint: disable=import-outside-toplevel
 
     return OllamaClient(host=host)
 

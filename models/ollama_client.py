@@ -13,7 +13,12 @@ from typing import Any, Final
 
 import aiohttp
 
-from models.config import Config, validate_ollama_url
+from models.config import (
+    Config,
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_TEMPERATURE,
+    validate_ollama_url,
+)
 from models.provider import (
     MessageDict,
     ProviderConnectionError,
@@ -23,8 +28,8 @@ from models.provider import (
 
 # Кэшированные дефолтные опции для производительности
 _DEFAULT_OPTIONS: Final = {
-    "temperature": 0.7,
-    "num_predict": 200,
+    "temperature": DEFAULT_TEMPERATURE,
+    "num_predict": DEFAULT_MAX_TOKENS,
 }
 
 # TTL для кэша моделей (5 минут)
@@ -423,8 +428,8 @@ class OllamaClient:
         # Кэшированные дефолтные опции для производительности
         # Note: num_predict = max_tokens в терминах Ollama API
         options = {
-            "temperature": kwargs.get("temperature", _DEFAULT_OPTIONS["temperature"]),
-            "num_predict": kwargs.get("max_tokens", _DEFAULT_OPTIONS["num_predict"]),
+            "temperature": kwargs.get("temperature", self._config.temperature),
+            "num_predict": kwargs.get("max_tokens", self._config.max_tokens),
         }
 
         payload = {

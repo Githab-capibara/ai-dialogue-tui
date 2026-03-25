@@ -5,11 +5,14 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 from models.config import Config
 from models.conversation import Conversation, ModelId
 from models.provider import ModelProvider, ProviderError
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -149,13 +152,12 @@ class DialogueService:
         if not self._is_running or self._is_paused:
             return None
 
-        self._turn_count += 1
-
         model_id = self._conversation.current_turn
         model_name = self._conversation.get_current_model_name()
 
         try:
             _, _, response = await self._conversation.process_turn(self._provider)
+            self._turn_count += 1
 
             result = DialogueTurnResult(
                 model_name=model_name,
@@ -167,6 +169,7 @@ class DialogueService:
             return result
 
         except ProviderError:
+            log.warning("Ошибка провайдера при выполнении цикла диалога")
             raise
 
     async def cleanup(self) -> None:

@@ -274,8 +274,11 @@ class DialogueService:
 - `tests/test_fixes.py` — тесты исправлений
 - `tests/test_arch_fixes.py` — тесты архитектурных изменений
 - `tests/test_audit_fixes.py` — тесты аудита кода
+- `tests/test_arch_audit_fixes.py` — тесты архитектурных исправлений аудита
+- `tests/test_audit_fixes_verification.py` — тесты верификации исправлений аудита
+- `tests/test_code_audit_fixes.py` — тесты исправлений по результатам аудита кода
 
-**Всего: 208 тестов**
+**Всего: 241 тест**
 
 ### Архитектурные тесты проверяют:
 - Отсутствие зависимостей Domain Layer от Infrastructure
@@ -354,7 +357,7 @@ pip check
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 208 passed
+- **Тесты:** 241 passed
 - **Дублирование кода:** 0%
 - **Циклические зависимости:** отсутствуют
 
