@@ -73,10 +73,10 @@ pip install -r requirements.txt
 ```
 ai_dialogue_tui/
 ├── main.py                    # Точка входа
-├── config.py                  # Конфигурация
 ├── models/                    # Domain Layer
 │   ├── __init__.py
-│   ├── provider.py            # Протокол ModelProvider (абстракция)
+│   ├── config.py              # Конфигурация (Config dataclass)
+│   ├── provider.py            # Протокол ModelProvider + иерархия ProviderError
 │   ├── ollama_client.py       # Реализация ModelProvider для Ollama
 │   └── conversation.py        # Доменная логика диалога
 ├── services/                  # Service Layer
@@ -88,17 +88,23 @@ ai_dialogue_tui/
 ├── tui/                       # Presentation Layer
 │   ├── __init__.py
 │   ├── app.py                 # Textual TUI приложение
-│   └── styles.py              # Централизованные стили и UI IDs
+│   ├── styles.py              # Централизованные стили и UI IDs
+│   └── sanitizer.py           # Sanitizer Protocol + функции санитизации
 ├── tests/                     # Модульные тесты
 │   ├── __init__.py
-│   ├── test_critical.py       # Тесты критических функций (33 теста)
-│   └── test_architecture.py   # Тесты архитектуры (20 тестов)
+│   ├── test_critical.py       # Тесты критических функций
+│   └── test_architecture.py   # Тесты архитектуры
 └── pytest.ini                 # Конфигурация pytest
 ```
 
 ### Ключевые компоненты
 
 - **ModelProvider** (протокол): Абстракция для работы с LLM-провайдерами
+- **ProviderError иерархия**: Типизированные исключения для обработки ошибок
+  - `ProviderError` — базовое исключение
+  - `ProviderConfigurationError` — ошибки конфигурации
+  - `ProviderConnectionError` — ошибки подключения
+  - `ProviderGenerationError` — ошибки генерации
 - **OllamaClient**: Реализация ModelProvider для Ollama API
 - **Conversation**: Доменная логика диалога между двумя моделями
 - **DialogueService**: Бизнес-логика диалога (сервисный слой)
@@ -109,7 +115,7 @@ ai_dialogue_tui/
 
 ## Конфигурация
 
-Параметры можно изменить в `config.py`:
+Параметры можно изменить в `models/config.py`:
 
 ```python
 # Константы по умолчанию
@@ -152,7 +158,7 @@ pytest tests/ -v
 pytest tests/ -v --cov=. --cov-report=term-missing
 ```
 
-Включено **163 теста**:
+Включено **208 тестов**:
 - **test_critical.py** — тесты критических функций (валидация, атомарность, санитизация)
 - **test_architecture.py** — тесты архитектуры (слои, зависимости, протоколы)
 - **test_fixes.py** — тесты исправлений и оптимизаций
@@ -180,7 +186,7 @@ pip check
 
 - **Pylint:** 10.00/10
 - **Ruff:** All checks passed
-- **Тесты:** 163 passed
+- **Тесты:** 208 passed
 - **Дублирование кода:** 0%
 
 ## Как это работает

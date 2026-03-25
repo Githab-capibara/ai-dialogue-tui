@@ -10,13 +10,16 @@ import logging
 from dataclasses import dataclass, field
 from typing import Literal
 
-from config import Config
+from models.config import Config
 from models.provider import MessageDict, ModelProvider
 
 log = logging.getLogger(__name__)
 
 # Импортируем для обратной совместимости
-__all__ = ["Conversation", "MessageDict"]
+__all__ = ["Conversation", "MessageDict", "MAX_CONTEXT_LENGTH"]
+
+# Константа для ограничения длины контекста
+MAX_CONTEXT_LENGTH: int = 50
 
 
 ModelId = Literal["A", "B"]
@@ -79,6 +82,44 @@ class Conversation:
         self._context_a.append(MessageDict(role="system", content=self._system_prompt))
         self._context_b.append(MessageDict(role="system", content=self._system_prompt))
 
+    def _trim_context_if_needed(self, context: list[MessageDict]) -> list[MessageDict]:
+        """
+        Обрезать контекст если он превышает MAX_CONTEXT_LENGTH.
+
+        Сохраняет системный промпт (первое сообщение) и последние сообщения.
+        Удаляет старые сообщения из середины контекста.
+
+        Args:
+            context: Контекст для проверки и возможной обрезки.
+
+        Returns:
+            Обрезанный контекст если было превышение, иначе исходный.
+        """
+        if len(context) <= MAX_CONTEXT_LENGTH:
+            return context
+
+        # Сохраняем системный промпт (первое сообщение)
+        system_message = context[0] if context else None
+
+        # Берем последние MAX_CONTEXT_LENGTH - 1 сообщений
+        remaining_messages = (
+            context[-(MAX_CONTEXT_LENGTH - 1) :] if len(context) > 1 else []
+        )
+
+        # Восстанавливаем контекст с системным промптом
+        if system_message:
+            trimmed = [system_message] + remaining_messages
+        else:
+            trimmed = remaining_messages
+
+        log.warning(
+            "Контекст превышен (%d сообщений), обрезано до %d",
+            len(context),
+            len(trimmed),
+        )
+
+        return trimmed
+
     def add_message(
         self,
         model_id: ModelId,
@@ -95,6 +136,14 @@ class Conversation:
         """
         context = self._context_a if model_id == "A" else self._context_b
         context.append(MessageDict(role=role, content=content))
+
+        # Проверяем и обрезаем контекст если нужно
+        if len(context) > MAX_CONTEXT_LENGTH:
+            if model_id == "A":
+                self._context_a = self._trim_context_if_needed(context)
+            else:
+                self._context_b = self._trim_context_if_needed(context)
+
         log.debug(
             "Added %s message to model %s context (total: %d)",
             role,

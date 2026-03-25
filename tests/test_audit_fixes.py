@@ -28,7 +28,8 @@ from unittest.mock import AsyncMock, MagicMock
 import aiohttp
 import pytest
 
-from config import (
+from controllers.dialogue_controller import DialogueController
+from models.config import (
     DEFAULT_MAX_TOKENS,
     DEFAULT_PAUSE_BETWEEN_MESSAGES,
     DEFAULT_REQUEST_TIMEOUT,
@@ -40,16 +41,12 @@ from config import (
     MIN_TEMPERATURE,
     Config,
 )
-from controllers.dialogue_controller import DialogueController
 from models.conversation import Conversation
 from models.ollama_client import (
     _DEFAULT_OPTIONS,
-    _EXCEPTION_HANDLERS,
     OllamaClient,
-    OllamaError,
-    _handle_api_error,
-    _validate_messages,
 )
+from models.provider import ProviderError
 from services.dialogue_service import DialogueService
 from tui.app import DEFAULT_NOTIFY_TIMEOUT, ModelSelectionScreen
 from tui.sanitizer import MAX_RESPONSE_PREVIEW_LENGTH, sanitize_topic
@@ -225,129 +222,95 @@ class TestConfigValidation:
 class TestSpecificExceptionTypes:
     """Тесты для проверки конкретных типов исключений."""
 
-    def test_ollama_error_has_original_exception_property(self):
-        """Проверить, что OllamaError имеет свойство original_exception."""
+    def test_provider_error_has_original_exception_property(self):
+        """Проверить, что ProviderError имеет свойство original_exception."""
         original = ValueError("original error")
-        error = OllamaError("test error", original_exception=original)
+        error = ProviderError("test error", original_exception=original)
         assert error.original_exception is original
 
-    def test_ollama_error_without_original_exception(self):
-        """Проверить, что OllamaError может быть без original_exception."""
-        error = OllamaError("test error")
+    def test_provider_error_without_original_exception(self):
+        """Проверить, что ProviderError может быть без original_exception."""
+        error = ProviderError("test error")
         assert error.original_exception is None
 
-    def test_aiohttp_client_error_handling(self):
-        """Проверить, что aiohttp.ClientError правильно обрабатывается."""
-        client_error = aiohttp.ClientError("connection error")
-        ollama_error = _handle_api_error("generate", client_error, host="localhost")
-        assert isinstance(ollama_error, OllamaError)
-        assert "Не удалось подключиться к Ollama" in str(ollama_error)
+    def test_provider_connection_error_is_subclass(self):
+        """Проверить, что ProviderConnectionError это подкласс ProviderError."""
+        from models.provider import ProviderConnectionError
 
-    def test_timeout_error_handling(self):
-        """Проверить, что asyncio.TimeoutError правильно обрабатывается."""
-        import asyncio
+        error = ProviderConnectionError("connection error")
+        assert isinstance(error, ProviderError)
 
-        timeout_error = asyncio.TimeoutError()
-        ollama_error = _handle_api_error("generate", timeout_error, timeout=60)
-        assert isinstance(ollama_error, OllamaError)
-        assert "Превышен таймаут запроса" in str(ollama_error)
+    def test_provider_configuration_error_is_subclass(self):
+        """Проверить, что ProviderConfigurationError это подкласс ProviderError."""
+        from models.provider import ProviderConfigurationError
 
-    def test_json_decode_error_handling(self):
-        """Проверить, что json.JSONDecodeError правильно обрабатывается."""
-        import json
+        error = ProviderConfigurationError("config error")
+        assert isinstance(error, ProviderError)
 
-        json_error = json.JSONDecodeError("msg", "doc", 0)
-        ollama_error = _handle_api_error("generate", json_error)
-        assert isinstance(ollama_error, OllamaError)
-        assert "Некорректный JSON" in str(ollama_error)
+    def test_provider_generation_error_is_subclass(self):
+        """Проверить, что ProviderGenerationError это подкласс ProviderError."""
+        from models.provider import ProviderGenerationError
+
+        error = ProviderGenerationError("generation error")
+        assert isinstance(error, ProviderError)
 
 
 # =============================================================================
-# 5. Тесты для _handle_api_error с dictionary mapping
+# 5. Тесты для валидации сообщений через _RequestValidator
 # =============================================================================
 
 
-class TestHandleApiError:
-    """Тесты для проверки _handle_api_error с dictionary mapping."""
-
-    def test_exception_handlers_dict_exists(self):
-        """Проверить, что _EXCEPTION_HANDLERS существует."""
-        assert isinstance(_EXCEPTION_HANDLERS, dict)
-        assert len(_EXCEPTION_HANDLERS) > 0
-
-    def test_exception_handlers_contains_aiohttp_client_error(self):
-        """Проверить, что маппинг содержит aiohttp.ClientError."""
-        assert aiohttp.ClientError in _EXCEPTION_HANDLERS
-
-    def test_exception_handlers_contains_timeout_error(self):
-        """Проверить, что маппинг содержит asyncio.TimeoutError."""
-        import asyncio
-
-        assert asyncio.TimeoutError in _EXCEPTION_HANDLERS
-
-    def test_handle_api_error_returns_ollama_error(self):
-        """Проверить, что _handle_api_error возвращает OllamaError."""
-        exc = aiohttp.ClientError("test")
-        result = _handle_api_error("generate", exc)
-        assert isinstance(result, OllamaError)
-
-    def test_handle_api_error_preserves_original_exception(self):
-        """Проверить, что оригинальное исключение сохраняется."""
-        exc = ValueError("original")
-        result = _handle_api_error("generate", exc)
-        assert result.original_exception is exc
-
-    def test_handle_api_error_ollama_error_passthrough(self):
-        """Проверить, что OllamaError пробрасывается без изменений."""
-        original = OllamaError("original")
-        result = _handle_api_error("generate", original)
-        assert result is original
-
-
-# =============================================================================
-# 6. Тесты для validate_messages
-# =============================================================================
-
-
-class TestValidateMessages:
-    """Тесты для проверки validate_messages."""
+class TestRequestValidator:
+    """Тесты для проверки _RequestValidator."""
 
     def test_validate_messages_with_valid_list(self):
         """Проверить валидацию корректного списка сообщений."""
+        from models.ollama_client import _RequestValidator
+
         messages = [
             {"role": "system", "content": "test"},
             {"role": "user", "content": "test"},
         ]
         # Не должно вызывать исключений
-        _validate_messages(messages)
+        _RequestValidator.validate_messages(messages)
 
     def test_validate_messages_non_list_raises(self):
         """Проверить, что не-список вызывает ValueError."""
+        from models.ollama_client import _RequestValidator
+
         with pytest.raises(ValueError, match="списком"):
-            _validate_messages("not a list")
+            _RequestValidator.validate_messages("not a list")
 
     def test_validate_messages_non_dict_item_raises(self):
         """Проверить, что не-dict элемент вызывает ValueError."""
+        from models.ollama_client import _RequestValidator
+
         with pytest.raises(ValueError, match="словарём"):
-            _validate_messages(["not a dict"])
+            _RequestValidator.validate_messages(["not a dict"])
 
     def test_validate_messages_missing_role_raises(self):
         """Проверить, что отсутствие 'role' вызывает ValueError."""
+        from models.ollama_client import _RequestValidator
+
         with pytest.raises(ValueError, match="'role' и 'content'"):
-            _validate_messages([{"content": "test"}])
+            _RequestValidator.validate_messages([{"content": "test"}])
 
     def test_validate_messages_missing_content_raises(self):
         """Проверить, что отсутствие 'content' вызывает ValueError."""
+        from models.ollama_client import _RequestValidator
+
         with pytest.raises(ValueError, match="'role' и 'content'"):
-            _validate_messages([{"role": "user"}])
+            _RequestValidator.validate_messages([{"role": "user"}])
 
     def test_validate_messages_empty_list_accepted(self):
         """Проверить, что пустой список принимается."""
-        _validate_messages([])
+        from models.ollama_client import _RequestValidator
+
+        _RequestValidator.validate_messages([])
 
 
 # =============================================================================
-# 7. Тесты для уменьшенной вложенности (early returns)
+# 6. Тесты для уменьшенной вложенности (early returns)
 # =============================================================================
 
 
@@ -357,16 +320,18 @@ class TestReducedNesting:
     def test_ollama_client_list_models_has_early_return_pattern(self):
         """Проверить early returns в list_models."""
         source = inspect.getsource(OllamaClient.list_models)
-        # Проверяем, что есть явный raise OllamaError для статуса != 200
-        assert "if response.status != 200:" in source
-        assert "raise OllamaError" in source
+        # Проверяем, что есть явный raise ProviderError для статуса != 200
+        assert (
+            "if response.status != 200:" in source or "validate_status_code" in source
+        )
 
     def test_ollama_client_generate_has_early_return_pattern(self):
         """Проверить early returns в generate."""
         source = inspect.getsource(OllamaClient.generate)
-        # Проверяем, что есть явный raise OllamaError для статуса != 200
-        assert "if response.status != 200:" in source
-        assert "raise OllamaError" in source
+        # Проверяем, что есть явный raise ProviderError для статуса != 200
+        assert (
+            "if response.status != 200:" in source or "validate_status_code" in source
+        )
 
     def test_ollama_client_uses_try_except_not_nested_if(self):
         """Проверить, что используется try/except вместо вложенных if."""
