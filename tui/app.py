@@ -38,6 +38,7 @@ from models.provider import (
     ProviderGenerationError,
 )
 from services.dialogue_service import DialogueService, DialogueTurnResult
+from services.model_style_mapper import ModelStyleMapper
 from tui.constants import MESSAGE_STYLES, UI_IDS
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 from tui.styles import generate_main_css
@@ -379,11 +380,17 @@ class DialogueApp(App):
             # Санитизация темы перед использованием
             sanitized_topic = sanitize_topic(topic)
 
+            # Форматируем системный промпт
+            system_prompt = self._config.default_system_prompt.format(
+                topic=sanitized_topic
+            )
+
             # Создаём объекты с dependency injection
             conversation = Conversation(
                 model_a=model_a,
                 model_b=model_b,
                 topic=sanitized_topic,
+                system_prompt=system_prompt,
             )
             service = DialogueService(
                 conversation=conversation,
@@ -463,13 +470,6 @@ class DialogueApp(App):
         """Очистить лог (горячая клавиша)."""
         self.on_clear_pressed()
 
-    def _get_model_info_and_style(self, service: DialogueService) -> tuple[str, str]:
-        """Получить информацию о текущей модели и соответствующий стиль."""
-        model_name = service.conversation.get_current_model_name()
-        model_id = service.conversation.current_turn
-        style = "model_a" if model_id == "A" else "model_b"
-        return model_name, style
-
     async def _run_dialogue(self) -> None:
         """Основной цикл диалога."""
         # Проверяем инициализацию через assert для type safety
@@ -477,21 +477,28 @@ class DialogueApp(App):
         assert self._client is not None, "Client not initialized"
 
         service = self._controller.service
+        style_mapper = ModelStyleMapper()
 
         try:
             while service.is_running and not service.is_paused:
                 if self._is_task_cancelled():
                     break
 
-                model_name, style = self._get_model_info_and_style(service)
-                self._controller.update_for_turn(model_name, style)
+                model_id = service.conversation.current_turn
+                model_name = service.conversation.get_current_model_name()
+                style_info = style_mapper.get_style_info(model_id, model_name)
+                self._controller.update_for_turn(
+                    style_info.model_name, style_info.style_id
+                )
 
                 try:
-                    await self._process_dialogue_turn(service, model_name, style)
+                    await self._process_dialogue_turn(
+                        service, style_info.model_name, style_info.style_id
+                    )
                 except ProviderError as e:
                     # Унифицированная обработка всех ProviderError
                     log.warning("Ошибка провайдера в цикле диалога: %s", e)
-                    self._handle_dialogue_error(model_name)
+                    self._handle_dialogue_error(style_info.model_name)
                     raise
 
                 await asyncio.sleep(self._config.pause_between_messages)

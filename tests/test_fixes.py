@@ -15,7 +15,7 @@ import pytest
 from controllers.dialogue_controller import DialogueController
 
 # Local application/library imports
-from models.config import Config, validate_ollama_url
+from models.config import validate_ollama_url
 from models.conversation import Conversation
 from models.ollama_client import OllamaClient
 
@@ -107,22 +107,21 @@ class TestFixes:
     def test_conversation_handles_malformed_system_prompt(self):
         """Тест, что Conversation корректно обрабатывает некорректный системный промпт."""
         # Arrange
-        # Create conversation with custom config directly
-        config_with_bad_prompt = Config(default_system_prompt="Привет {nonexistent}!")
+        # Create conversation with custom system_prompt that has invalid format
         conversation = Conversation(
-            "model_a",
-            "model_b",
-            "тема",
-            _config=config_with_bad_prompt,
+            model_a="model_a",
+            model_b="model_b",
+            topic="тема",
+            system_prompt="Привет {nonexistent}!",
         )
 
         # Act & Assert
-        # Should not raise an exception, should use fallback prompt (in English as per code)
-        # Topic remains in original language
-        expected_prompt = (
-            "You are a helpful assistant. The topic of discussion is: тема"
-        )
-        assert conversation._system_prompt == expected_prompt  # noqa: W0212
+        # При некорректном промпте используется fallback
+        context_a = conversation.get_context("A")
+        assert len(context_a) > 0
+        # Fallback prompt на английском
+        assert "helpful assistant" in context_a[0]["content"]
+        assert "тема" in context_a[0]["content"]
 
     def test_conversation_get_context_returns_copy_for_safety(self):
         """Тест, что get_context возвращает tuple для безопасности и производительности."""

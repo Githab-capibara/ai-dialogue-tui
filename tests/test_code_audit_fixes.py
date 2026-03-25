@@ -102,26 +102,29 @@ async def test_generate_uses_self_config() -> None:
     await client.close()
 
 
-# --- Тест 4: Optional аннотация для _config ---
+# --- Тест 4: System prompt в Conversation ---
 
 
-def test_config_field_is_optional() -> None:
-    """_config в Conversation аннотирован как Config | None."""
+def test_system_prompt_field_exists() -> None:
+    """system_prompt существует в Conversation."""
     from dataclasses import fields
 
     conv_fields = {f.name: f for f in fields(Conversation)}
-    assert conv_fields["_config"].default is None
+    assert "system_prompt" in conv_fields
 
-    # Проверяем что объект можно создать без _config (default=None)
-    conv = Conversation(model_a="a", model_b="b", topic="t")
-    assert conv._config is not None  # __post_init__ создаёт Config()
-    assert isinstance(conv._config, Config)
+    # Проверяем что объект можно создать с system_prompt
+    conv = Conversation(model_a="a", model_b="b", topic="t", system_prompt="custom")
+    assert conv.system_prompt == "custom"
 
 
-def test_config_none_replaced_in_post_init() -> None:
-    """Когда _config=None, __post_init__ заменяет его на Config()."""
-    conv = Conversation(model_a="a", model_b="b", topic="t", _config=None)
-    assert isinstance(conv._config, Config)
+def test_system_prompt_formatted_in_post_init() -> None:
+    """system_prompt форматируется с topic в __post_init__ для контекста."""
+    conv = Conversation(model_a="a", model_b="b", topic="test topic")
+    # Проверяем что контекст содержит отформатированный промпт
+    context_a = conv.get_context("A")
+    assert len(context_a) > 0
+    assert context_a[0]["role"] == "system"
+    assert "test topic" in context_a[0]["content"]
 
 
 # --- Тест 5: Отдельные копии system_message ---

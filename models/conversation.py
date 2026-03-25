@@ -10,7 +10,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import Literal
 
-from models.config import Config
 from models.provider import MessageDict, ModelProvider
 
 log = logging.getLogger(__name__)
@@ -37,6 +36,7 @@ class Conversation:
         model_a: Название модели A.
         model_b: Название модели B.
         topic: Тема диалога.
+        system_prompt: Системный промпт для диалога.
 
     Note:
         Имеет 8 атрибутов что превышает стандартный лимит (7),
@@ -47,9 +47,11 @@ class Conversation:
     model_a: str  # Название модели A
     model_b: str  # Название второй модели
     topic: str  # Тема диалога
-
-    # Конфигурация для dependency injection
-    _config: Config | None = field(default=None, repr=False)
+    system_prompt: str = field(
+        default="Ты участвуешь в диалоге на тему '{topic}'. "
+        "Отвечай кратко и по существу. Не повторяйся. "
+        "Веди себя как живой собеседник."
+    )
 
     # Контексты для каждой модели (списки сообщений в формате Ollama)
     _context_a: list[MessageDict] = field(default_factory=list, repr=False)
@@ -57,9 +59,6 @@ class Conversation:
 
     # Чей сейчас ход
     _current_turn: ModelId = field(default="A", init=False)
-
-    # Системный промпт
-    _system_prompt: str = field(init=False, repr=False)
 
     # Флаг для предотвращения повторной инициализации
     _initialized: bool = field(default=False, init=False)
@@ -70,19 +69,16 @@ class Conversation:
             return
         self._initialized = True
 
-        self._config = self._config or Config()
-
+        # Форматируем системный промпт с темой
         try:
-            self._system_prompt = self._config.default_system_prompt.format(
-                topic=self.topic
-            )
+            formatted_prompt = self.system_prompt.format(topic=self.topic)
         except (KeyError, ValueError):
-            self._system_prompt = (
+            formatted_prompt = (
                 f"You are a helpful assistant. The topic of discussion is: {self.topic}"
             )
         # Добавляем системный промпт в оба контекста
-        self._context_a.append(MessageDict(role="system", content=self._system_prompt))
-        self._context_b.append(MessageDict(role="system", content=self._system_prompt))
+        self._context_a.append(MessageDict(role="system", content=formatted_prompt))
+        self._context_b.append(MessageDict(role="system", content=formatted_prompt))
 
     def _trim_context_if_needed(
         self, context: list[MessageDict], max_len: int = MAX_CONTEXT_LENGTH
@@ -277,9 +273,16 @@ class Conversation:
 
         Использует присваивание новых списков для простоты и читаемости.
         """
+        # Форматируем системный промпт с темой
+        try:
+            formatted_prompt = self.system_prompt.format(topic=self.topic)
+        except (KeyError, ValueError):
+            formatted_prompt = (
+                f"You are a helpful assistant. The topic of discussion is: {self.topic}"
+            )
         # Присваиваем новые списки с отдельными копиями system_message
-        self._context_a = [MessageDict(role="system", content=self._system_prompt)]
-        self._context_b = [MessageDict(role="system", content=self._system_prompt)]
+        self._context_a = [MessageDict(role="system", content=formatted_prompt)]
+        self._context_b = [MessageDict(role="system", content=formatted_prompt)]
 
         # Сбрасываем ход на A
         self._current_turn = "A"

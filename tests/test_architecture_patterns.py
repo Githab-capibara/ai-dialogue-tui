@@ -11,11 +11,9 @@
 from __future__ import annotations
 
 import ast
-import inspect
 
 import pytest
 
-from models.conversation import Conversation
 from services.dialogue_service import DialogueService
 
 
@@ -96,48 +94,29 @@ class TestStylesAndConstantsSeparation:
 class TestStyleMappingInUI:
     """Тест: Маппинг style в UI слое."""
 
-    def test_get_model_info_and_style_exists_in_dialogue_app(self) -> None:
-        """Проверить, что _get_model_info_and_style существует в DialogueApp."""
-        from tui.app import DialogueApp
+    def test_model_style_mapper_exists(self) -> None:
+        """Проверить, что ModelStyleMapper существует."""
+        from services.model_style_mapper import ModelStyleMapper
 
-        assert hasattr(DialogueApp, "_get_model_info_and_style")
-
-        method = getattr(DialogueApp, "_get_model_info_and_style")
-        assert inspect.isfunction(method) or inspect.ismethod(method)
+        assert ModelStyleMapper is not None
 
     def test_style_mapping_works_correctly(self) -> None:
         """Проверить, что маппинг model_id -> style работает корректно."""
-        from unittest.mock import AsyncMock
+        from services.model_style_mapper import ModelStyleMapper
 
-        from models.provider import ModelProvider
-        from tui.app import DialogueApp
+        mapper = ModelStyleMapper()
 
-        mock_provider = AsyncMock(spec=ModelProvider)
-        mock_provider.generate.return_value = "test response"
-        mock_provider.close.return_value = None
+        # Тест для модели A
+        info_a = mapper.get_style_info("A", "llama3")
+        assert info_a.model_name == "llama3"
+        assert info_a.style_id == "model_a"
+        assert info_a.model_id == "A"
 
-        conversation = Conversation(
-            model_a="llama3",
-            model_b="mistral",
-            topic="test topic",
-        )
-
-        service = DialogueService(
-            conversation=conversation,
-            provider=mock_provider,
-        )
-
-        class TestDialogueApp(DialogueApp):
-            def __init__(self):
-                self._dialogue_task = None
-                self._controller = None
-
-        app_instance = TestDialogueApp()
-
-        model_name, style = app_instance._get_model_info_and_style(service)
-
-        assert model_name == "llama3"
-        assert style == "model_a"
+        # Тест для модели B
+        info_b = mapper.get_style_info("B", "mistral")
+        assert info_b.model_name == "mistral"
+        assert info_b.style_id == "model_b"
+        assert info_b.model_id == "B"
 
 
 class TestNoCircularDependencies:
