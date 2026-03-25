@@ -1,0 +1,28 @@
+refactor: комплексное улучшение кода (аудит + оптимизации)
+
+Основные изменения:
+- Добавлены __slots__ в Config и Conversation для оптимизации памяти
+- Добавлена полная валидация конфигурации (temperature, max_tokens, timeout, pause)
+- Вынесены магические числа в константы (DEFAULT_*, MIN_*, MAX_*)
+- Рефакторинг обработки исключений (конкретные типы вместо broad Exception)
+- Dictionary mapping для обработки исключений (_EXCEPTION_HANDLERS)
+- Уменьшена вложенность через early returns в list_models/generate
+- Добавлена функция validate_messages для устранения дублирования
+- Удалён мёртвый код (метод update_for_ready)
+- Убраны избыточные проверки в pause/resume
+- Упрощена логика ModelSelectionScreen
+- Добавлены константы MAX_RESPONSE_PREVIEW_LENGTH, DEFAULT_NOTIFY_TIMEOUT
+- Добавлен __all__ в модули sanitizer, styles, dialogue_controller
+
+Тесты:
+- Добавлено 75 тестов для проверки исправлений аудита
+- Общее количество тестов: 163 (все проходят)
+
+Документация:
+- Обновлены README.md и ARCHITECTURE.md
+- Актуализирована информация о тестах и константах
+
+Инструменты:
+- Ruff: All checks passed
+- Pylint: 10.00/10
+- Ruff format: 20 files formatted
