@@ -5,25 +5,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from typing import Tuple
 
 from models.conversation import ModelId
 
-
-@dataclass
-class ModelStyleInfo:
-    """
-    Информация о стиле модели.
-
-    Attributes:
-        model_name: Название модели.
-        style_id: Идентификатор стиля (model_a или model_b).
-        model_id: Идентификатор модели (A или B).
-    """
-
-    model_name: str
-    style_id: str
-    model_id: ModelId
+# Тип для возврата метода get_style_info
+StyleInfo = Tuple[str, str]  # (model_name, style_id)
 
 
 class ModelStyleMapper:
@@ -34,8 +21,8 @@ class ModelStyleMapper:
 
     Example:
         >>> mapper = ModelStyleMapper()
-        >>> info = mapper.get_style_info("A", "llama3")
-        >>> info.style_id  # "model_a"
+        >>> model_name, style_id = mapper.get_style_info("A", "llama3")
+        >>> style_id  # "model_a"
     """
 
     def __init__(self) -> None:
@@ -45,7 +32,7 @@ class ModelStyleMapper:
             "B": "model_b",
         }
 
-    def get_style_info(self, model_id: ModelId, model_name: str) -> ModelStyleInfo:
+    def get_style_info(self, model_id: ModelId, model_name: str) -> StyleInfo:
         """
         Получить информацию о стиле для модели.
 
@@ -54,14 +41,10 @@ class ModelStyleMapper:
             model_name: Название модели.
 
         Returns:
-            ModelStyleInfo с информацией о стиле.
+            Кортеж (model_name, style_id).
         """
         style_id = self._style_map[model_id]
-        return ModelStyleInfo(
-            model_name=model_name,
-            style_id=style_id,
-            model_id=model_id,
-        )
+        return (model_name, style_id)
 
     def get_style_id(self, model_id: ModelId) -> str:
         """

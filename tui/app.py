@@ -249,6 +249,10 @@ class DialogueApp(App):
         self._controller: DialogueController | None = None
         self._dialogue_task: asyncio.Task[None] | None = None
         self._models: list[str] = []
+        # Кэшируем style_mapper для производительности
+        self._style_mapper = ModelStyleMapper()
+        # Флаг для идемпотентности on_unmount
+        self._cleanup_done = False
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -323,14 +327,16 @@ class DialogueApp(App):
                 callback=on_models_selected,
             )
 
-        except ProviderConnectionError:
+        except ProviderConnectionError as e:
+            log.exception("Ошибка подключения к Ollama: %s", e)
             self.notify(
                 "Не удалось подключиться к Ollama. Проверьте что сервис запущен.",
                 title="Ошибка подключения",
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
-        except ProviderGenerationError:
+        except ProviderGenerationError as e:
+            log.exception("Ошибка генерации при получении моделей: %s", e)
             self.notify(
                 "Ошибка генерации ответа. Проверьте модель...",
                 title="Ошибка",
@@ -341,6 +347,7 @@ class DialogueApp(App):
                 "[red]Ошибка подключения[/red]"
             )
         except ValueError as e:
+            log.exception("Ошибка валидации конфигурации: %s", e)
             self.notify(
                 f"Ошибка конфигурации: {e}",
                 title="Ошибка",
@@ -350,6 +357,26 @@ class DialogueApp(App):
             self.query_one("#status-value", Label).update(
                 "[red]Ошибка конфигурации[/red]"
             )
+        except aiohttp.ClientError as e:
+            log.exception("Ошибка HTTP клиента при запуске: %s", e)
+            self.notify(
+                "Ошибка сетевого подключения",
+                title="Ошибка",
+                severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
+            )
+            self.query_one("#status-value", Label).update(
+                "[red]Ошибка подключения[/red]"
+            )
+        except asyncio.TimeoutError as e:
+            log.exception("Таймаут при запуске: %s", e)
+            self.notify(
+                "Превышено время ожидания подключения",
+                title="Ошибка",
+                severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
+            )
+            self.query_one("#status-value", Label).update("[red]Таймаут[/red]")
         except (RuntimeError, SystemError) as e:
             # Не раскрываем детали внутренней ошибки
             log.exception("Внутренняя ошибка при запуске: %s", e)
@@ -477,7 +504,8 @@ class DialogueApp(App):
         assert self._client is not None, "Client not initialized"
 
         service = self._controller.service
-        style_mapper = ModelStyleMapper()
+        # Используем кэшированный style_mapper из __init__
+        style_mapper = self._style_mapper
 
         try:
             while service.is_running and not service.is_paused:
@@ -561,7 +589,13 @@ class DialogueApp(App):
 
     async def on_unmount(self) -> None:
         """Очистка при закрытии приложения."""
+        # Проверяем флаг для идемпотентности
+        if self._cleanup_done:
+            return
+
         try:
+            self._cleanup_done = True
+
             # Отменяем задачу диалога
             if self._dialogue_task and not self._dialogue_task.done():
                 self._dialogue_task.cancel()
@@ -569,12 +603,20 @@ class DialogueApp(App):
                     await self._dialogue_task
                 except asyncio.CancelledError:
                     pass
+                finally:
+                    self._dialogue_task = None
 
             # Очищаем контроллер и клиент
-            if self._controller:
-                await self._controller.cleanup()
-            elif self._client:
-                await self._client.close()
+            try:
+                if self._controller:
+                    await self._controller.cleanup()
+                elif self._client:
+                    await self._client.close()
+            finally:
+                self._controller = None
+                self._client = None
 
         except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as e:
             log.warning("Ошибка при очистке ресурсов: %s", e)
+        except RuntimeError as e:
+            log.exception("Неожиданная ошибка при очистке: %s", e)

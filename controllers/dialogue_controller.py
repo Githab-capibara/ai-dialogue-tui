@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Callable
 
 from services.dialogue_service import DialogueService
@@ -75,7 +75,14 @@ class DialogueController:
         Returns:
             Текущее состояние UI.
         """
-        return replace(self._state)
+        # Возвращаем копию для безопасности через конструктор
+        return UIState(
+            status_text=self._state.status_text,
+            status_style=self._state.status_style,
+            turn_count=self._state.turn_count,
+            current_model=self._state.current_model,
+            is_dialogue_active=self._state.is_dialogue_active,
+        )
 
     @property
     def service(self) -> DialogueService:
@@ -120,7 +127,8 @@ class DialogueController:
             return False
 
         self._service.start()
-        self._state = replace(self._state, is_dialogue_active=True)
+        # Прямая модификация атрибута вместо replace()
+        self._state.is_dialogue_active = True
         self._update_status("Диалог идёт...", "green")
         return True
 
@@ -151,7 +159,8 @@ class DialogueController:
         Очищает контексты диалога и сбрасывает счетчик ходов.
         """
         self._service.clear_history()
-        self._state = replace(self._state, turn_count=0)
+        # Прямая модификация атрибута вместо replace()
+        self._state.turn_count = 0
         self._update_status("История очищена", "dim")
 
     def handle_stop(self) -> None:
@@ -161,7 +170,8 @@ class DialogueController:
         Устанавливает флаги is_running и is_paused в False.
         """
         self._service.stop()
-        self._state = replace(self._state, is_dialogue_active=False)
+        # Прямая модификация атрибута вместо replace()
+        self._state.is_dialogue_active = False
         self._update_status("Остановлен", "dim")
 
     def update_for_turn(
@@ -176,9 +186,9 @@ class DialogueController:
             model_name: Название модели которая делает ход.
             style: Стиль для отображения (STYLE_MODEL_A или STYLE_MODEL_B).
         """
-        self._state = replace(
-            self._state, current_model=model_name, turn_count=self._service.turn_count
-        )
+        # Прямая модификация атрибутов вместо replace()
+        self._state.current_model = model_name
+        self._state.turn_count = self._service.turn_count
         self._update_status(f"Ход: {model_name}", style)
 
     def update_for_error(self, model_name: str) -> None:

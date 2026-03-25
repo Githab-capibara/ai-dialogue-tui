@@ -106,17 +106,19 @@ class TestStyleMappingInUI:
 
         mapper = ModelStyleMapper()
 
-        # Тест для модели A
-        info_a = mapper.get_style_info("A", "llama3")
-        assert info_a.model_name == "llama3"
-        assert info_a.style_id == "model_a"
-        assert info_a.model_id == "A"
+        # Тест для модели A - возвращает tuple (model_name, style_id)
+        result_a = mapper.get_style_info("A", "llama3")
+        assert isinstance(result_a, tuple)
+        assert len(result_a) == 2
+        assert result_a[0] == "llama3"
+        assert result_a[1] == "model_a"
 
         # Тест для модели B
-        info_b = mapper.get_style_info("B", "mistral")
-        assert info_b.model_name == "mistral"
-        assert info_b.style_id == "model_b"
-        assert info_b.model_id == "B"
+        result_b = mapper.get_style_info("B", "mistral")
+        assert isinstance(result_b, tuple)
+        assert len(result_b) == 2
+        assert result_b[0] == "mistral"
+        assert result_b[1] == "model_b"
 
 
 class TestNoCircularDependencies:
