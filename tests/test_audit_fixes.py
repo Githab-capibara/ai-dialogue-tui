@@ -7,7 +7,7 @@ import pytest
 
 from config import Config, validate_ollama_url
 from models.conversation import Conversation
-from models.ollama_client import OllamaClient, _DEFAULT_OPTIONS
+from models.ollama_client import _DEFAULT_OPTIONS, OllamaClient
 from services.dialogue_service import DialogueService
 
 
