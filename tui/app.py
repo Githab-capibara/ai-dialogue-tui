@@ -13,6 +13,7 @@ from typing import Callable
 import aiohttp
 from textual import on
 from textual.app import App, ComposeResult
+from textual.reactive import reactive
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -225,7 +226,7 @@ class DialogueApp(App):
     ]
 
     TITLE = "AI Dialogue TUI"
-    sub_title = "Диалог двух ИИ-моделей через Ollama"
+    sub_title = reactive("Диалог двух ИИ-моделей через Ollama")
 
     def __init__(
         self,
