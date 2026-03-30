@@ -18,7 +18,7 @@ Note:
     что оправдано для тестирования.
 """
 
-# pylint: disable=protected-access,import-outside-toplevel,no-member
+# pylint: disable=protected-access,import-outside-toplevel,no-member,too-few-public-methods,reimported,redefined-outer-name
 
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch

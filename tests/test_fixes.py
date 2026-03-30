@@ -4,7 +4,7 @@ Note:
     Тесты используют доступ к внутренним атрибутам, что оправдано для тестирования.
 """
 
-# pylint: disable=protected-access
+# pylint: disable=protected-access,import-outside-toplevel
 
 # Standard library imports
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -210,3 +210,24 @@ class TestFixes:
         assert validate_ollama_url(123) is False
         # Should return False, not raise
         assert validate_ollama_url([]) is False
+
+
+class TestAsyncioAPICorrectness:
+    """Тесты для проверки корректного использования asyncio API."""
+
+    def test_task_cancelled_method_exists(self):
+        """Тест, что asyncio.Task имеет атрибут .cancelled (Python 3.11+)."""
+        import asyncio
+        from tui.app import DialogueApp
+
+        DialogueApp.__new__(DialogueApp)
+        assert hasattr(asyncio.Task, "cancelled")
+        assert not hasattr(asyncio.Task, "is_cancelled")
+
+    def test_app_uses_correct_cancelled_method(self):
+        """Тест, что _is_task_cancelled использует правильный метод .cancelled()."""
+        with open("/home/d/ai-dialogue-tui/tui/app.py", "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert ".cancelled()" in content
+        assert "is_cancelled()" not in content
