@@ -5,12 +5,16 @@
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import NamedTuple
 
 from models.conversation import ModelId
 
-# Тип для возврата метода get_style_info
-StyleInfo = Tuple[str, str]  # (model_name, style_id)
+
+class StyleInfo(NamedTuple):
+    """Информация о стиле для модели."""
+
+    model_name: str
+    style_id: str
 
 
 class ModelStyleMapper:
@@ -44,7 +48,7 @@ class ModelStyleMapper:
             Кортеж (model_name, style_id).
         """
         style_id = self._style_map[model_id]
-        return (model_name, style_id)
+        return StyleInfo(model_name=model_name, style_id=style_id)
 
     def get_style_id(self, model_id: ModelId) -> str:
         """
