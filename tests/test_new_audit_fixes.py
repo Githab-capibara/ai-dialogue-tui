@@ -17,7 +17,8 @@ Note:
     что оправдано для тестирования.
 """
 
-# pylint: disable=protected-access,import-outside-toplevel,no-member,too-few-public-methods,line-too-long
+# pylint:
+# disable=protected-access,import-outside-toplevel,no-member,too-few-public-methods,line-too-long
 
 import asyncio
 import inspect

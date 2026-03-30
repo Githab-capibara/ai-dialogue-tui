@@ -325,7 +325,10 @@ class OllamaClient:
         _RequestValidator.validate_host(self.host)
 
         # Выносим HTTP-логику в отдельный класс
-        self._http_manager = _HTTPSessionManager(timeout=self._config.request_timeout)
+        self._http_manager = _HTTPSessionManager(
+            timeout=self._config.request_timeout,
+            sock_read_timeout=self._config.sock_read_timeout,
+        )
 
         # Компоненты для обработки запросов (используем класс напрямую)
 
@@ -440,8 +443,10 @@ class OllamaClient:
         # Note: num_predict = max_tokens в терминах Ollama API
         options = {
             "temperature": kwargs.get("temperature", self._config.temperature),
-            "num_predict": kwargs.get("max_tokens", self._config.max_tokens),
         }
+        max_tokens = kwargs.get("max_tokens", self._config.max_tokens)
+        if max_tokens > 0:
+            options["num_predict"] = max_tokens
 
         payload = {
             "model": model,
@@ -470,8 +475,10 @@ class OllamaClient:
                 return _ResponseHandler.extract_generation_response(data)
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            timeout_info = f"Таймаут: {self._config.sock_read_timeout}с"
             raise ProviderConnectionError(
-                f"Не удалось подключиться к Ollama ({self.host})",
+                f"Не удалось подключиться к Ollama ({self.host}). "
+                f"{timeout_info}. Попробуйте увеличить таймаут в настройках.",
                 original_exception=e,
             ) from e
         except ProviderError as e:

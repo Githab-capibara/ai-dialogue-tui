@@ -101,8 +101,7 @@ class TestFixes:
         payload = call_args[1]["json"]  # Get the json payload
         # From _DEFAULT_OPTIONS
         assert payload["options"]["temperature"] == 0.7
-        # From _DEFAULT_OPTIONS
-        assert payload["options"]["num_predict"] == 200
+        # num_predict is not set when max_tokens=-1 (unlimited)
 
     def test_conversation_handles_malformed_system_prompt(self):
         """Тест, что Conversation корректно обрабатывает некорректный системный промпт."""
