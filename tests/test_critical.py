@@ -183,7 +183,7 @@ class TestConfigValidation:
     def test_max_tokens_validation(self) -> None:
         """Тест валидации max_tokens."""
         with pytest.raises(ValueError, match="max_tokens"):
-            Config(max_tokens=0)
+            Config(max_tokens=-2)
 
     def test_request_timeout_validation(self) -> None:
         """Тест валидации request_timeout."""

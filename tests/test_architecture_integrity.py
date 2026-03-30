@@ -15,7 +15,8 @@
 Всего: 42 теста
 """
 
-# pylint: disable=import-outside-toplevel,reimported,duplicate-code,line-too-long,too-few-public-methods,missing-class-docstring,missing-function-docstring,unused-argument
+# pylint:
+# disable=import-outside-toplevel,reimported,duplicate-code,line-too-long,too-few-public-methods,missing-class-docstring,missing-function-docstring,unused-argument
 
 from __future__ import annotations
 
@@ -750,7 +751,7 @@ class TestArchitectureIntegrity:
         # Валидная конфигурация
         config = ModelsConfig()
         assert config.temperature == 0.7
-        assert config.max_tokens == 200
+        assert config.max_tokens == -1  # Без лимита
 
         # Невалидная температура
         with pytest.raises(ValueError) as exc_info:
@@ -759,7 +760,7 @@ class TestArchitectureIntegrity:
 
         # Невалидный max_tokens
         with pytest.raises(ValueError) as exc_info:
-            ModelsConfig(max_tokens=0)
+            ModelsConfig(max_tokens=-2)
         assert "max_tokens" in str(exc_info.value).lower()
 
         # Невалидный URL

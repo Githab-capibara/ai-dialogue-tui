@@ -12,15 +12,17 @@ from urllib.parse import urlparse
 
 # Константы по умолчанию для параметров генерации
 DEFAULT_TEMPERATURE: Final = 0.7
-DEFAULT_MAX_TOKENS: Final = 200
+DEFAULT_MAX_TOKENS: Final = -1  # Без лимита
 DEFAULT_REQUEST_TIMEOUT: Final = 60  # секунд на запрос к Ollama
+DEFAULT_SOCK_READ_TIMEOUT: Final = 300  # 5 минут на чтение ответа
 DEFAULT_PAUSE_BETWEEN_MESSAGES: Final = 1.0  # секунд между сообщениями
 
 # Диапазоны валидации
 MIN_TEMPERATURE: Final = 0.0
 MAX_TEMPERATURE: Final = 1.0
-MIN_MAX_TOKENS: Final = 1
+MIN_MAX_TOKENS: Final = -1  # -1 означает без лимита
 MIN_REQUEST_TIMEOUT: Final = 1
+MIN_SOCK_READ_TIMEOUT: Final = 1
 MIN_PAUSE_BETWEEN_MESSAGES: Final = 0.0
 
 
@@ -145,6 +147,24 @@ def _validate_request_timeout(value: int) -> None:
     )
 
 
+def _validate_sock_read_timeout(value: int) -> None:
+    """
+    Валидировать параметр sock_read_timeout.
+
+    Args:
+        value: Значение sock_read_timeout для валидации.
+
+    Raises:
+        ValueError: Если значение меньше минимального.
+    """
+    _validate_numeric_range(
+        value,
+        MIN_SOCK_READ_TIMEOUT,
+        None,
+        "sock_read_timeout",
+    )
+
+
 def _validate_pause_between_messages(value: float) -> None:
     """
     Валидировать параметр pause_between_messages.
@@ -172,6 +192,7 @@ class Config:
         temperature: Температура генерации (0.0-1.0).
         max_tokens: Максимальное количество токенов в ответе.
         request_timeout: Таймаут запроса к Ollama в секундах.
+        sock_read_timeout: Таймаут чтения ответа от сервера в секундах.
         pause_between_messages: Пауза между сообщениями в секундах.
         default_system_prompt: Шаблон системного промпта.
         ollama_host: URL хоста Ollama API.
@@ -183,6 +204,7 @@ class Config:
 
     # Таймауты и задержки
     request_timeout: int = DEFAULT_REQUEST_TIMEOUT
+    sock_read_timeout: int = DEFAULT_SOCK_READ_TIMEOUT
     pause_between_messages: float = DEFAULT_PAUSE_BETWEEN_MESSAGES
 
     # Системный промпт
@@ -206,6 +228,7 @@ class Config:
         _validate_temperature(self.temperature)
         _validate_max_tokens(self.max_tokens)
         _validate_request_timeout(self.request_timeout)
+        _validate_sock_read_timeout(self.sock_read_timeout)
         _validate_pause_between_messages(self.pause_between_messages)
 
         # Валидация URL через urllib.parse

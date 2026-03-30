@@ -231,7 +231,7 @@ class Conversation:
         """
         model_id = self.current_turn
         model_name = self.get_current_model_name()
-        context = self.get_context(model_id)
+        context = list(self.get_context(model_id))
 
         response = await provider.generate(
             model=model_name,

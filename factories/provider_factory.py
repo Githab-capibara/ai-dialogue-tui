@@ -17,7 +17,7 @@ class ProviderFactory(Protocol):
     def __call__(self) -> ModelProvider: ...
 
 
-def create_ollama_provider(config: Config) -> ModelProvider:
+def create_ollama_provider(config: Config) -> ModelProvider:  # pylint: disable=import-outside-toplevel
     """
     Создать провайдер Ollama.
 
@@ -27,9 +27,7 @@ def create_ollama_provider(config: Config) -> ModelProvider:
     Returns:
         Настроенный провайдер ModelProvider.
     """
-    from models.ollama_client import (
-        OllamaClient,  # pylint: disable=import-outside-toplevel
-    )
+    from models.ollama_client import OllamaClient
 
     return OllamaClient(host=config.ollama_host)
 
