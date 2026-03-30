@@ -15,8 +15,7 @@
 Всего: 42 теста
 """
 
-# pylint:
-# disable=import-outside-toplevel,missing-class-docstring,missing-function-docstring,unused-argument,reimported,duplicate-code,line-too-long
+# pylint: disable=import-outside-toplevel,reimported,duplicate-code,line-too-long,too-few-public-methods,missing-class-docstring,missing-function-docstring,unused-argument
 
 from __future__ import annotations
 
@@ -629,19 +628,23 @@ class TestSOLIDPrinciples:
         assert hasattr(ModelProvider, "close")
 
         # Проверяем что можно создать новую реализацию
-        class NewProvider:
+        class NewProvider:  # pylint: disable=missing-class-docstring
+            """Новая реализация провайдера для тестирования."""
+
             async def list_models(self) -> list[str]:
+                """Список моделей."""
                 return ["new-model"]
 
-            async def generate(
+            async def generate(  # pylint: disable=unused-argument
                 self,
                 model: str,
                 messages: list[dict[str, str]],  # type: ignore[override]
             ) -> str:
+                """Генерация ответа."""
                 return "response"
 
             async def close(self) -> None:
-                pass
+                """Закрытие провайдера."""
 
         # Новая реализация совместима с протоколом
         provider = NewProvider()

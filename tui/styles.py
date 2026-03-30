@@ -17,8 +17,8 @@ def generate_main_css() -> str:
     """
     return f"""
 #{UI_IDS.model_selection_container} {{
-    align: center middle;
-    height: 100%;
+    align: center top;
+    padding: 3 1;
     background: $surface;
 }}
 
@@ -29,21 +29,32 @@ def generate_main_css() -> str:
     margin-bottom: 2;
 }}
 
+#{UI_IDS.selection_buttons} {{
+    height: 3;
+    align: center middle;
+    margin-top: 3;
+}}
+
 #{UI_IDS.models_row} {{
     height: auto;
-    align: center middle;
+    width: 100%;
+    align: center top;
 }}
 
 #{UI_IDS.model_a_container}, #{UI_IDS.model_b_container} {{
-    width: 30;
-    margin: 0 2;
-    border: solid $primary;
-    padding: 1 2;
+    width: 100%;
+    height: 3;
+    margin: 1 0;
+    align: left middle;
 }}
 
 #{UI_IDS.model_a_label}, #{UI_IDS.model_b_label} {{
-    margin-bottom: 1;
-    text-align: center;
+    width: 15;
+    margin: 0 1;
+}}
+
+#{UI_IDS.model_a_select}, #{UI_IDS.model_b_select} {{
+    width: 1fr;
 }}
 
 #{UI_IDS.selection_buttons} {{

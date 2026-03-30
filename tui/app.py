@@ -73,23 +73,21 @@ class ModelSelectionScreen(ModalScreen):
         with Container(id=UI_IDS.model_selection_container):
             yield Static("Выберите две модели для диалога", id=UI_IDS.selection_title)
 
-            with Horizontal(id=UI_IDS.models_row):
-                with Vertical(id=UI_IDS.model_a_container):
+            with Vertical(id=UI_IDS.models_row):
+                with Horizontal(id=UI_IDS.model_a_container):
                     yield Label("Модель A:", id=UI_IDS.model_a_label)
-                    model_a_value = self._get_model_value(0)
                     yield Select(
                         [(m, m) for m in self._available_models],
                         id=UI_IDS.model_a_select,
-                        value=model_a_value,
+                        value=self._get_model_value(0),
                     )
 
-                with Vertical(id=UI_IDS.model_b_container):
+                with Horizontal(id=UI_IDS.model_b_container):
                     yield Label("Модель B:", id=UI_IDS.model_b_label)
-                    model_b_value = self._get_model_value(1)
                     yield Select(
                         [(m, m) for m in self._available_models],
                         id=UI_IDS.model_b_select,
-                        value=model_b_value,
+                        value=self._get_model_value(1),
                     )
 
             with Horizontal(id=UI_IDS.selection_buttons):
@@ -211,7 +209,7 @@ class TopicInputScreen(ModalScreen):
         self.dismiss(topic)
 
 
-class DialogueApp(App):
+class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
     """Основное TUI приложение для диалога ИИ-моделей.
 
     Содержит только UI-логику. Бизнес-логика вынесена в DialogueService.
@@ -547,7 +545,7 @@ class DialogueApp(App):
     def _is_task_cancelled(self) -> bool:
         """Проверить отменена ли текущая задача."""
         current_task = asyncio.current_task()
-        return current_task is not None and current_task.is_cancelled()
+        return current_task is not None and current_task.cancelled()
 
     async def _process_dialogue_turn(  # pylint: disable=unused-argument
         self,

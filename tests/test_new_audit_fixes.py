@@ -1,7 +1,7 @@
 """Тесты для проверки новых исправлений из аудита кода.
 
 Этот файл содержит тесты для проверки следующих исправлений:
-1. models/conversation.py:108-110 - remaining_messages = context[-max_len:] (без бессмысленного условия)
+1. models/conversation.py - remaining_messages обрезается корректно
 2. models/conversation.py:154-159 - add_message не дублирует код
 3. tui/app.py:220 - пустой binding ctrl+c удалён из BINDINGS
 4. models/ollama_client.py:208-212 - asyncio.Lock используется в _HTTPSessionManager
@@ -17,7 +17,7 @@ Note:
     что оправдано для тестирования.
 """
 
-# pylint: disable=protected-access,import-outside-toplevel,no-member
+# pylint: disable=protected-access,import-outside-toplevel,no-member,too-few-public-methods,line-too-long
 
 import asyncio
 import inspect
@@ -249,7 +249,7 @@ class TestHTTPSessionManagerGetSession:
 
 
 # =============================================================================
-# 8. Тест: tui/app.py:317 - ProviderConnectionError и ProviderGenerationError обрабатываются раздельно
+# 8. Тест: ProviderConnectionError и ProviderGenerationError обрабатываются раздельно
 # =============================================================================
 
 
