@@ -12,7 +12,8 @@ from typing import Callable
 
 import aiohttp
 from textual import on
-from textual.app import App, ComposeResult
+from textual.app import App, ComposeResult, ScreenStackError
+from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
@@ -288,7 +289,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
             status_label.update(
                 f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
             )
-        except (LookupError, RuntimeError):
+        except (LookupError, RuntimeError, NoMatches, ScreenStackError):
             log.exception("Ошибка при обновлении UI состояния")
 
     async def on_mount(self) -> None:
