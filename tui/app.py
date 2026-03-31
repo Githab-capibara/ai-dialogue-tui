@@ -13,10 +13,10 @@ from typing import Callable
 import aiohttp
 from textual import on
 from textual.app import App, ComposeResult, ScreenStackError
-from textual.css.query import NoMatches
-from textual.reactive import reactive
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
+from textual.css.query import NoMatches
+from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
@@ -285,11 +285,14 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
             state: Новое состояние UI от контроллера.
         """
         try:
-            status_label = self.query_one("#status-value", Label)
+            status_label: Label = self.query_one("#status-value", Label)
             status_label.update(
                 f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
             )
-        except (LookupError, RuntimeError, NoMatches, ScreenStackError):
+        except NoMatches:
+            # Элемент ещё не доступен (модальное окно активно или UI не готов)
+            log.debug("Элемент #status-value недоступен для обновления")
+        except (LookupError, RuntimeError, ScreenStackError):
             log.exception("Ошибка при обновлении UI состояния")
 
     async def on_mount(self) -> None:
@@ -436,7 +439,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
             )
 
             # Логируем начало
-            dialog_log = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
+            dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
             dialog_log.write(
                 f"[bold]=== Диалог начат ===[/bold]\n"
                 f"[bold]Модель A:[/bold] [{MESSAGE_STYLES.model_a}]"
@@ -477,7 +480,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
         if self._controller:
             self._controller.handle_clear()
 
-        dialog_log = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
+        dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
         dialog_log.clear()
         dialog_log.write("[dim]История очищена[/dim]")
 
