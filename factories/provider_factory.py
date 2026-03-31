@@ -8,16 +8,17 @@ from __future__ import annotations
 from typing import Protocol
 
 from models.config import Config
+from models.ollama_client import OllamaClient
 from models.provider import ModelProvider
 
 
-class ProviderFactory(Protocol):
+class ProviderFactory(Protocol):  # pylint: disable=too-few-public-methods
     """Протокол фабрики провайдеров."""
 
     def __call__(self) -> ModelProvider: ...
 
 
-def create_ollama_provider(config: Config) -> ModelProvider:  # pylint: disable=import-outside-toplevel
+def create_ollama_provider(config: Config) -> ModelProvider:
     """
     Создать провайдер Ollama.
 
@@ -27,8 +28,6 @@ def create_ollama_provider(config: Config) -> ModelProvider:  # pylint: disable=
     Returns:
         Настроенный провайдер ModelProvider.
     """
-    from models.ollama_client import OllamaClient
-
     return OllamaClient(host=config.ollama_host)
 
 
