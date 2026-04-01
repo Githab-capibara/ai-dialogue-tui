@@ -8,8 +8,7 @@
 - Кэширование style_mapper
 """
 
-# pylint:
-# disable=protected-access,import-outside-toplevel,too-few-public-methods
+# pylint: disable=protected-access,import-outside-toplevel,too-few-public-methods
 
 from __future__ import annotations
 

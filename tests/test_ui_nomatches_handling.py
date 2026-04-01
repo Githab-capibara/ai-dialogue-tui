@@ -1,5 +1,7 @@
 """Тесты для обработки недоступности UI элементов при активных модальных окнах."""
 
+# pylint: disable=protected-access,import-outside-toplevel
+
 from __future__ import annotations
 
 import pytest

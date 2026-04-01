@@ -13,7 +13,10 @@ Note:
     Некоторые тесты содержат дублирующийся код что оправдано для тестирования
     изолированных сценариев.
     Тесты используют доступ к внутренним атрибутам, что оправдано для тестирования.
-"""  # pylint: disable=duplicate-code,protected-access,import-outside-toplevel,too-few-public-methods,reimported,redefined-outer-name,line-too-long
+"""
+
+# pylint: disable=duplicate-code,protected-access,import-outside-toplevel
+# pylint: disable=too-few-public-methods,reimported,redefined-outer-name,line-too-long
 
 from __future__ import annotations
 

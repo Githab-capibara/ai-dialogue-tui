@@ -4,6 +4,9 @@
 _on_ui_state_changed в DialogueApp, когда элемент #status-value недоступен.
 """
 
+# pylint: disable=protected-access,import-outside-toplevel,broad-exception-caught
+# pylint: disable=duplicate-code
+
 from __future__ import annotations
 
 import logging

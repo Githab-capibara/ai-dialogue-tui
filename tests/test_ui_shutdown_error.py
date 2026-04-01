@@ -1,14 +1,16 @@
 """Тесты для предотвращения ошибок NoMatches при завершении работы UI."""
 
-from __future__ import annotations
+# pylint: disable=protected-access,import-outside-toplevel,broad-exception-caught
+# pylint: disable=duplicate-code
 
+from __future__ import annotations
 
 import pytest
 
 from controllers.dialogue_controller import UIState
-from tui.app import DialogueApp
-from models.config import Config
 from factories.provider_factory import create_provider_factory
+from models.config import Config
+from tui.app import DialogueApp
 
 
 class TestUIShutdownError:
