@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 """Тесты архитектурных принципов для проверки правильного разделения слоёв.
 
 Этот модуль проверяет что:
@@ -8,8 +9,7 @@
 5. Separation of Concerns
 """
 
-# pylint:
-# disable=import-outside-toplevel,too-few-public-methods,protected-access
+# pylint: disable=import-outside-toplevel,too-few-public-methods,protected-access
 
 from __future__ import annotations
 

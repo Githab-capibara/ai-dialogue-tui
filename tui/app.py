@@ -418,6 +418,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
             status: Строка статуса для отображения.
         """
         try:
+            # pylint: disable=assignment-from-no-return
             status_label = self.query_one("#status-value", Label)
             status_label.update(status)
         except (NoMatches, LookupError, RuntimeError) as e:

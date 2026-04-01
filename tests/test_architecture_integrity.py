@@ -15,8 +15,9 @@
 Всего: 42 теста
 """
 
-# pylint:
-# disable=import-outside-toplevel,reimported,duplicate-code,line-too-long,too-few-public-methods,missing-class-docstring,missing-function-docstring,unused-argument
+# pylint: disable=import-outside-toplevel,reimported,duplicate-code
+# pylint: disable=line-too-long,too-few-public-methods,missing-class-docstring
+# pylint: disable=missing-function-docstring,unused-argument
 
 from __future__ import annotations
 

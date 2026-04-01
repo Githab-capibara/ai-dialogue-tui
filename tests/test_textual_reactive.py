@@ -9,7 +9,7 @@ Note:
     Тесты используют доступ к внутренним атрибутам Textual для проверки.
 """
 
-from __future__ import annotations
+# pylint: disable=protected-access,import-outside-toplevel
 
 from textual.reactive import reactive
 

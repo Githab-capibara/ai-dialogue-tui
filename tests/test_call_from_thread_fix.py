@@ -10,9 +10,11 @@
 "DialogueApp нарушает SRP (20+ методов, God Object)" и проблемы с DIP.
 """
 
+# pylint: disable=protected-access,import-outside-toplevel,too-few-public-methods
+# pylint: disable=reimported,redefined-outer-name,unused-argument
+
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -20,7 +22,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from textual.css.query import NoMatches
 
-from controllers.dialogue_controller import DialogueController, UIState
+from controllers.dialogue_controller import DialogueController
 from factories.provider_factory import create_provider_factory
 from models.config import Config
 from models.provider import ProviderError, ProviderGenerationError
@@ -92,9 +94,7 @@ class TestCallFromThreadFixtures:
         mock_log.write = MagicMock()
         mock_log.clear = MagicMock()
 
-        with patch.object(
-            app_with_mocks, "query_one", return_value=mock_log
-        ) as mock_query:
+        with patch.object(app_with_mocks, "query_one", return_value=mock_log):
             yield mock_log
 
 

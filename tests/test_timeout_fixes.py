@@ -9,7 +9,7 @@ Note:
     Тесты используют доступ к внутренним атрибутам для тестирования.
 """
 
-from __future__ import annotations
+# pylint: disable=protected-access,import-outside-toplevel
 
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
