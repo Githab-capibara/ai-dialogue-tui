@@ -83,6 +83,7 @@ class UIElementIDs:
 
     # Topic Input Screen
     topic_input_container: str = "topic-input-container"
+    topic_input_content: str = "topic-input-content"
     topic_label: str = "topic-label"
     topic_input: str = "topic-input"
     topic_buttons: str = "topic-buttons"

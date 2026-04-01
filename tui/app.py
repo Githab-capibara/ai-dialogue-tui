@@ -164,14 +164,15 @@ class TopicInputScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Container(id=UI_IDS.topic_input_container):
-            yield Static("Введите тему диалога:", id=UI_IDS.topic_label)
-            yield Input(
-                placeholder="Например: Спор о преимуществах Python перед Go",
-                id=UI_IDS.topic_input,
-            )
-            with Horizontal(id=UI_IDS.topic_buttons):
-                yield Button("Начать", id=UI_IDS.topic_start_btn, variant="primary")
-                yield Button("Отмена", id=UI_IDS.topic_cancel_btn, variant="error")
+            with Vertical(id=UI_IDS.topic_input_content):
+                yield Static("Введите тему диалога:", id=UI_IDS.topic_label)
+                yield Input(
+                    placeholder="Например: Спор о преимуществах Python перед Go",
+                    id=UI_IDS.topic_input,
+                )
+                with Horizontal(id=UI_IDS.topic_buttons):
+                    yield Button("Начать", id=UI_IDS.topic_start_btn, variant="primary")
+                    yield Button("Отмена", id=UI_IDS.topic_cancel_btn, variant="error")
 
     def action_submit(self) -> None:
         """Обработать нажатие Enter для подтверждения темы."""
