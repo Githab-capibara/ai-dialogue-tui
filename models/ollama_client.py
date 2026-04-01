@@ -398,7 +398,7 @@ class OllamaClient:
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             raise ProviderConnectionError(
                 f"Не удалось подключиться к Ollama ({self.host})",
-                original_exception=e,
+                e,
             ) from e
         except ProviderError as e:
             # Логируем и пробрасываем наши ошибки дальше
@@ -479,7 +479,7 @@ class OllamaClient:
             raise ProviderConnectionError(
                 f"Не удалось подключиться к Ollama ({self.host}). "
                 f"{timeout_info}. Попробуйте увеличить таймаут в настройках.",
-                original_exception=e,
+                e,
             ) from e
         except ProviderError as e:
             # Логируем и пробрасываем наши ошибки дальше
