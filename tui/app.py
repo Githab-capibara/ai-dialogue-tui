@@ -48,6 +48,29 @@ from tui.styles import generate_main_css
 # Константа таймаута для уведомлений
 DEFAULT_NOTIFY_TIMEOUT: int = 10
 
+# =============================================================================
+# ВАЖНО: call_from_thread vs call_after_refresh в Textual
+# =============================================================================
+# call_from_thread:
+#   - Используется ТОЛЬКО когда код выполняется в отдельном потоке (threading.Thread)
+#   - Вызывает RuntimeError если вызван из основного потока или asyncio контекста
+#   - Пример правильного использования: threading.Thread(target=...).start()
+#
+# call_after_refresh:
+#   - Используется в асинхронном контексте (asyncio.create_task, async def)
+#   - Безопасно для вызова из async методов и задач
+#   - Планирует выполнение после обновления UI
+#
+# В этом модуле:
+#   - _run_dialogue() запущен через asyncio.create_task → асинхронный контекст
+#   - _process_dialogue_turn() вызывается из _run_dialogue → асинхронный контекст
+#   - _handle_dialogue_error() вызывается из _process_dialogue_turn → асинхронный контекст
+#   - _handle_critical_error() вызывается из _run_dialogue → асинхронный контекст
+#
+# ВЫВОД: Все вызовы для обновления UI из этих методов должны использовать
+#        call_after_refresh, а НЕ call_from_thread!
+# =============================================================================
+
 # CSS генерируется из централизованных констант
 CSS = generate_main_css()
 
@@ -313,7 +336,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                     severity="error",
                     timeout=DEFAULT_NOTIFY_TIMEOUT,
                 )
-                self.query_one("#status-value", Label).update("[red]Нет моделей[/red]")
+                self._safe_update_status("[red]Нет моделей[/red]")
                 return
 
             # Показываем окно выбора моделей
@@ -339,6 +362,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
+            self._safe_update_status("[red]Ошибка подключения[/red]")
         except ProviderGenerationError as e:
             log.exception("Ошибка генерации при получении моделей: %s", e)
             self.notify(
@@ -347,9 +371,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
-            self.query_one("#status-value", Label).update(
-                "[red]Ошибка подключения[/red]"
-            )
+            self._safe_update_status("[red]Ошибка подключения[/red]")
         except ValueError as e:
             log.exception("Ошибка валидации конфигурации: %s", e)
             self.notify(
@@ -358,9 +380,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
-            self.query_one("#status-value", Label).update(
-                "[red]Ошибка конфигурации[/red]"
-            )
+            self._safe_update_status("[red]Ошибка конфигурации[/red]")
         except aiohttp.ClientError as e:
             log.exception("Ошибка HTTP клиента при запуске: %s", e)
             self.notify(
@@ -369,9 +389,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
-            self.query_one("#status-value", Label).update(
-                "[red]Ошибка подключения[/red]"
-            )
+            self._safe_update_status("[red]Ошибка подключения[/red]")
         except asyncio.TimeoutError as e:
             log.exception("Таймаут при запуске: %s", e)
             self.notify(
@@ -380,7 +398,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
-            self.query_one("#status-value", Label).update("[red]Таймаут[/red]")
+            self._safe_update_status("[red]Таймаут[/red]")
         except (RuntimeError, SystemError) as e:
             # Не раскрываем детали внутренней ошибки
             log.exception("Внутренняя ошибка при запуске: %s", e)
@@ -390,9 +408,20 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
-            self.query_one("#status-value", Label).update(
-                "[red]Неизвестная ошибка[/red]"
-            )
+            self._safe_update_status("[red]Неизвестная ошибка[/red]")
+
+    def _safe_update_status(self, status: str) -> None:
+        """
+        Безопасно обновить статус с обработкой ошибок.
+
+        Args:
+            status: Строка статуса для отображения.
+        """
+        try:
+            status_label = self.query_one("#status-value", Label)
+            status_label.update(status)
+        except (NoMatches, LookupError, RuntimeError) as e:
+            log.warning("Не удалось обновить статус: %s", e)
 
     def _setup_conversation(self, model_a: str, model_b: str) -> None:
         """
@@ -433,23 +462,33 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                 on_state_changed=self._on_ui_state_changed,
             )
 
-            # Обновляем заголовок и статус
-            self.sub_title = f"{model_a} ↔ {model_b} | Тема: {sanitized_topic}"
-            self._on_ui_state_changed(
-                UIState(status_text="Готов к запуску", status_style="green")
-            )
+            # Обновляем заголовок и статус через call_after_refresh
+            # чтобы UI успел обновиться после закрытия модального окна
+            def _finalize_setup() -> None:
+                self.sub_title = f"{model_a} ↔ {model_b} | Тема: {sanitized_topic}"
+                self._on_ui_state_changed(
+                    UIState(status_text="Готов к запуску", status_style="green")
+                )
 
-            # Логируем начало
-            dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
-            dialog_log.write(
-                f"[bold]=== Диалог начат ===[/bold]\n"
-                f"[bold]Модель A:[/bold] [{MESSAGE_STYLES.model_a}]"
-                f"{model_a}[/{MESSAGE_STYLES.model_a}]\n"
-                f"[bold]Модель B:[/bold] [{MESSAGE_STYLES.model_b}]"
-                f"{model_b}[/{MESSAGE_STYLES.model_b}]\n"
-                f"[bold]Тема:[/bold] {sanitized_topic}\n"
-                f"[dim]Нажмите 'Старт' для начала диалога[/dim]"
-            )
+                # Логируем начало с обработкой ошибок
+                try:
+                    dialog_log: RichLog = self.query_one(
+                        f"#{UI_IDS.dialogue_log}", RichLog
+                    )
+                    dialog_log.write(
+                        f"[bold]=== Диалог начат ===[/bold]\n"
+                        f"[bold]Модель A:[/bold] [{MESSAGE_STYLES.model_a}]"
+                        f"{model_a}[/{MESSAGE_STYLES.model_a}]\n"
+                        f"[bold]Модель B:[/bold] [{MESSAGE_STYLES.model_b}]"
+                        f"{model_b}[/{MESSAGE_STYLES.model_b}]\n"
+                        f"[bold]Тема:[/bold] {sanitized_topic}\n"
+                        f"[dim]Нажмите 'Старт' для начала диалога[/dim]"
+                    )
+                except (NoMatches, LookupError, RuntimeError) as e:
+                    log.warning("Не удалось записать в лог при инициализации: %s", e)
+
+            # Используем call_after_refresh для безопасного обновления UI
+            self.call_after_refresh(_finalize_setup)
 
         # Показываем окно ввода темы
         self.push_screen(TopicInputScreen(), callback=on_topic_entered)
@@ -558,7 +597,11 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
         model_name: str,
         style: str,
     ) -> DialogueTurnResult | None:
-        """Обработать один ход диалога и вывести результат."""
+        """Обработать один ход диалога и вывести результат.
+
+        Важно: Этот метод работает в асинхронном контексте (asyncio.create_task),
+        поэтому для записи в UI используем call_after_refresh вместо call_from_thread.
+        """
         result = await service.run_dialogue_cycle()
 
         if result:
@@ -567,14 +610,38 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                 f"\n[{style}]Ход {service.turn_count}: {result.model_name}[/]\n"
                 f"  {formatted_response}"
             )
-            self.call_from_thread(log.write, message)
+            # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в потоке
+            # call_from_thread требует вызова из отдельного потока (threading.Thread)
+            self.call_after_refresh(self._write_to_log, message)
 
         return result
 
+    def _write_to_log(self, message: str) -> None:
+        """
+        Безопасно записать сообщение в лог UI.
+
+        Args:
+            message: Сообщение для записи.
+        """
+        try:
+            dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
+            dialog_log.write(message)
+        except (NoMatches, LookupError, RuntimeError) as e:
+            log.warning("Не удалось записать в лог: %s", e)
+
     def _handle_dialogue_error(self, model_name: str) -> None:
-        """Обработать ошибку генерации ответа."""
+        """Обработать ошибку генерации ответа.
+
+        Важно: Этот метод вызывается из асинхронного контекста (_process_dialogue_turn),
+        поэтому используем call_after_refresh вместо call_from_thread.
+
+        call_from_thread должен использоваться ТОЛЬКО когда метод вызывается из
+        отдельного потока (threading.Thread). Для асинхронного контекста (asyncio)
+        используйте call_after_refresh или call_later.
+        """
         error_msg = f"\n[{MESSAGE_STYLES.error}]Ошибка ({model_name})[/]"
-        self.call_from_thread(log.write, error_msg)
+        # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в потоке
+        self.call_after_refresh(self._write_to_log, error_msg)
         self._controller.update_for_error(model_name)
         self.notify(
             "Ошибка генерации ответа",
@@ -584,10 +651,15 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
         )
 
     def _handle_critical_error(self, e: Exception) -> None:
-        """Обработать критическую ошибку в цикле диалога."""
+        """Обработать критическую ошибку в цикле диалога.
+
+        Важно: Этот метод вызывается из асинхронного контекста (_run_dialogue),
+        поэтому используем call_after_refresh вместо call_from_thread.
+        """
         log.exception("Критическая ошибка в цикле диалога: %s", e)
-        self.call_from_thread(
-            log.write,
+        # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в потоке
+        self.call_after_refresh(
+            self._write_to_log,
             f"\n[{MESSAGE_STYLES.error}]Критическая ошибка[/]",
         )
 
