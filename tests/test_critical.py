@@ -31,7 +31,11 @@ from aiohttp import ClientError
 from models.config import Config, validate_ollama_url
 from models.conversation import Conversation, MessageDict
 from models.ollama_client import OllamaClient
-from models.provider import ProviderError
+from models.provider import (
+    ProviderConnectionError,
+    ProviderError,
+    ProviderGenerationError,
+)
 from tui.app import ModelSelectionScreen, sanitize_response_for_display, sanitize_topic
 from tui.sanitizer import MAX_RESPONSE_PREVIEW_LENGTH
 
@@ -545,6 +549,112 @@ class TestOllamaClientChainedExceptions:
 
             # Проверяем что оригинальное исключение сохранено
             assert exc_info.value.original_exception is not None
+
+
+class TestProviderExceptionHandling:
+    """
+    Тесты для проверки правильной передачи original_exception в исключениях.
+
+    Проверяет что ProviderConnectionError и ProviderGenerationError:
+    1. Принимают original_exception как позиционный аргумент
+    2. Сохраняют original_exception в атрибуте _original_exception
+    3. Свойство original_exception возвращает правильное значение
+    """
+
+    def test_provider_connection_error_with_positional_argument(self) -> None:
+        """Тест что ProviderConnectionError принимает original_exception позиционно."""
+        original_error = ClientError("Connection refused")
+        exception = ProviderConnectionError("Failed to connect", original_error)
+
+        # Проверяем что original_exception сохранён в атрибуте
+        assert exception._original_exception is original_error
+        # Проверяем что свойство возвращает правильное значение
+        assert exception.original_exception is original_error
+        # Проверяем сообщение
+        assert str(exception) == "Failed to connect"
+
+    def test_provider_generation_error_with_positional_argument(self) -> None:
+        """Тест что ProviderGenerationError принимает original_exception позиционно."""
+        original_error = ValueError("Invalid response format")
+        exception = ProviderGenerationError("Generation failed", original_error)
+
+        # Проверяем что original_exception сохранён в атрибуте
+        assert exception._original_exception is original_error
+        # Проверяем что свойство возвращает правильное значение
+        assert exception.original_exception is original_error
+        # Проверяем сообщение
+        assert str(exception) == "Generation failed"
+
+    def test_provider_connection_error_without_original_exception(self) -> None:
+        """Тест что ProviderConnectionError работает без original_exception."""
+        exception = ProviderConnectionError("Failed to connect")
+
+        # Проверяем что original_exception равен None
+        assert exception._original_exception is None
+        assert exception.original_exception is None
+        # Проверяем сообщение
+        assert str(exception) == "Failed to connect"
+
+    def test_provider_generation_error_without_original_exception(self) -> None:
+        """Тест что ProviderGenerationError работает без original_exception."""
+        exception = ProviderGenerationError("Generation failed")
+
+        # Проверяем что original_exception равен None
+        assert exception._original_exception is None
+        assert exception.original_exception is None
+        # Проверяем сообщение
+        assert str(exception) == "Generation failed"
+
+    @pytest.mark.asyncio
+    async def test_list_models_passes_original_exception_positionally(self) -> None:
+        """Тест что list_models передаёт original_exception позиционно."""
+        original_error = ClientError("Connection failed")
+        mock_context_manager = AsyncContextManagerMock(raise_on_enter=original_error)
+        mock_session = create_session_mock(response=None)
+        mock_session.get = MagicMock(return_value=mock_context_manager)
+
+        with patch.object(
+            OllamaClient, "_get_session", create_mock_get_session(mock_session)
+        ):
+            client = OllamaClient(host="http://localhost:11434")
+            with pytest.raises(ProviderConnectionError) as exc_info:
+                await client.list_models()
+
+            # Проверяем что original_exception сохранён через позиционную передачу
+            assert exc_info.value._original_exception is original_error
+            assert exc_info.value.original_exception is original_error
+
+    @pytest.mark.asyncio
+    async def test_generate_passes_original_exception_positionally(self) -> None:
+        """Тест что generate передаёт original_exception позиционно."""
+        original_error = ClientError("Connection failed")
+        mock_context_manager = AsyncContextManagerMock(raise_on_enter=original_error)
+        mock_session = create_session_mock(response=None)
+        mock_session.post = MagicMock(return_value=mock_context_manager)
+
+        with patch.object(
+            OllamaClient, "_get_session", create_mock_get_session(mock_session)
+        ):
+            client = OllamaClient(host="http://localhost:11434")
+            with pytest.raises(ProviderConnectionError) as exc_info:
+                await client.generate("llama3", [{"role": "user", "content": "test"}])
+
+            # Проверяем что original_exception сохранён через позиционную передачу
+            assert exc_info.value._original_exception is original_error
+            assert exc_info.value.original_exception is original_error
+
+    def test_exception_chain_preservation(self) -> None:
+        """Тест что цепочка исключений сохраняется корректно."""
+        original_error = TimeoutError("Request timed out")
+        exception = ProviderConnectionError("Connection timeout", original_error)
+
+        # Проверяем что это тот же самый объект исключения
+        assert exception.original_exception is original_error
+        assert exception._original_exception is original_error
+        # Проверяем тип оригинального исключения
+        assert isinstance(exception.original_exception, TimeoutError)
+        # Проверяем сообщение оригинального исключения
+        assert str(exception.original_exception) == "Request timed out"
 
 
 class TestDialogueAppPauseHandling:  # pylint: disable=too-few-public-methods
