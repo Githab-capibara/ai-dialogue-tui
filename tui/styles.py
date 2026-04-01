@@ -69,14 +69,16 @@ def generate_main_css() -> str:
 
 #{UI_IDS.topic_input_container} {{
     align: center middle;
+    width: 100%;
     height: 100%;
     background: $surface;
 }}
 
 #{UI_IDS.topic_input_content} {{
     align: center middle;
-    width: auto;
+    width: 80%;
     height: auto;
+    min-height: 10;
 }}
 
 #{UI_IDS.topic_label} {{

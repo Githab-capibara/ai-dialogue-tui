@@ -612,7 +612,8 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                 f"  {formatted_response}"
             )
             # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в потоке
-            # call_from_thread требует вызова из отдельного потока (threading.Thread)
+            # call_from_thread требует вызова из отдельного потока
+            # (threading.Thread)
             self.call_after_refresh(self._write_to_log, message)
 
         return result
@@ -641,7 +642,8 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
         используйте call_after_refresh или call_later.
         """
         error_msg = f"\n[{MESSAGE_STYLES.error}]Ошибка ({model_name})[/]"
-        # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в потоке
+        # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в
+        # потоке
         self.call_after_refresh(self._write_to_log, error_msg)
         self._controller.update_for_error(model_name)
         self.notify(
@@ -658,7 +660,8 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
         поэтому используем call_after_refresh вместо call_from_thread.
         """
         log.exception("Критическая ошибка в цикле диалога: %s", e)
-        # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в потоке
+        # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в
+        # потоке
         self.call_after_refresh(
             self._write_to_log,
             f"\n[{MESSAGE_STYLES.error}]Критическая ошибка[/]",
