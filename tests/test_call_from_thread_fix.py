@@ -362,7 +362,8 @@ class TestIntegrationCallFromThreadFix(TestCallFromThreadFixtures):
                 )
             except ProviderError:
                 # Ожидается что ProviderError будет проброшен
-                # Обработка ошибки (_handle_dialogue_error) происходит в _run_dialogue
+                # Обработка ошибки (_handle_dialogue_error) происходит в
+                # _run_dialogue
                 pass
             except RuntimeError as e:
                 if "call_from_thread" in str(e):

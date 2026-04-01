@@ -9,7 +9,8 @@
 5. Separation of Concerns
 """
 
-# pylint: disable=import-outside-toplevel,too-few-public-methods,protected-access
+# pylint:
+# disable=import-outside-toplevel,too-few-public-methods,protected-access
 
 from __future__ import annotations
 

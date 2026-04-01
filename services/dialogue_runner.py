@@ -112,7 +112,6 @@ class DialogueRunner:
                     if on_error:
                         model_name = self._service.conversation.get_current_model_name()
                         on_error(model_name)
-                    raise
 
                 await asyncio.sleep(self._config.pause_between_messages)
 
@@ -139,7 +138,7 @@ class DialogueRunner:
     def _is_task_cancelled(self) -> bool:
         """Проверить отменена ли текущая задача."""
         current_task = asyncio.current_task()
-        return current_task is not None and current_task.is_cancelled()
+        return current_task is not None and current_task.cancelled()
 
     async def cleanup(self) -> None:
         """Очистить ресурсы раннера."""
