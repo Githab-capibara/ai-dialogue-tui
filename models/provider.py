@@ -21,9 +21,7 @@ class ProviderError(Exception):
         original_exception: Оригинальное исключение для цепочки.
     """
 
-    def __init__(
-        self, message: str, original_exception: Exception | None = None
-    ) -> None:
+    def __init__(self, message: str, original_exception: Exception | None = None) -> None:
         """
         Инициализация исключения.
 
@@ -101,11 +99,13 @@ class ModelProvider(Protocol):
         >>> class MyProvider:
         ...     async def list_models(self) -> list[str]:
         ...         return ["model1", "model2"]
-        ...     async def generate(self, model: str, messages: list[MessageDict]) -> str:
+        ...     async def generate(
+        ...         self, model: str, messages: list[MessageDict]
+        ...     ) -> str:
         ...         return "response"
         ...     async def close(self) -> None:
         ...         pass
-        >>> provider: ModelProvider = MyProvider()  # Типизация работает
+        >>> provider: ModelProvider = MyProvider()
     """
 
     async def list_models(self) -> list[str]:

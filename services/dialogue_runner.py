@@ -69,7 +69,8 @@ class DialogueRunner:
             on_turn: Callback для обработки каждого хода.
             on_error: Callback для обработки ошибок генерации.
         """
-        self._dialogue_task = asyncio.create_task(self._run_loop(on_turn, on_error))
+        loop = asyncio.get_running_loop()
+        self._dialogue_task = loop.create_task(self._run_loop(on_turn, on_error))
 
     async def stop(self) -> None:
         """

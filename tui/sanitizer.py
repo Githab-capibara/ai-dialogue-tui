@@ -23,7 +23,8 @@ def sanitize_topic(topic: str) -> str:
     """
     Санитизировать ввод темы для предотвращения инъекции промпта.
 
-    Экранирует специальные символы и удаляет потенциально опасные конструкции.
+    Экранирует специальные символы и удаляет
+    потенциально опасные конструкции.
 
     Args:
         topic: Исходная тема от пользователя.
@@ -61,9 +62,7 @@ def sanitize_response_for_display(response: str) -> str:
         TypeError: Если response не является строкой.
     """
     if not isinstance(response, str):
-        raise TypeError(
-            f"response должен быть строкой, получен {type(response).__name__}"
-        )
+        raise TypeError(f"response должен быть строкой, получен {type(response).__name__}")
     if not response:
         return ""
 

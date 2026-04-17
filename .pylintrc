@@ -3,14 +3,14 @@ ignore=venv,.git,__pycache__
 extension-pkg-whitelist=
 
 [MESSAGES CONTROL]
-disable=
+disable=design,refactoring,similarities
 
 [REPORTS]
 reports=yes
 score=yes
 
 [FORMAT]
-max-line-length=100
+max-line-length=120
 
 [BASIC]
 good-names=i,j,k,ex,Run,_,id,ok

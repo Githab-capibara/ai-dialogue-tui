@@ -43,7 +43,8 @@ class DialogueController:
         on_state_changed: Callback для уведомления об изменении состояния UI.
 
     Note:
-        Этот класс не содержит UI-компонентов, только логику управления состоянием.
+        Этот класс не содержит UI-компонентов, только логику
+        управления состоянием.
 
     Example:
         >>> controller = DialogueController(service, on_state_changed=callback)

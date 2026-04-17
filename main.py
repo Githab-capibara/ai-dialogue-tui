@@ -34,7 +34,8 @@ def main() -> int:  # pylint: disable=too-many-return-statements
         Код выхода приложения.
 
     Note:
-        Оборачивает app.run() в try/except для перехвата необработанных исключений.
+        Оборачивает app.run() в try/except
+        для перехвата необработанных исключений.
     """
     config = Config()
 
@@ -60,8 +61,7 @@ def main() -> int:  # pylint: disable=too-many-return-statements
         # Ошибка подключения
         logging.exception("Ошибка подключения: %s", e)
         print(
-            f"Ошибка подключения к Ollama: {e}\n"
-            "Убедитесь, что Ollama запущен и доступен.",
+            f"Ошибка подключения к Ollama: {e}\nУбедитесь, что Ollama запущен и доступен.",
             file=sys.stderr,
         )
         return 1

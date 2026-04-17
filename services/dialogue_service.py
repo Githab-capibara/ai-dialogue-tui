@@ -37,8 +37,9 @@ class DialogueService:
     """
     Сервис для управления бизнес-логикой диалога.
 
-    Инкапсулирует логику запуска, паузы, остановки и выполнения циклов диалога.
-    Работает с абстракциями (ModelProvider, Conversation), не с конкретными реализациями.
+    Инкапсулирует логику запуска, паузы, остановки и выполнения
+    циклов диалога. Работает с абстракциями (ModelProvider, Conversation),
+    не с конкретными реализациями.
 
     Attributes:
         conversation: Объект диалога для управления контекстами.
@@ -147,7 +148,7 @@ class DialogueService:
         переключает ход и increment счетчик.
 
         Returns:
-            DialogueTurnResult с результатом хода или None если диалог не запущен.
+            DialogueTurnResult или None если диалог не запущен.
         """
         if not self._is_running or self._is_paused:
             return None

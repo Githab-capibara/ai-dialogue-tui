@@ -1,0 +1,41 @@
+[project]
+name = "ai-dialogue-tui"
+version = "0.1.0"
+description = "TUI для диалога двух ИИ-моделей через Ollama"
+requires-python = ">=3.10"
+dependencies = [
+    "textual==0.49.0",
+    "aiohttp==3.9.1",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+exclude = [
+    "tests/",
+    "audit_reports/",
+    ".git/",
+    "__pycache__/",
+    ".mypy_cache/",
+    ".ruff_cache/",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+explicit_package_bases = true
+exclude = ["tests/", "audit_reports/"]

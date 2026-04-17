@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Callable
+from typing import Any, Callable
 
 import aiohttp
 from textual import on
-from textual.app import App, ComposeResult, ScreenStackError
+from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.css.query import NoMatches
@@ -49,26 +49,13 @@ from tui.styles import generate_main_css
 DEFAULT_NOTIFY_TIMEOUT: int = 10
 
 # =============================================================================
-# ВАЖНО: call_from_thread vs call_after_refresh в Textual
+# call_from_thread vs call_after_refresh в Textual
 # =============================================================================
-# call_from_thread:
-#   - Используется ТОЛЬКО когда код выполняется в отдельном потоке (threading.Thread)
-#   - Вызывает RuntimeError если вызван из основного потока или asyncio контекста
-#   - Пример правильного использования: threading.Thread(target=...).start()
+# call_from_thread: используется для threading.Thread
+# call_after_refresh: используется в asyncio.create_task, async def
 #
-# call_after_refresh:
-#   - Используется в асинхронном контексте (asyncio.create_task, async def)
-#   - Безопасно для вызова из async методов и задач
-#   - Планирует выполнение после обновления UI
-#
-# В этом модуле:
-#   - _run_dialogue() запущен через asyncio.create_task → асинхронный контекст
-#   - _process_dialogue_turn() вызывается из _run_dialogue → асинхронный контекст
-#   - _handle_dialogue_error() вызывается из _process_dialogue_turn → асинхронный контекст
-#   - _handle_critical_error() вызывается из _run_dialogue → асинхронный контекст
-#
-# ВЫВОД: Все вызовы для обновления UI из этих методов должны использовать
-#        call_after_refresh, а НЕ call_from_thread!
+# В этом модуле все методы работают в асинхронном контексте,
+# поэтому используется call_after_refresh, а НЕ call_from_thread!
 # =============================================================================
 
 # CSS генерируется из централизованных констант
@@ -77,7 +64,7 @@ CSS = generate_main_css()
 log = logging.getLogger(__name__)
 
 
-class ModelSelectionScreen(ModalScreen):
+class ModelSelectionScreen(ModalScreen[None]):
     """Модальное окно для выбора двух моделей."""
 
     BINDINGS = [
@@ -87,8 +74,8 @@ class ModelSelectionScreen(ModalScreen):
     def __init__(
         self,
         models: list[str],
-        *args,
-        **kwargs,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self._available_models = models
@@ -174,10 +161,10 @@ class ModelSelectionScreen(ModalScreen):
             )
             return
 
-        self.dismiss((model_a, model_b))
+        self.dismiss((model_a, model_b))  # type: ignore[arg-type]
 
 
-class TopicInputScreen(ModalScreen):
+class TopicInputScreen(ModalScreen[None]):
     """Модальное окно для ввода темы диалога."""
 
     BINDINGS = [
@@ -231,10 +218,10 @@ class TopicInputScreen(ModalScreen):
             )
             return
 
-        self.dismiss(topic)
+        self.dismiss(topic)  # type: ignore[arg-type]
 
 
-class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
+class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
     """Основное TUI приложение для диалога ИИ-моделей.
 
     Содержит только UI-логику. Бизнес-логика вынесена в DialogueService.
@@ -266,9 +253,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
         """
         super().__init__()
         self._config = config or Config()
-        self._provider_factory = provider_factory or (
-            lambda: OllamaClient(host=self._config.ollama_host)
-        )
+        self._provider_factory = provider_factory or (lambda: OllamaClient(host=self._config.ollama_host))
         self._client: ModelProvider | None = None
         self._controller: DialogueController | None = None
         self._dialogue_task: asyncio.Task[None] | None = None
@@ -308,15 +293,20 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
         Args:
             state: Новое состояние UI от контроллера.
         """
+        from textual.app import ScreenStackError
+
         try:
             status_label: Label = self.query_one("#status-value", Label)
             status_label.update(
                 f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
             )
-        except NoMatches:
-            # Элемент ещё не доступен (модальное окно активно или UI не готов)
+        except (NoMatches, ScreenStackError):
             log.debug("Элемент #status-value недоступен для обновления")
-        except (LookupError, RuntimeError, ScreenStackError):
+        except LookupError:
+            log.exception("LookupError при обновлении UI состояния")
+        except RuntimeError:
+            log.exception("RuntimeError при обновлении UI состояния")
+        except Exception:
             log.exception("Ошибка при обновлении UI состояния")
 
     async def on_mount(self) -> None:
@@ -330,8 +320,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
 
             if not self._models:
                 self.notify(
-                    "Не найдено установленных моделей Ollama!\n"
-                    "Установите модель командой: ollama pull llama3",
+                    "Не найдено установленных моделей Ollama!\nУстановите модель командой: ollama pull llama3",
                     title="Ошибка",
                     severity="error",
                     timeout=DEFAULT_NOTIFY_TIMEOUT,
@@ -342,7 +331,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
             # Показываем окно выбора моделей
             def on_models_selected(result: tuple[str, str] | None) -> None:
                 if result is None:
-                    self.exit(1)
+                    self.exit(1)  # type: ignore[arg-type]
                     return
 
                 model_a, model_b = result
@@ -390,8 +379,8 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             self._safe_update_status("[red]Ошибка подключения[/red]")
-        except asyncio.TimeoutError as e:
-            log.exception("Таймаут при запуске: %s", e)
+        except asyncio.TimeoutError:
+            log.exception("Таймаут при запуске")
             self.notify(
                 "Превышено время ожидания подключения",
                 title="Ошибка",
@@ -435,16 +424,14 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
 
         def on_topic_entered(topic: str | None) -> None:
             if topic is None:
-                self.exit(1)
+                self.exit(1)  # type: ignore[arg-type]
                 return
 
             # Санитизация темы перед использованием
             sanitized_topic = sanitize_topic(topic)
 
             # Форматируем системный промпт
-            system_prompt = self._config.default_system_prompt.format(
-                topic=sanitized_topic
-            )
+            system_prompt = self._config.default_system_prompt.format(topic=sanitized_topic)
 
             # Создаём объекты с dependency injection
             conversation = Conversation(
@@ -467,15 +454,11 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
             # чтобы UI успел обновиться после закрытия модального окна
             def _finalize_setup() -> None:
                 self.sub_title = f"{model_a} ↔ {model_b} | Тема: {sanitized_topic}"
-                self._on_ui_state_changed(
-                    UIState(status_text="Готов к запуску", status_style="green")
-                )
+                self._on_ui_state_changed(UIState(status_text="Готов к запуску", status_style="green"))
 
                 # Логируем начало с обработкой ошибок
                 try:
-                    dialog_log: RichLog = self.query_one(
-                        f"#{UI_IDS.dialogue_log}", RichLog
-                    )
+                    dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
                     dialog_log.write(
                         f"[bold]=== Диалог начат ===[/bold]\n"
                         f"[bold]Модель A:[/bold] [{MESSAGE_STYLES.model_a}]"
@@ -559,14 +542,10 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
                 model_id = service.conversation.current_turn
                 model_name = service.conversation.get_current_model_name()
                 style_info = style_mapper.get_style_info(model_id, model_name)
-                self._controller.update_for_turn(
-                    style_info.model_name, style_info.style_id
-                )
+                self._controller.update_for_turn(style_info.model_name, style_info.style_id)
 
                 try:
-                    await self._process_dialogue_turn(
-                        service, style_info.model_name, style_info.style_id
-                    )
+                    await self._process_dialogue_turn(service, style_info.model_name, style_info.style_id)
                 except ProviderError as e:
                     # Унифицированная обработка всех ProviderError
                     log.warning("Ошибка провайдера в цикле диалога: %s", e)
@@ -607,10 +586,7 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
 
         if result:
             formatted_response = sanitize_response_for_display(result.response)
-            message = (
-                f"\n[{style}]Ход {service.turn_count}: {result.model_name}[/]\n"
-                f"  {formatted_response}"
-            )
+            message = f"\n[{style}]Ход {service.turn_count}: {result.model_name}[/]\n  {formatted_response}"
             # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в потоке
             # call_from_thread требует вызова из отдельного потока
             # (threading.Thread)
@@ -645,7 +621,8 @@ class DialogueApp(App):  # pylint: disable=too-many-instance-attributes
         # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в
         # потоке
         self.call_after_refresh(self._write_to_log, error_msg)
-        self._controller.update_for_error(model_name)
+        if self._controller:
+            self._controller.update_for_error(model_name)
         self.notify(
             "Ошибка генерации ответа",
             title="Ошибка",

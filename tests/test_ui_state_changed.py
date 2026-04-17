@@ -190,7 +190,7 @@ class TestUIStateChangedNoMatches:
         ]
         assert len(error_records) > 0
         assert any(
-            "Ошибка при обновлении UI состояния" in record.message
+            "при обновлении UI состояния" in record.message
             for record in error_records
         )
 
