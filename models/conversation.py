@@ -26,12 +26,21 @@ ModelId = Literal["A", "B"]
 
 
 @dataclass(slots=True)
+class _ConversationContext:
+    """Контекст для каждой модели - выделен для уменьшения атрибутов Conversation."""
+
+    messages: list[MessageDict] = field(default_factory=list)
+    model_id: ModelId = field(default="A")
+
+
+@dataclass(slots=True)
 class Conversation:
     """
     Управление диалогом между двумя моделями.
 
     Каждая модель имеет свой независимый контекст (историю сообщений).
-    Ответ одной модели добавляется в контекст другой как сообщение от пользователя.
+    Ответ одной модели добавляется в контекст другой
+    как сообщение от пользователя.
 
     Attributes:
         model_a: Название модели A.
@@ -53,8 +62,7 @@ class Conversation:
     _context_a: list[MessageDict] = field(default_factory=list, repr=False)
     _context_b: list[MessageDict] = field(default_factory=list, repr=False)
 
-    # Системный промпт по умолчанию из Config
-    system_prompt: str = field(default_factory=lambda: Config().default_system_prompt)
+    system_prompt: str = ""
 
     # Чей сейчас ход
     _current_turn: ModelId = field(default="A", init=False)
@@ -78,14 +86,13 @@ class Conversation:
         if self.model_a == self.model_b:
             raise ValueError("model_a и model_b должны быть разными")
 
-        # Форматируем системный промпт с темой
+        _default_prompt = Config().default_system_prompt
+        effective_prompt = self.system_prompt if self.system_prompt else _default_prompt
+
         try:
-            formatted_prompt = self.system_prompt.format(topic=self.topic)
+            formatted_prompt = effective_prompt.format(topic=self.topic)
         except (KeyError, ValueError):
-            formatted_prompt = (
-                f"You are a helpful assistant. The topic of discussion is: {self.topic}"
-            )
-        # Добавляем системный промпт в оба контекста
+            formatted_prompt = f"You are a helpful assistant. The topic of discussion is: {self.topic}"
         self._context_a.append(MessageDict(role="system", content=formatted_prompt))
         self._context_b.append(MessageDict(role="system", content=formatted_prompt))
 
@@ -128,7 +135,7 @@ class Conversation:
     def _add_message_to_context(
         self,
         model_id: ModelId,
-        role: str,
+        role: Literal["system", "user", "assistant"],
         content: str,
     ) -> None:
         """Добавить сообщение в контекст модели."""
@@ -298,9 +305,7 @@ class Conversation:
         try:
             formatted_prompt = self.system_prompt.format(topic=self.topic)
         except (KeyError, ValueError):
-            formatted_prompt = (
-                f"You are a helpful assistant. The topic of discussion is: {self.topic}"
-            )
+            formatted_prompt = f"You are a helpful assistant. The topic of discussion is: {self.topic}"
         # Присваиваем новые списки с отдельными копиями system_message
         self._context_a = [MessageDict(role="system", content=formatted_prompt)]
         self._context_b = [MessageDict(role="system", content=formatted_prompt)]

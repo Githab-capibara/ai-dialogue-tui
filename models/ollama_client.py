@@ -62,7 +62,7 @@ class _RequestValidator:
     @staticmethod
     def validate_messages(messages: Any) -> None:
         """
-        Валидировать параметр messages для generate метода.
+        Валидировать messages для generate метода.
 
         Args:
             messages: Параметр messages для валидации.
@@ -121,9 +121,7 @@ class _ResponseHandler:
             ProviderGenerationError: Если формат некорректный.
         """
         if not isinstance(data, dict):
-            raise ProviderGenerationError(
-                f"Некорректный формат ответа API ({operation})"
-            )
+            raise ProviderGenerationError(f"Некорректный формат ответа API ({operation})")
         return data
 
     @staticmethod
@@ -142,11 +140,9 @@ class _ResponseHandler:
             return []
 
         return [
-            model.get("name")
+            str(model.get("name"))
             for model in models
-            if isinstance(model, dict)
-            and isinstance(model.get("name"), str)
-            and model.get("name")
+            if isinstance(model, dict) and isinstance(model.get("name"), str) and model.get("name")
         ]
 
     @staticmethod
@@ -324,15 +320,12 @@ class OllamaClient:
         # Валидация host параметра через вынесенный класс
         _RequestValidator.validate_host(self.host)
 
-        # Выносим HTTP-логику в отдельный класс
         self._http_manager = _HTTPSessionManager(
             timeout=self._config.request_timeout,
             sock_read_timeout=self._config.sock_read_timeout,
         )
 
-        # Компоненты для обработки запросов (используем класс напрямую)
-
-        # Кэш для списка моделей
+        self._models_cache = _ModelsCache(ttl=_MODELS_CACHE_TTL)
         self._models_cache = _ModelsCache(ttl=_MODELS_CACHE_TTL)
 
     async def _get_session(self) -> aiohttp.ClientSession:
@@ -380,9 +373,7 @@ class OllamaClient:
                 try:
                     data = await response.json()
                 except json.JSONDecodeError as e:
-                    raise ProviderGenerationError(
-                        "Некорректный JSON в ответе API"
-                    ) from e
+                    raise ProviderGenerationError("Некорректный JSON в ответе API") from e
 
                 # Валидация структуры ответа
                 _ResponseHandler.parse_json_response(data, "list_models")
@@ -408,9 +399,7 @@ class OllamaClient:
             raise ProviderGenerationError(f"Ошибка валидации ответа API: {e}") from e
         except OSError as e:
             _logger.warning("Игнорируемое OSError при получении списка моделей: %s", e)
-            raise ProviderGenerationError(
-                f"Ошибка ввода-вывода при получении списка моделей: {e}"
-            ) from e
+            raise ProviderGenerationError(f"Ошибка ввода-вывода при получении списка моделей: {e}") from e
 
     async def generate(
         self,
@@ -464,9 +453,7 @@ class OllamaClient:
                 try:
                     data = await response.json()
                 except json.JSONDecodeError as e:
-                    raise ProviderGenerationError(
-                        "Некорректный JSON в ответе API"
-                    ) from e
+                    raise ProviderGenerationError("Некорректный JSON в ответе API") from e
 
                 # Валидация структуры ответа
                 _ResponseHandler.parse_json_response(data, "generate")
@@ -489,6 +476,4 @@ class OllamaClient:
             raise ProviderGenerationError(f"Ошибка валидации ответа API: {e}") from e
         except OSError as e:
             _logger.warning("Игнорируемое OSError при генерации ответа: %s", e)
-            raise ProviderGenerationError(
-                f"Ошибка ввода-вывода при генерации ответа: {e}"
-            ) from e
+            raise ProviderGenerationError(f"Ошибка ввода-вывода при генерации ответа: {e}") from e

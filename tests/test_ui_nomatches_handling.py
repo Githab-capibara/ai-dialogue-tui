@@ -65,7 +65,7 @@ class TestUINoMatchesHandling:
             app._on_ui_state_changed(test_state)
 
         # Проверяем что ERROR было записано
-        assert "Ошибка при обновлении UI состояния" in caplog.text
+        assert "RuntimeError при обновлении UI состояния" in caplog.text
 
     def test_on_ui_state_changed_lookup_error_logged_as_error(
         self,
@@ -90,14 +90,14 @@ class TestUINoMatchesHandling:
             app._on_ui_state_changed(test_state)
 
         # Проверяем что ERROR было записано
-        assert "Ошибка при обновлении UI состояния" in caplog.text
+        assert "LookupError при обновлении UI состояния" in caplog.text
 
-    def test_on_ui_state_changed_screen_stack_error_logged_as_error(
+    def test_on_ui_state_changed_screen_stack_error_logged_as_debug(
         self,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """
-        Тест проверяет, что ScreenStackError логируется на уровне ERROR.
+        Тест проверяет, что ScreenStackError логируется на уровне DEBUG.
         """
         from textual.app import ScreenStackError
 
@@ -113,11 +113,11 @@ class TestUINoMatchesHandling:
 
         app.query_one = mock_query_one  # type: ignore[method-assign]
 
-        with caplog.at_level("ERROR"):
+        with caplog.at_level("DEBUG"):
             app._on_ui_state_changed(test_state)
 
-        # Проверяем что ERROR было записано
-        assert "Ошибка при обновлении UI состояния" in caplog.text
+        # Проверяем что DEBUG было записано
+        assert "Элемент #status-value недоступен для обновления" in caplog.text
 
     def test_on_ui_state_changed_no_matches_does_not_reraise(self) -> None:
         """
