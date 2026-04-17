@@ -297,9 +297,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
 
         try:
             status_label: Label = self.query_one("#status-value", Label)
-            status_label.update(
-                f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
-            )
+            status_label.update(f"[{state.status_style}]{state.status_text}[/{state.status_style}]")
         except (NoMatches, ScreenStackError):
             log.debug("Элемент #status-value недоступен для обновления")
         except LookupError:
@@ -557,8 +555,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         except asyncio.CancelledError:
             log.debug("Диалог отменён")
         except ProviderError:
-            # ProviderError уже обработан в _handle_dialogue_error выше
-            pass
+            log.debug("ProviderError обработан")
         except (RuntimeError, SystemError, OSError) as e:
             self._handle_critical_error(e)
         finally:
