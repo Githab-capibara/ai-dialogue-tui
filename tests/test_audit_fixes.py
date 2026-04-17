@@ -97,9 +97,7 @@ class TestBroadExceptionHandler:
 
         # Создаем mock сессии которая выбрасывает ClientError
         mock_session = AsyncMock()
-        mock_session.get = MagicMock(
-            side_effect=aiohttp.ClientError("Connection refused")
-        )
+        mock_session.get = MagicMock(side_effect=aiohttp.ClientError("Connection refused"))
 
         with patch.object(client, "_get_session", return_value=mock_session):
             # Act & Assert

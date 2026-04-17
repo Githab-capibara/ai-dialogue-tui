@@ -53,9 +53,7 @@ class TestUIStateChangedNoMatches:
                 # Если исключение все же произошло, тест падает
                 pytest.fail(f"_on_ui_state_changed raised unexpected exception: {e}")
 
-    def test_on_ui_state_changed_logs_debug_on_no_matches(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_on_ui_state_changed_logs_debug_on_no_matches(self, caplog: pytest.LogCaptureFixture) -> None:
         """
         Тест проверяет, что при NoMatches исключении выполняется логирование на уровне DEBUG.
 
@@ -83,14 +81,9 @@ class TestUIStateChangedNoMatches:
         assert "Элемент #status-value недоступен для обновления" in caplog.text
 
         # Проверяем что логирование было именно на уровне DEBUG (не ERROR)
-        debug_records = [
-            record for record in caplog.records if record.levelname == "DEBUG"
-        ]
+        debug_records = [record for record in caplog.records if record.levelname == "DEBUG"]
         assert len(debug_records) > 0
-        assert any(
-            "Элемент #status-value недоступен для обновления" in record.message
-            for record in debug_records
-        )
+        assert any("Элемент #status-value недоступен для обновления" in record.message for record in debug_records)
 
     def test_on_ui_state_changed_no_error_when_element_missing(self) -> None:
         """
@@ -121,9 +114,7 @@ class TestUIStateChangedNoMatches:
                 try:
                     app._on_ui_state_changed(state)
                 except Exception as e:
-                    pytest.fail(
-                        f"_on_ui_state_changed raised exception for state {state}: {e}"
-                    )
+                    pytest.fail(f"_on_ui_state_changed raised exception for state {state}: {e}")
 
     def test_on_ui_state_changed_with_mock_label(self) -> None:
         """
@@ -185,14 +176,9 @@ class TestUIStateChangedNoMatches:
                 app._on_ui_state_changed(test_state)
 
         # Проверяем что логирование произошло на уровне ERROR
-        error_records = [
-            record for record in caplog.records if record.levelname == "ERROR"
-        ]
+        error_records = [record for record in caplog.records if record.levelname == "ERROR"]
         assert len(error_records) > 0
-        assert any(
-            "при обновлении UI состояния" in record.message
-            for record in error_records
-        )
+        assert any("при обновлении UI состояния" in record.message for record in error_records)
 
 
 if __name__ == "__main__":

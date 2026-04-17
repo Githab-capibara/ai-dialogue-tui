@@ -133,18 +133,12 @@ class TestHandleDialogueErrorUsesCallAfterRefresh(TestCallFromThreadFixtures):
         app_with_mocks._handle_dialogue_error("TestModel")
 
         # Проверяем что call_after_refresh был вызван
-        assert call_after_refresh_called, (
-            "call_after_refresh должен быть вызван в _handle_dialogue_error"
-        )
+        assert call_after_refresh_called, "call_after_refresh должен быть вызван в _handle_dialogue_error"
 
         # Проверяем что call_from_thread НЕ был вызван
-        assert not call_from_thread_called, (
-            "call_from_thread НЕ должен вызываться в асинхронном контексте"
-        )
+        assert not call_from_thread_called, "call_from_thread НЕ должен вызываться в асинхронном контексте"
 
-    def test_handle_dialogue_error_no_runtime_error_from_async_context(
-        self, app_with_mocks: DialogueApp
-    ) -> None:
+    def test_handle_dialogue_error_no_runtime_error_from_async_context(self, app_with_mocks: DialogueApp) -> None:
         """
         Тест проверяет что _handle_dialogue_error не вызывает RuntimeError.
 
@@ -159,14 +153,11 @@ class TestHandleDialogueErrorUsesCallAfterRefresh(TestCallFromThreadFixtures):
             except RuntimeError as e:
                 if "call_from_thread" in str(e):
                     pytest.fail(
-                        f"call_from_thread вызвал RuntimeError: {e}. "
-                        "Метод должен использовать call_after_refresh!"
+                        f"call_from_thread вызвал RuntimeError: {e}. Метод должен использовать call_after_refresh!"
                     )
                 raise
 
-    def test_handle_dialogue_error_updates_controller(
-        self, app_with_mocks: DialogueApp
-    ) -> None:
+    def test_handle_dialogue_error_updates_controller(self, app_with_mocks: DialogueApp) -> None:
         """Тест проверяет что update_for_error вызывается при ошибке."""
         app_with_mocks._handle_dialogue_error("TestModel")
 
@@ -180,9 +171,7 @@ class TestProcessDialogueTurnUsesCallAfterRefresh(TestCallFromThreadFixtures):
     """Тесты для _process_dialogue_turn."""
 
     @pytest.mark.asyncio
-    async def test_process_dialogue_turn_uses_call_after_refresh(
-        self, app_with_mocks: DialogueApp
-    ) -> None:
+    async def test_process_dialogue_turn_uses_call_after_refresh(self, app_with_mocks: DialogueApp) -> None:
         """
         Тест проверяет что _process_dialogue_turn использует call_after_refresh.
 
@@ -220,14 +209,10 @@ class TestProcessDialogueTurnUsesCallAfterRefresh(TestCallFromThreadFixtures):
         )
 
         # Проверяем что call_after_refresh был вызван
-        assert call_after_refresh_called, (
-            "call_after_refresh должен быть вызван в _process_dialogue_turn"
-        )
+        assert call_after_refresh_called, "call_after_refresh должен быть вызван в _process_dialogue_turn"
 
         # Проверяем что call_from_thread НЕ был вызван
-        assert not call_from_thread_called, (
-            "call_from_thread НЕ должен вызываться в асинхронном контексте"
-        )
+        assert not call_from_thread_called, "call_from_thread НЕ должен вызываться в асинхронном контексте"
 
     @pytest.mark.asyncio
     async def test_process_dialogue_turn_handles_provider_error(
@@ -293,14 +278,10 @@ class TestHandleCriticalErrorUsesCallAfterRefresh(TestCallFromThreadFixtures):
         app_with_mocks._handle_critical_error(test_error)
 
         # Проверяем что call_after_refresh был вызван
-        assert call_after_refresh_called, (
-            "call_after_refresh должен быть вызван в _handle_critical_error"
-        )
+        assert call_after_refresh_called, "call_after_refresh должен быть вызван в _handle_critical_error"
 
         # Проверяем что call_from_thread НЕ был вызван
-        assert not call_from_thread_called, (
-            "call_from_thread НЕ должен вызываться в асинхронном контексте"
-        )
+        assert not call_from_thread_called, "call_from_thread НЕ должен вызываться в асинхронном контексте"
 
     def test_handle_critical_error_logs_exception(
         self, app_with_mocks: DialogueApp, caplog: pytest.LogCaptureFixture
@@ -311,19 +292,16 @@ class TestHandleCriticalErrorUsesCallAfterRefresh(TestCallFromThreadFixtures):
             app_with_mocks._handle_critical_error(test_error)
 
         # Проверяем что ошибка была залогирована
-        assert any(
-            "Критическая ошибка в цикле диалога" in record.message
-            for record in caplog.records
-        ), "Критическая ошибка должна быть залогирована"
+        assert any("Критическая ошибка в цикле диалога" in record.message for record in caplog.records), (
+            "Критическая ошибка должна быть залогирована"
+        )
 
 
 class TestIntegrationCallFromThreadFix(TestCallFromThreadFixtures):
     """Интеграционные тесты для проверки всех исправлений call_from_thread."""
 
     @pytest.mark.asyncio
-    async def test_full_dialogue_error_handling_no_runtime_error(
-        self, app_with_mocks: DialogueApp
-    ) -> None:
+    async def test_full_dialogue_error_handling_no_runtime_error(self, app_with_mocks: DialogueApp) -> None:
         """
         Интеграционный тест: полная обработка ошибки диалога без RuntimeError.
 
@@ -370,9 +348,7 @@ class TestIntegrationCallFromThreadFix(TestCallFromThreadFixtures):
                     runtime_error_occurred = True
 
             # Проверяем что RuntimeError не возник
-            assert not runtime_error_occurred, (
-                "RuntimeError от call_from_thread не должен возникать"
-            )
+            assert not runtime_error_occurred, "RuntimeError от call_from_thread не должен возникать"
 
             # call_after_refresh вызывается в _handle_dialogue_error который вызывается
             # из _run_dialogue, а не из _process_dialogue_turn напрямую

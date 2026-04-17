@@ -115,9 +115,7 @@ class TestExceptionHandling:
         with patch.object(app, "query_one") as mock_query:
             mock_query.side_effect = LookupError("Test")
 
-            app._on_ui_state_changed(
-                type("UIState", (), {"status_text": "test", "status_style": "info"})()
-            )
+            app._on_ui_state_changed(type("UIState", (), {"status_text": "test", "status_style": "info"})())
 
 
 class TestConversationSystemPrompt:
@@ -194,9 +192,7 @@ class TestFStringFormatting:
         model_name = "llama3"
         formatted_response = "Test response"
 
-        message = (
-            f"\n[{style}]Ход {turn_count}: {model_name}[/]\n  {formatted_response}"
-        )
+        message = f"\n[{style}]Ход {turn_count}: {model_name}[/]\n  {formatted_response}"
 
         assert "Ход 1: llama3" in message
         assert "Test response" in message

@@ -58,9 +58,7 @@ class TestTrimContextFix:
         conversation._context_a = [MagicMock() for _ in range(MAX_CONTEXT_LENGTH + 10)]
         conversation._context_a[0] = {"role": "system", "content": "System prompt"}
 
-        result = conversation._trim_context_if_needed(
-            conversation._context_a, MAX_CONTEXT_LENGTH - 2
-        )
+        result = conversation._trim_context_if_needed(conversation._context_a, MAX_CONTEXT_LENGTH - 2)
 
         assert len(result) <= MAX_CONTEXT_LENGTH - 2 + 1
         assert result[0]["role"] == "system"
@@ -90,9 +88,7 @@ class TestAddMessageNoDuplication:
         from models import conversation as conv_module
 
         conversation = Conversation("model_a", "model_b", "test_topic")
-        with patch.object(
-            conv_module.Conversation, "_add_message_to_context", autospec=True
-        ) as mock_helper:
+        with patch.object(conv_module.Conversation, "_add_message_to_context", autospec=True) as mock_helper:
             conversation.add_message("A", "user", "Hello")
             mock_helper.assert_called_once_with(conversation, "A", "user", "Hello")
 
@@ -352,9 +348,7 @@ class TestAddMessageToContext:
         conversation = Conversation("model_a", "model_b", "test_topic")
 
         initial_context_len = MAX_CONTEXT_LENGTH - 1
-        conversation._context_a = [
-            {"role": "user", "content": f"msg_{i}"} for i in range(initial_context_len)
-        ]
+        conversation._context_a = [{"role": "user", "content": f"msg_{i}"} for i in range(initial_context_len)]
 
         conversation._add_message_to_context("A", "user", "new message")
 
