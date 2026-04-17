@@ -12,8 +12,11 @@ from models.ollama_client import OllamaClient
 from models.provider import ModelProvider
 
 
-class ProviderFactory(Protocol):  # pylint: disable=too-few-public-methods
-    """Протокол фабрики провайдеров."""
+class ProviderFactory(Protocol):
+    """Протокол фабрики провайдеров моделей.
+
+    Используется для dependency injection в приложении.
+    """
 
     def __call__(self) -> ModelProvider: ...
 

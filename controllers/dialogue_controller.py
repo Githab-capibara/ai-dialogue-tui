@@ -11,7 +11,7 @@ from typing import Callable
 from services.dialogue_service import DialogueService
 
 
-@dataclass
+@dataclass(slots=True)
 class UIState:
     """
     Состояние UI для отображения.

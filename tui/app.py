@@ -256,7 +256,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         self._provider_factory = provider_factory or (lambda: OllamaClient(host=self._config.ollama_host))
         self._client: ModelProvider | None = None
         self._controller: DialogueController | None = None
-        self._dialogue_task: asyncio.Task[None] | None = None
+        self._dialogue_task: asyncio.Task[None] | None = None  # type: ignore[type-arg]
         self._models: list[str] = []
         # Кэшируем style_mapper для производительности
         self._style_mapper = ModelStyleMapper()
