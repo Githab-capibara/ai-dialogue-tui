@@ -46,9 +46,7 @@ def analyze_test_file(filepath):
             if isinstance(func.body[0], ast.Pass):
                 issues.append(f"Test function with only pass: {func.name}")
                 continue
-            if isinstance(func.body[0], ast.Expr) and isinstance(
-                func.body[0].value, ast.Str
-            ):
+            if isinstance(func.body[0], ast.Expr) and isinstance(func.body[0].value, ast.Str):
                 issues.append(f"Test function with only docstring: {func.name}")
                 continue
 

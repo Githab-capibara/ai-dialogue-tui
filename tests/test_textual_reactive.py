@@ -31,9 +31,7 @@ def test_sub_title_is_reactive() -> None:
     assert hasattr(DialogueApp, "sub_title"), "sub_title атрибут должен существовать"
 
     sub_title_attr = DialogueApp.sub_title
-    assert isinstance(sub_title_attr, reactive), (
-        f"sub_title должен быть reactive, получено: {type(sub_title_attr)}"
-    )
+    assert isinstance(sub_title_attr, reactive), f"sub_title должен быть reactive, получено: {type(sub_title_attr)}"
 
 
 def test_title_class_constant() -> None:

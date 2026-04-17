@@ -31,11 +31,7 @@ def test_create_ollama_client_removed_from_styles() -> None:
         source = f.read()
 
     assert "def create_ollama_client" not in source
-    assert (
-        "create_ollama_client" not in source.split("__all__")[1]
-        if "__all__" in source
-        else True
-    )
+    assert "create_ollama_client" not in source.split("__all__")[1] if "__all__" in source else True
 
 
 def test_styles_no_ollama_import() -> None:
@@ -89,9 +85,7 @@ def test_sanitizer_module_has_only_functions() -> None:
 
     classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
 
-    assert len(classes) == 0, (
-        f"Найдены классы в sanitizer.py: {[c.name for c in classes]}"
-    )
+    assert len(classes) == 0, f"Найдены классы в sanitizer.py: {[c.name for c in classes]}"
 
 
 # --- Тест 5: _RequestConfig удалён из models/ollama_client.py ---

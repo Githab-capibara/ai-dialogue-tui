@@ -71,9 +71,7 @@ class TestStylesAndConstantsSeparation:
 
         tree = ast.parse(source)
 
-        functions = [
-            node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
-        ]
+        functions = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
 
         assert "generate_main_css" in functions
         assert len(functions) == 1, f"Found extra functions in styles.py: {functions}"
@@ -144,9 +142,7 @@ class TestNoCircularDependencies:
 
     def test_controllers_no_tui_imports(self) -> None:
         """Проверить, что controllers не импортирует из tui."""
-        controllers_imports = get_imports_from_file(
-            "controllers/dialogue_controller.py"
-        )
+        controllers_imports = get_imports_from_file("controllers/dialogue_controller.py")
 
         tui_imports = [imp for imp in controllers_imports if imp.startswith("tui")]
         assert len(tui_imports) == 0, f"Found tui imports in controllers: {tui_imports}"
@@ -184,27 +180,21 @@ class TestSeparationOfConcerns:
         imports = get_imports_from_file("models/conversation.py")
 
         tui_imports = [imp for imp in imports if imp.startswith("tui")]
-        assert len(tui_imports) == 0, (
-            f"models should not import from tui: {tui_imports}"
-        )
+        assert len(tui_imports) == 0, f"models should not import from tui: {tui_imports}"
 
     def test_services_no_ui_imports(self) -> None:
         """Проверить, что services НЕ импортирует из tui."""
         imports = get_imports_from_file("services/dialogue_service.py")
 
         tui_imports = [imp for imp in imports if imp.startswith("tui")]
-        assert len(tui_imports) == 0, (
-            f"services should not import from tui: {tui_imports}"
-        )
+        assert len(tui_imports) == 0, f"services should not import from tui: {tui_imports}"
 
     def test_controllers_no_ui_imports(self) -> None:
         """Проверить, что controllers НЕ импортирует из tui."""
         imports = get_imports_from_file("controllers/dialogue_controller.py")
 
         tui_imports = [imp for imp in imports if imp.startswith("tui")]
-        assert len(tui_imports) == 0, (
-            f"controllers should not import from tui: {tui_imports}"
-        )
+        assert len(tui_imports) == 0, f"controllers should not import from tui: {tui_imports}"
 
 
 if __name__ == "__main__":

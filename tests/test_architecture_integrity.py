@@ -165,9 +165,7 @@ class TestConfigLocation:
 class TestDialogueServiceErrors:
     """Тесты для проверки обработки ошибок в DialogueService."""
 
-    def _create_service_with_mock_provider(
-        self, mock_provider: AsyncMock
-    ) -> DialogueService:
+    def _create_service_with_mock_provider(self, mock_provider: AsyncMock) -> DialogueService:
         """Создать сервис с мок-провайдером."""
         conversation = Conversation(
             model_a="test-a",
@@ -201,9 +199,7 @@ class TestDialogueServiceErrors:
         Ошибка конфигурации должна пробрасываться дальше.
         """
         mock_provider = AsyncMock(spec=ModelProvider)
-        mock_provider.generate.side_effect = ProviderConfigurationError(
-            "Invalid configuration"
-        )
+        mock_provider.generate.side_effect = ProviderConfigurationError("Invalid configuration")
 
         service = self._create_service_with_mock_provider(mock_provider)
         service.start()
@@ -219,9 +215,7 @@ class TestDialogueServiceErrors:
         Ошибка подключения должна пробрасываться дальше.
         """
         mock_provider = AsyncMock(spec=ModelProvider)
-        mock_provider.generate.side_effect = ProviderConnectionError(
-            "Connection failed"
-        )
+        mock_provider.generate.side_effect = ProviderConnectionError("Connection failed")
 
         service = self._create_service_with_mock_provider(mock_provider)
         service.start()
@@ -237,9 +231,7 @@ class TestDialogueServiceErrors:
         Ошибка генерации должна пробрасываться дальше.
         """
         mock_provider = AsyncMock(spec=ModelProvider)
-        mock_provider.generate.side_effect = ProviderGenerationError(
-            "Generation failed"
-        )
+        mock_provider.generate.side_effect = ProviderGenerationError("Generation failed")
 
         service = self._create_service_with_mock_provider(mock_provider)
         service.start()
@@ -715,9 +707,7 @@ class TestArchitectureIntegrity:
         """
         # Создаём мок провайдера с ошибкой
         mock_provider = AsyncMock(spec=ModelProvider)
-        mock_provider.generate.side_effect = ProviderGenerationError(
-            "Test generation error"
-        )
+        mock_provider.generate.side_effect = ProviderGenerationError("Test generation error")
         mock_provider.list_models.return_value = ["test-model"]
         mock_provider.close.return_value = None
 
@@ -767,10 +757,7 @@ class TestArchitectureIntegrity:
         # Невалидный URL
         with pytest.raises(ValueError) as exc_info:
             ModelsConfig(ollama_host="invalid-url")
-        assert (
-            "url" in str(exc_info.value).lower()
-            or "ollama" in str(exc_info.value).lower()
-        )
+        assert "url" in str(exc_info.value).lower() or "ollama" in str(exc_info.value).lower()
 
     def test_provider_error_propagation_to_ui(self) -> None:
         """

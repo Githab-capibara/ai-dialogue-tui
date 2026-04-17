@@ -139,9 +139,7 @@ class TestConfigWrapperRemoval:  # pylint: disable=too-few-public-methods
 
         if config_file.exists():
             content = config_file.read_text(encoding="utf-8")
-            assert (
-                "from models.config import Config" not in content or len(content) < 50
-            )
+            assert "from models.config import Config" not in content or len(content) < 50
 
 
 class TestArchitectureIntegrity:

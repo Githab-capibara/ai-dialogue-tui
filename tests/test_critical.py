@@ -91,9 +91,7 @@ def create_session_mock(
     Returns:
         AsyncMock настроенный для эмуляции сессии.
     """
-    mock_context_manager = AsyncContextManagerMock(
-        response=response, raise_on_enter=raise_on_enter
-    )
+    mock_context_manager = AsyncContextManagerMock(response=response, raise_on_enter=raise_on_enter)
     mock_session = AsyncMock()
     mock_session.get = MagicMock(return_value=mock_context_manager)
     mock_session.post = MagicMock(return_value=mock_context_manager)
@@ -121,9 +119,7 @@ def create_mock_get_session(mock_session: AsyncMock):
 class AsyncContextManagerMock:  # pylint: disable=too-few-public-methods
     """Мок для асинхронного контекстного менеджера."""
 
-    def __init__(
-        self, response: Any = None, raise_on_enter: Exception | None = None
-    ) -> None:
+    def __init__(self, response: Any = None, raise_on_enter: Exception | None = None) -> None:
         self._response = response
         self._raise_on_enter = raise_on_enter
 
@@ -223,9 +219,7 @@ class TestOllamaClientValidation:
         mock_response = create_async_mock_response(json_data={"invalid": "data"})
         mock_session = create_session_mock(response=mock_response)
 
-        with patch.object(
-            OllamaClient, "_get_session", create_mock_get_session(mock_session)
-        ):
+        with patch.object(OllamaClient, "_get_session", create_mock_get_session(mock_session)):
             client = OllamaClient(host="http://localhost:11434")
             # Должен вернуть пустой список вместо ошибки
             result = await client.list_models()
@@ -246,9 +240,7 @@ class TestOllamaClientValidation:
         )
         mock_session = create_session_mock(response=mock_response)
 
-        with patch.object(
-            OllamaClient, "_get_session", create_mock_get_session(mock_session)
-        ):
+        with patch.object(OllamaClient, "_get_session", create_mock_get_session(mock_session)):
             client = OllamaClient(host="http://localhost:11434")
             result = await client.list_models()
             # Должны быть только модели с name
@@ -257,14 +249,10 @@ class TestOllamaClientValidation:
     @pytest.mark.asyncio
     async def test_list_models_handles_json_decode_error(self) -> None:
         """Тест что list_models обрабатывает JSONDecodeError."""
-        mock_response = create_async_mock_response(
-            raise_on_json=json.JSONDecodeError("Invalid JSON", "", 0)
-        )
+        mock_response = create_async_mock_response(raise_on_json=json.JSONDecodeError("Invalid JSON", "", 0))
         mock_session = create_session_mock(response=mock_response)
 
-        with patch.object(
-            OllamaClient, "_get_session", create_mock_get_session(mock_session)
-        ):
+        with patch.object(OllamaClient, "_get_session", create_mock_get_session(mock_session)):
             client = OllamaClient(host="http://localhost:11434")
             with pytest.raises(ProviderError, match="Некорректный JSON"):
                 await client.list_models()
@@ -515,15 +503,11 @@ class TestOllamaClientChainedExceptions:
     @pytest.mark.asyncio
     async def test_list_models_preserves_exception_chain(self) -> None:
         """Тест что list_models сохраняет цепочку исключений."""
-        mock_context_manager = AsyncContextManagerMock(
-            raise_on_enter=ClientError("Connection failed")
-        )
+        mock_context_manager = AsyncContextManagerMock(raise_on_enter=ClientError("Connection failed"))
         mock_session = create_session_mock(response=None)
         mock_session.get = MagicMock(return_value=mock_context_manager)
 
-        with patch.object(
-            OllamaClient, "_get_session", create_mock_get_session(mock_session)
-        ):
+        with patch.object(OllamaClient, "_get_session", create_mock_get_session(mock_session)):
             client = OllamaClient(host="http://localhost:11434")
             with pytest.raises(ProviderError) as exc_info:
                 await client.list_models()
@@ -534,15 +518,11 @@ class TestOllamaClientChainedExceptions:
     @pytest.mark.asyncio
     async def test_generate_preserves_exception_chain(self) -> None:
         """Тест что generate сохраняет цепочку исключений."""
-        mock_context_manager = AsyncContextManagerMock(
-            raise_on_enter=ClientError("Connection failed")
-        )
+        mock_context_manager = AsyncContextManagerMock(raise_on_enter=ClientError("Connection failed"))
         mock_session = create_session_mock(response=None)
         mock_session.post = MagicMock(return_value=mock_context_manager)
 
-        with patch.object(
-            OllamaClient, "_get_session", create_mock_get_session(mock_session)
-        ):
+        with patch.object(OllamaClient, "_get_session", create_mock_get_session(mock_session)):
             client = OllamaClient(host="http://localhost:11434")
             with pytest.raises(ProviderError) as exc_info:
                 await client.generate("llama3", [{"role": "user", "content": "test"}])
@@ -613,9 +593,7 @@ class TestProviderExceptionHandling:
         mock_session = create_session_mock(response=None)
         mock_session.get = MagicMock(return_value=mock_context_manager)
 
-        with patch.object(
-            OllamaClient, "_get_session", create_mock_get_session(mock_session)
-        ):
+        with patch.object(OllamaClient, "_get_session", create_mock_get_session(mock_session)):
             client = OllamaClient(host="http://localhost:11434")
             with pytest.raises(ProviderConnectionError) as exc_info:
                 await client.list_models()
@@ -632,9 +610,7 @@ class TestProviderExceptionHandling:
         mock_session = create_session_mock(response=None)
         mock_session.post = MagicMock(return_value=mock_context_manager)
 
-        with patch.object(
-            OllamaClient, "_get_session", create_mock_get_session(mock_session)
-        ):
+        with patch.object(OllamaClient, "_get_session", create_mock_get_session(mock_session)):
             client = OllamaClient(host="http://localhost:11434")
             with pytest.raises(ProviderConnectionError) as exc_info:
                 await client.generate("llama3", [{"role": "user", "content": "test"}])

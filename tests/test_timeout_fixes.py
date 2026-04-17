@@ -42,9 +42,7 @@ def create_session_mock(
     raise_on_enter: Exception | None = None,
 ) -> AsyncMock:
     """Создать мок для HTTP сессии."""
-    mock_context_manager = AsyncContextManagerMock(
-        response=response, raise_on_enter=raise_on_enter
-    )
+    mock_context_manager = AsyncContextManagerMock(response=response, raise_on_enter=raise_on_enter)
     mock_session = AsyncMock()
     mock_session.get = MagicMock(return_value=mock_context_manager)
     mock_session.post = MagicMock(return_value=mock_context_manager)
@@ -64,9 +62,7 @@ def create_mock_get_session(mock_session: AsyncMock):
 class AsyncContextManagerMock:
     """Мок для асинхронного контекстного менеджера."""
 
-    def __init__(
-        self, response: Any = None, raise_on_enter: Exception | None = None
-    ) -> None:
+    def __init__(self, response: Any = None, raise_on_enter: Exception | None = None) -> None:
         self._response = response
         self._raise_on_enter = raise_on_enter
 
@@ -150,9 +146,7 @@ class TestTimeoutErrorHandling:
         mock_session = create_session_mock(response=None)
         mock_session.post = MagicMock(return_value=mock_context_manager)
 
-        with patch.object(
-            OllamaClient, "_get_session", create_mock_get_session(mock_session)
-        ):
+        with patch.object(OllamaClient, "_get_session", create_mock_get_session(mock_session)):
             client = OllamaClient(
                 host="http://localhost:11434",
                 config=Config(sock_read_timeout=300),
@@ -173,9 +167,7 @@ class TestTimeoutErrorHandling:
         mock_session = create_session_mock(response=None)
         mock_session.post = MagicMock(return_value=mock_context_manager)
 
-        with patch.object(
-            OllamaClient, "_get_session", create_mock_get_session(mock_session)
-        ):
+        with patch.object(OllamaClient, "_get_session", create_mock_get_session(mock_session)):
             client = OllamaClient(
                 host="http://localhost:11434",
                 config=Config(sock_read_timeout=120),

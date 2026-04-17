@@ -69,9 +69,7 @@ class TestFixes:
         # Create mock session and response like in existing tests
         mock_response = AsyncMock()
         mock_response.status = 200
-        mock_response.json = AsyncMock(
-            return_value={"message": {"content": "test response"}}
-        )
+        mock_response.json = AsyncMock(return_value={"message": {"content": "test response"}})
 
         # Mock context manager for session.post()
         mock_post_context_manager = AsyncMock()
@@ -89,9 +87,7 @@ class TestFixes:
         with patch.object(OllamaClient, "_get_session", mock_get_session):
             client = OllamaClient(host="http://localhost:11434")
             # Call without specifying temperature or max_tokens
-            result = await client.generate(
-                "test_model", [{"role": "user", "content": "test"}]
-            )
+            result = await client.generate("test_model", [{"role": "user", "content": "test"}])
 
         # Assert
         assert result == "test response"
