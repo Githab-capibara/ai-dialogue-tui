@@ -45,7 +45,7 @@ class DialogueRunner:
         """
         self._service = service
         self._config = config or Config()
-        self._dialogue_task: asyncio.Task[None] | None = None
+        self._dialogue_task: asyncio.Task[None] | None = None  # type: ignore[type-arg]
 
     @property
     def service(self) -> DialogueService:

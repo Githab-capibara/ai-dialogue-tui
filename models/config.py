@@ -183,7 +183,7 @@ def _validate_pause_between_messages(value: float) -> None:
     )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Config:
     """
     Параметры конфигурации для диалога ИИ-моделей.

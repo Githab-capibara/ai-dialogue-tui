@@ -6,7 +6,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Protocol, TypedDict, runtime_checkable
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, runtime_checkable
+
+if TYPE_CHECKING:
+    from typing import Self
 
 
 class ProviderError(Exception):

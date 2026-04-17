@@ -9,7 +9,10 @@ import asyncio
 import json
 import logging
 import time
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
+
+if TYPE_CHECKING:
+    import aiohttp
 
 import aiohttp
 
@@ -204,7 +207,7 @@ class _HTTPSessionManager:
         self._timeout = timeout
         self._conn_timeout = conn_timeout
         self._sock_read_timeout = sock_read_timeout
-        self._session: aiohttp.ClientSession | None = None
+        self._session: aiohttp.ClientSession | None = None  # type: ignore[assignment]
         self._lock = asyncio.Lock()
 
     async def get_session(self) -> aiohttp.ClientSession:
