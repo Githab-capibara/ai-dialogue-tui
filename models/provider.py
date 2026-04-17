@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, runtime_checkable
 
 if TYPE_CHECKING:
-    from typing import Self
+    pass
 
 
 class ProviderError(Exception):
