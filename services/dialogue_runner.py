@@ -120,7 +120,7 @@ class DialogueRunner:
             log.debug("Диалог отменён")
             raise
         except ProviderError:
-            pass
+            log.debug("ProviderError обработан в цикле диалога")
         except (RuntimeError, SystemError, OSError) as e:
             log.exception("Критическая ошибка в цикле диалога: %s", e)
         finally:
