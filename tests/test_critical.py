@@ -262,16 +262,13 @@ class TestOllamaClientValidation:
         """Тест что generate валидирует messages параметр."""
         client = OllamaClient(host="http://localhost:11434")
 
-        # messages должен быть списком
-        with pytest.raises(ValueError, match="списком"):
+        with pytest.raises(TypeError, match="list"):
             await client.generate("llama3", "not a list")  # type: ignore
 
-        # Каждое сообщение должно быть словарём
-        with pytest.raises(ValueError, match="словарём"):
+        with pytest.raises(TypeError, match="dictionary"):
             await client.generate("llama3", ["not a dict"])  # type: ignore
 
-        # Сообщение должно содержать role и content
-        with pytest.raises(ValueError, match="role"):
+        with pytest.raises(TypeError, match="'role'"):
             await client.generate("llama3", [{"role": "user"}])
 
 

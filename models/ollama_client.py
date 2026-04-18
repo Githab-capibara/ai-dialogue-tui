@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -74,16 +75,16 @@ class _RequestValidator:
 
         """
         if not isinstance(messages, list):
-            msg = "messages должен быть списком"
-            raise ValueError(msg)
+            msg = "messages must be a list"
+            raise TypeError(msg)
 
         for msg in messages:
             if not isinstance(msg, dict):
-                msg_0 = "Каждое сообщение должно быть словарём"
-                raise ValueError(msg_0)
+                msg_0 = "Each message must be a dictionary"
+                raise TypeError(msg_0)
             if "role" not in msg or "content" not in msg:
-                msg_0 = "Сообщение должно содержать 'role' и 'content'"
-                raise ValueError(msg_0)
+                msg_0 = "Message must contain 'role' and 'content'"
+                raise TypeError(msg_0)
 
 
 class _ResponseHandler:
@@ -104,7 +105,7 @@ class _ResponseHandler:
             ProviderGenerationError: Если статус код не 200.
 
         """
-        if status != 200:
+        if status != 200:  # noqa: PLR2004
             msg = f"Ошибка {operation}: HTTP {status}"
             raise ProviderGenerationError(msg)
 
@@ -235,11 +236,8 @@ class _HTTPSessionManager:
     async def close(self) -> None:
         """Закрыть HTTP сессию."""
         if self._session and not self._session.closed:
-            try:
+            with contextlib.suppress(aiohttp.ClientError, asyncio.TimeoutError):
                 await self._session.close()
-            except (aiohttp.ClientError, asyncio.TimeoutError):
-                # Игнорируем ошибки при закрытии
-                pass
 
 
 class _ModelsCache:
@@ -330,7 +328,6 @@ class OllamaClient:
             sock_read_timeout=self._config.sock_read_timeout,
         )
 
-        self._models_cache = _ModelsCache(ttl=_MODELS_CACHE_TTL)
         self._models_cache = _ModelsCache(ttl=_MODELS_CACHE_TTL)
 
     async def _get_session(self) -> aiohttp.ClientSession:
