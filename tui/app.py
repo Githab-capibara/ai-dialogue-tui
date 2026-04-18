@@ -164,7 +164,7 @@ class ModelSelectionScreen(ModalScreen[None]):
             )
             return
 
-        self.dismiss((model_a, model_b))
+        self.dismiss((model_a, model_b))  # type: ignore[arg-type]
 
 
 class TopicInputScreen(ModalScreen[None]):
@@ -220,7 +220,7 @@ class TopicInputScreen(ModalScreen[None]):
             )
             return
 
-        self.dismiss(topic)
+        self.dismiss(topic)  # type: ignore[arg-type]
 
 
 class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
@@ -329,7 +329,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             # Показываем окно выбора моделей
             def on_models_selected(result: tuple[str, str] | None) -> None:
                 if result is None:
-                    self.exit(1)
+                    self.exit(1)  # type: ignore[arg-type]
                     return
 
                 model_a, model_b = result
@@ -421,7 +421,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
 
         def on_topic_entered(topic: str | None) -> None:
             if topic is None:
-                self.exit(1)
+                self.exit(1)  # type: ignore[arg-type]
                 return
 
             # Санитизация темы перед использованием
