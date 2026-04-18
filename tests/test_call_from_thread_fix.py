@@ -288,12 +288,11 @@ class TestHandleCriticalErrorUsesCallAfterRefresh(TestCallFromThreadFixtures):
     ) -> None:
         """Тест проверяет что критическая ошибка логируется с traceback."""
         with caplog.at_level(logging.ERROR):
-            test_error = RuntimeError("Тестовая критическая ошибка")
+            test_error = RuntimeError("Test critical error")
             app_with_mocks._handle_critical_error(test_error)
 
-        # Проверяем что ошибка была залогирована
-        assert any("Критическая ошибка в цикле диалога" in record.message for record in caplog.records), (
-            "Критическая ошибка должна быть залогирована"
+        assert any("Critical error in dialogue loop" in record.message for record in caplog.records), (
+            "Critical error should be logged"
         )
 
 

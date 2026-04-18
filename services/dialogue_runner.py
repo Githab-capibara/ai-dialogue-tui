@@ -124,8 +124,8 @@ class DialogueRunner:
             raise
         except ProviderError:
             log.debug("ProviderError обработан в цикле диалога")
-        except (RuntimeError, SystemError, OSError) as e:
-            log.exception("Критическая ошибка в цикле диалога: %s", e)
+        except (RuntimeError, SystemError, OSError):
+            log.exception("Critical error in dialogue loop")
         finally:
             self._service.stop()
 

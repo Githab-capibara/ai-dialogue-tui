@@ -706,8 +706,8 @@ class TestMessageDictValidation:
         config = Config(ollama_host="http://localhost:11434")
         client = OllamaClient(config=config)
 
-        # Act & Assert - messages без role должен вызвать ошибку
-        with pytest.raises(ValueError, match="role"):
+        # Act & Assert - messages without role should raise error
+        with pytest.raises(TypeError, match="role"):
             await client.generate(
                 model="test",
                 messages=[{"content": "no role"}],  # type: ignore

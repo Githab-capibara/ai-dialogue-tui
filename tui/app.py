@@ -341,8 +341,8 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
                 callback=on_models_selected,
             )
 
-        except ProviderConnectionError as e:
-            log.exception("Ошибка подключения к Ollama: %s", e)
+        except ProviderConnectionError:
+            log.exception("Connection error to Ollama")
             self.notify(
                 "Не удалось подключиться к Ollama. Проверьте что сервис запущен.",
                 title="Ошибка подключения",
@@ -350,8 +350,8 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             self._safe_update_status("[red]Ошибка подключения[/red]")
-        except ProviderGenerationError as e:
-            log.exception("Ошибка генерации при получении моделей: %s", e)
+        except ProviderGenerationError:
+            log.exception("Generation error while getting models")
             self.notify(
                 "Ошибка генерации ответа. Проверьте модель...",
                 title="Ошибка",
@@ -359,17 +359,17 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             self._safe_update_status("[red]Ошибка подключения[/red]")
-        except ValueError as e:
-            log.exception("Ошибка валидации конфигурации: %s", e)
+        except ValueError as exc:
+            log.exception("Configuration validation error")
             self.notify(
-                f"Ошибка конфигурации: {e}",
-                title="Ошибка",
+                f"Configuration error: {exc}",
+                title="Error",
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
-            self._safe_update_status("[red]Ошибка конфигурации[/red]")
-        except aiohttp.ClientError as e:
-            log.exception("Ошибка HTTP клиента при запуске: %s", e)
+            self._safe_update_status("[red]Config error[/red]")
+        except aiohttp.ClientError:
+            log.exception("HTTP client error at startup")
             self.notify(
                 "Ошибка сетевого подключения",
                 title="Ошибка",
@@ -386,9 +386,8 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
             self._safe_update_status("[red]Таймаут[/red]")
-        except (RuntimeError, SystemError) as e:
-            # Не раскрываем детали внутренней ошибки
-            log.exception("Внутренняя ошибка при запуске: %s", e)
+        except (RuntimeError, SystemError):
+            log.exception("Internal error at startup")
             self.notify(
                 "Произошла непредвиденная ошибка при запуске",
                 title="Ошибка",
@@ -569,7 +568,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         current_task = asyncio.current_task()
         return current_task is not None and current_task.cancelled()
 
-    async def _process_dialogue_turn(  # pylint: disable=unused-argument
+    async def _process_dialogue_turn(
         self,
         service: DialogueService,
         model_name: str,
@@ -585,9 +584,6 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         if result:
             formatted_response = sanitize_response_for_display(result.response)
             message = f"\n[{style}]Ход {service.turn_count}: {result.model_name}[/]\n  {formatted_response}"
-            # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в потоке
-            # call_from_thread требует вызова из отдельного потока
-            # (threading.Thread)
             self.call_after_refresh(self._write_to_log, message)
 
         return result
@@ -634,9 +630,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         Важно: Этот метод вызывается из асинхронного контекста (_run_dialogue),
         поэтому используем call_after_refresh вместо call_from_thread.
         """
-        log.exception("Критическая ошибка в цикле диалога: %s", e)
-        # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в
-        # потоке
+        log.exception("Critical error in dialogue loop")
         self.call_after_refresh(
             self._write_to_log,
             f"\n[{MESSAGE_STYLES.error}]Критическая ошибка[/]",
@@ -673,5 +667,5 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
 
         except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as e:
             log.warning("Ошибка при очистке ресурсов: %s", e)
-        except RuntimeError as e:
-            log.exception("Неожиданная ошибка при очистке: %s", e)
+        except RuntimeError:
+            log.exception("Unexpected error during cleanup")
