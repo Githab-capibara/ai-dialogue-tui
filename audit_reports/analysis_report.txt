@@ -1,93 +1,108 @@
-TEST ANALYSIS REPORT
-==================================================
+<!-- NOTE: переписано ИИ -->
+# Отчёт анализа тестов
 
-File: ./tests/test_architecture.py
-  No issues found
+## Сводка
 
-File: ./tests/test_code_audit_fixes_verification.py
-  Issues found:
-    - Test function with no assertions: test_empty_model_a_raises_error
-    - Test function with no assertions: test_empty_model_b_raises_error
-    - Test function with no assertions: test_empty_topic_raises_error
-    - Test function with no assertions: test_same_models_raises_error
-    - Test function with no assertions: test_non_string_model_a_raises_error
+Данный отчёт содержит результаты анализа тестовых файлов проекта.
 
-File: ./tests/test_architecture_refactor.py
-  No issues found
+---
 
-File: ./tests/test_ui_nomatches_handling.py
-  No issues found
+## Результаты по файлам
 
-File: ./tests/test_audit_fixes.py
-  Issues found:
-    - Test function with no assertions: test_sanitize_topic_rejects_non_string
-    - Test function with no assertions: test_sanitize_response_rejects_non_string
+### tests/test_architecture.py
+✅ Проблем не обнаружено
 
-File: ./tests/test_new_audit_fixes.py
-  Issues found:
-    - Test function with no assertions: test_add_message_calls_helper
+### tests/test_code_audit_fixes_verification.py
+⚠️ Обнаружены проблемы:
+- Функция теста без проверок: `test_empty_model_a_raises_error`
+- Функция теста без проверок: `test_empty_model_b_raises_error`
+- Функция теста без проверок: `test_empty_topic_raises_error`
+- Функция теста без проверок: `test_same_models_raises_error`
+- Функция теста без проверок: `test_non_string_model_a_raises_error`
 
-File: ./tests/test_timeout_fixes.py
-  Issues found:
-    - Test function with no assertions: test_sock_read_timeout_validation_out_of_range
-    - Test function with no assertions: test_sock_read_timeout_validation_negative
+### tests/test_architecture_refactor.py
+✅ Проблем не обнаружено
 
-File: ./tests/test_dialogue_runner_error_handling.py
-  Issues found:
-    - No test functions found
+### tests/test_ui_nomatches_handling.py
+✅ Проблем не обнаружено
 
-File: ./tests/test_fixes.py
-  No issues found
+### tests/test_audit_fixes.py
+⚠️ Обнаружены проблемы:
+- Функция теста без проверок: `test_sanitize_topic_rejects_non_string`
+- Функция теста без проверок: `test_sanitize_response_rejects_non_string`
 
-File: ./tests/test_arch_audit_fixes.py
-  Issues found:
-    - Test function with no assertions: test_no_circular_dependencies
+### tests/test_new_audit_fixes.py
+⚠️ Обнаружены проблемы:
+- Функция теста без проверок: `test_add_message_calls_helper`
 
-File: ./tests/test_architecture_integrity.py
-  Issues found:
-    - Test function with no assertions: test_service_handles_provider_configuration_error
-    - Test function with no assertions: test_service_handles_provider_connection_error
-    - Test function with no assertions: test_service_handles_provider_generation_error
-    - Test function with no assertions: test_config_is_frozen
+### tests/test_timeout_fixes.py
+⚠️ Обнаружены проблемы:
+- Функция теста без проверок: `test_sock_read_timeout_validation_out_of_range`
+- Функция теста без проверок: `test_sock_read_timeout_validation_negative`
 
-File: ./tests/test_ui_shutdown_error.py
-  No issues found
+### tests/test_dialogue_runner_error_handling.py
+⚠️ Обнаружены проблемы:
+- Тестовые функции не найдены
 
-File: ./tests/test_call_from_thread_fix.py
-  Issues found:
-    - Test function with no assertions: test_handle_dialogue_error_no_runtime_error_from_async_context
-    - Test function with no assertions: test_handle_dialogue_error_updates_controller
+### tests/test_fixes.py
+✅ Проблем не обнаружено
 
-File: ./tests/test_code_audit_fixes.py
-  No issues found
+### tests/test_arch_audit_fixes.py
+⚠️ Обнаружены проблемы:
+- Функция теста без проверок: `test_no_circular_dependencies`
 
-File: ./tests/test_arch_fixes.py
-  No issues found
+### tests/test_architecture_integrity.py
+⚠️ Обнаружены проблемы:
+- Функция теста без проверок: `test_service_handles_provider_configuration_error`
+- Функция теста без проверок: `test_service_handles_provider_connection_error`
+- Функция теста без проверок: `test_service_handles_provider_generation_error`
+- Функция теста без проверок: `test_config_is_frozen`
 
-File: ./tests/test_audit_fixes_verification.py
-  Issues found:
-    - Test function with no assertions: test_lookup_error_handled
+### tests/test_ui_shutdown_error.py
+✅ Проблем не обнаружено
 
-File: ./tests/test_ui_state_changed.py
-  Issues found:
-    - Test function with no assertions: test_on_ui_state_changed_no_error_when_element_missing
-    - Test function with no assertions: test_on_ui_state_changed_with_mock_label
+### tests/test_call_from_thread_fix.py
+⚠️ Обнаружены проблемы:
+- Функция теста без проверок: `test_handle_dialogue_error_no_runtime_error_from_async_context`
+- Функция теста без проверок: `test_handle_dialogue_error_updates_controller`
 
-File: ./tests/test_critical.py
-  Issues found:
-    - Test function with no assertions: test_invalid_url_no_scheme
-    - Test function with no assertions: test_invalid_url_wrong_scheme
-    - Test function with no assertions: test_invalid_url_empty
-    - Test function with no assertions: test_temperature_validation_out_of_range
-    - Test function with no assertions: test_max_tokens_validation
-    - Test function with no assertions: test_request_timeout_validation
-    - Test function with no assertions: test_pause_between_messages_validation
-    - Test function with no assertions: test_invalid_host_raises_value_error
-    - Test function with no assertions: test_on_pause_pressed_checks_conversation
+### tests/test_code_audit_fixes.py
+✅ Проблем не обнаружено
 
-File: ./tests/test_textual_reactive.py
-  No issues found
+### tests/test_arch_fixes.py
+✅ Проблем не обнаружено
 
-File: ./tests/test_architecture_patterns.py
-  No issues found
+### tests/test_audit_fixes_verification.py
+⚠️ Обнаружены проблемы:
+- Функция теста без проверок: `test_lookup_error_handled`
 
+### tests/test_ui_state_changed.py
+⚠️ Обнаружены проблемы:
+- Функция теста без проверок: `test_on_ui_state_changed_no_error_when_element_missing`
+- Функция теста без проверок: `test_on_ui_state_changed_with_mock_label`
+
+### tests/test_critical.py
+⚠️ Обнаружены проблемы:
+- Функция теста без проверок: `test_invalid_url_no_scheme`
+- Функция теста без проверок: `test_invalid_url_wrong_scheme`
+- Функция теста без проверок: `test_invalid_url_empty`
+- Функция теста без проверок: `test_temperature_validation_out_of_range`
+- Функция теста без проверок: `test_max_tokens_validation`
+- Функция теста без проверок: `test_request_timeout_validation`
+- Функция теста без проверок: `test_pause_between_messages_validation`
+- Функция теста без проверок: `test_invalid_host_raises_value_error`
+- Функция теста без проверок: `test_on_pause_pressed_checks_conversation`
+
+### tests/test_textual_reactive.py
+✅ Проблем не обнаружено
+
+### tests/test_architecture_patterns.py
+✅ Проблем не обнаружено
+
+---
+
+## Рекомендации
+
+1. Добавить assertions во все тестовые функции без проверок
+2. Убедиться, что каждый тест действительно проверяет ожидаемое поведение
+3. Заполнить пропущенные тесты в `test_dialogue_runner_error_handling.py`
