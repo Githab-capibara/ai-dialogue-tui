@@ -10,7 +10,7 @@ import contextlib
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Mapping, Sequence
 
 if TYPE_CHECKING:
     import aiohttp
@@ -64,7 +64,7 @@ class _RequestValidator:
             raise ValueError(msg)
 
     @staticmethod
-    def validate_messages(messages: Any) -> None:
+    def validate_messages(messages: Sequence[Mapping[str, Any]]) -> None:
         """Валидировать messages для generate метода.
 
         Args:
@@ -111,7 +111,7 @@ class _ResponseHandler:
 
     @staticmethod
     def parse_json_response(
-        data: Any,
+        data: Mapping[str, Any],
         operation: str,
     ) -> dict[str, Any]:
         """Валидировать и распарсить JSON ответ.
@@ -439,7 +439,9 @@ class OllamaClient:
         options = {
             "temperature": kwargs.get("temperature", self._config.temperature),
         }
-        max_tokens = kwargs.get("max_tokens", self._config.max_tokens)
+        max_tokens: int = self._config.max_tokens
+        if "max_tokens" in kwargs:
+            max_tokens = int(kwargs["max_tokens"])
         if max_tokens > 0:
             options["num_predict"] = max_tokens
 
