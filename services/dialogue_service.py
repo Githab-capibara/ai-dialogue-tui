@@ -7,24 +7,27 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from models.config import Config
-from models.conversation import Conversation, ModelId
 from models.provider import ModelProvider, ProviderError
+
+if TYPE_CHECKING:
+    from models.conversation import Conversation, ModelId
 
 log = logging.getLogger(__name__)
 
 
 @dataclass
 class DialogueTurnResult:
-    """
-    Результат одного хода диалога.
+    """Результат одного хода диалога.
 
     Attributes:
         model_name: Название модели которая сделала ход.
         model_id: Идентификатор модели (A или B).
         role: Роль сообщения (всегда "assistant").
         response: Сгенерированный текст ответа.
+
     """
 
     model_name: str
@@ -34,8 +37,7 @@ class DialogueTurnResult:
 
 
 class DialogueService:
-    """
-    Сервис для управления бизнес-логикой диалога.
+    """Сервис для управления бизнес-логикой диалога.
 
     Инкапсулирует логику запуска, паузы, остановки и выполнения
     циклов диалога. Работает с абстракциями (ModelProvider, Conversation),
@@ -48,6 +50,7 @@ class DialogueService:
 
     Note:
         Этот класс содержит бизнес-логику и не зависит от UI.
+
     """
 
     def __init__(
@@ -56,13 +59,13 @@ class DialogueService:
         provider: ModelProvider,
         config: Config | None = None,
     ) -> None:
-        """
-        Инициализация сервиса диалога.
+        """Инициализация сервиса диалога.
 
         Args:
             conversation: Объект диалога для управления контекстами.
             provider: Провайдер моделей для генерации ответов.
             config: Конфигурация для параметров (паузы, таймауты).
+
         """
         self._conversation = conversation
         self._provider = provider
@@ -97,8 +100,7 @@ class DialogueService:
         return self._turn_count
 
     def start(self) -> None:
-        """
-        Запустить диалог.
+        """Запустить диалог.
 
         Устанавливает флаг _is_running в True и сбрасывает паузу.
         """
@@ -106,8 +108,7 @@ class DialogueService:
         self._is_paused = False
 
     def pause(self) -> None:
-        """
-        Поставить диалог на паузу.
+        """Поставить диалог на паузу.
 
         Устанавливает флаг _is_paused в True.
         Диалог остается запущенным (is_running=True).
@@ -115,16 +116,14 @@ class DialogueService:
         self._is_paused = True
 
     def resume(self) -> None:
-        """
-        Возобновить диалог после паузы.
+        """Возобновить диалог после паузы.
 
         Сбрасывает флаг _is_paused в False.
         """
         self._is_paused = False
 
     def stop(self) -> None:
-        """
-        Остановить диалог.
+        """Остановить диалог.
 
         Сбрасывает флаги _is_running и _is_paused.
         """
@@ -132,8 +131,7 @@ class DialogueService:
         self._is_paused = False
 
     def clear_history(self) -> None:
-        """
-        Очистить историю диалога.
+        """Очистить историю диалога.
 
         Очищает контексты обеих моделей и сбрасывает счетчик ходов.
         """
@@ -141,14 +139,14 @@ class DialogueService:
         self._turn_count = 0
 
     async def run_dialogue_cycle(self) -> DialogueTurnResult | None:
-        """
-        Выполнить один цикл диалога.
+        """Выполнить один цикл диалога.
 
         Генерирует ответ текущей модели, обновляет контексты,
         переключает ход и increment счетчик.
 
         Returns:
             DialogueTurnResult или None если диалог не запущен.
+
         """
         if not self._is_running or self._is_paused:
             return None
@@ -160,22 +158,19 @@ class DialogueService:
             _, _, response = await self._conversation.process_turn(self._provider)
             self._turn_count += 1
 
-            result = DialogueTurnResult(
+            return DialogueTurnResult(
                 model_name=model_name,
                 model_id=model_id,
                 role="assistant",
                 response=response,
             )
 
-            return result
-
         except ProviderError:
             log.exception("Ошибка провайдера при выполнении цикла диалога")
             raise
 
     async def cleanup(self) -> None:
-        """
-        Очистить ресурсы сервиса.
+        """Очистить ресурсы сервиса.
 
         Закрывает соединение с провайдером моделей.
         """

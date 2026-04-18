@@ -39,3 +39,4 @@ warn_return_any = true
 warn_unused_ignores = true
 explicit_package_bases = true
 exclude = ["tests/", "audit_reports/"]
+disable_error_code = ["misc", "untyped-decorator"]

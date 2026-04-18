@@ -6,15 +6,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, runtime_checkable
-
-if TYPE_CHECKING:
-    pass
+from typing import Any, Literal, Protocol, TypedDict, runtime_checkable
 
 
 class ProviderError(Exception):
-    """
-    Базовое исключение для ошибок провайдера моделей.
+    """Базовое исключение для ошибок провайдера моделей.
 
     Используется как базовый класс для специфичных исключений провайдера.
     Содержит информацию об оригинальном исключении для отладки.
@@ -22,15 +18,16 @@ class ProviderError(Exception):
     Attributes:
         message: Сообщение об ошибке.
         original_exception: Оригинальное исключение для цепочки.
+
     """
 
     def __init__(self, message: str, original_exception: Exception | None = None) -> None:
-        """
-        Инициализация исключения.
+        """Инициализация исключения.
 
         Args:
             message: Сообщение об ошибке.
             original_exception: Оригинальное исключение для цепочки.
+
         """
         super().__init__(message)
         self._original_exception = original_exception
@@ -42,8 +39,7 @@ class ProviderError(Exception):
 
 
 class ProviderConfigurationError(ProviderError):
-    """
-    Исключение для ошибок конфигурации провайдера.
+    """Исключение для ошибок конфигурации провайдера.
 
     Возникает при некорректной конфигурации провайдера:
     - Некорректный URL хоста
@@ -53,8 +49,7 @@ class ProviderConfigurationError(ProviderError):
 
 
 class ProviderConnectionError(ProviderError):
-    """
-    Исключение для ошибок подключения к провайдеру.
+    """Исключение для ошибок подключения к провайдеру.
 
     Возникает при проблемах с сетевым подключением:
     - Недоступность хоста
@@ -64,8 +59,7 @@ class ProviderConnectionError(ProviderError):
 
 
 class ProviderGenerationError(ProviderError):
-    """
-    Исключение для ошибок генерации ответа.
+    """Исключение для ошибок генерации ответа.
 
     Возникает при проблемах с генерацией ответа моделью:
     - Ошибки API провайдера
@@ -75,12 +69,12 @@ class ProviderGenerationError(ProviderError):
 
 
 class MessageDict(TypedDict, total=True):
-    """
-    Структура сообщения в формате совместимом с Ollama.
+    """Структура сообщения в формате совместимом с Ollama.
 
     Attributes:
         role: Роль отправителя (system, user, assistant).
         content: Текст сообщения.
+
     """
 
     role: Literal["system", "user", "assistant"]
@@ -92,8 +86,7 @@ ModelId = Literal["A", "B"]
 
 @runtime_checkable
 class ModelProvider(Protocol):
-    """
-    Протокол для провайдеров языковых моделей.
+    """Протокол для провайдеров языковых моделей.
 
     Определяет интерфейс для взаимодействия с различными LLM-провайдерами.
     Позволяет использовать dependency injection для тестируемости и заменяемости.
@@ -109,17 +102,18 @@ class ModelProvider(Protocol):
         ...     async def close(self) -> None:
         ...         pass
         >>> provider: ModelProvider = MyProvider()
+
     """
 
     async def list_models(self) -> list[str]:
-        """
-        Получить список доступных моделей.
+        """Получить список доступных моделей.
 
         Returns:
             Список названий доступных моделей.
 
         Raises:
             Exception: Если не удалось получить список моделей.
+
         """
 
     async def generate(
@@ -128,8 +122,7 @@ class ModelProvider(Protocol):
         messages: list[MessageDict],
         **kwargs: Any,
     ) -> str:
-        """
-        Сгенерировать ответ от модели.
+        """Сгенерировать ответ от модели.
 
         Args:
             model: Название модели для генерации.
@@ -141,15 +134,16 @@ class ModelProvider(Protocol):
 
         Raises:
             Exception: Если не удалось сгенерировать ответ.
+
         """
 
     async def close(self) -> None:
-        """
-        Освободить ресурсы провайдера.
+        """Освободить ресурсы провайдера.
 
         Закрывает соединения, очищает кэши и т.д.
         Вызывается при завершении работы приложения.
 
         Note:
             Метод должен быть идемпотентным (безопасным для повторного вызова).
+
         """

@@ -13,15 +13,14 @@ import re
 MAX_RESPONSE_PREVIEW_LENGTH: int = 100
 
 __all__ = [
-    "sanitize_topic",
-    "sanitize_response_for_display",
     "MAX_RESPONSE_PREVIEW_LENGTH",
+    "sanitize_response_for_display",
+    "sanitize_topic",
 ]
 
 
 def sanitize_topic(topic: str) -> str:
-    """
-    Санитизировать ввод темы для предотвращения инъекции промпта.
+    """Санитизировать ввод темы для предотвращения инъекции промпта.
 
     Экранирует специальные символы и удаляет
     потенциально опасные конструкции.
@@ -34,20 +33,20 @@ def sanitize_topic(topic: str) -> str:
 
     Raises:
         TypeError: Если topic не является строкой.
+
     """
     if not isinstance(topic, str):
-        raise TypeError(f"topic должен быть строкой, получен {type(topic).__name__}")
+        msg = f"topic должен быть строкой, получен {type(topic).__name__}"
+        raise TypeError(msg)
     if not topic:
         return ""
     topic = topic.strip()
     topic = topic.replace("{", "{{").replace("}", "}}")
-    topic = re.sub(r"\[([^\]]*)\]", r"[[\1]]", topic)
-    return topic
+    return re.sub(r"\[([^\]]*)\]", r"[[\1]]", topic)
 
 
 def sanitize_response_for_display(response: str) -> str:
-    """
-    Санитизировать ответ модели для безопасного отображения в TUI.
+    """Санитизировать ответ модели для безопасного отображения в TUI.
 
     Экранирует markup-символы Textual для предотвращения XSS-подобных атак.
     Обрезает длинные ответы до MAX_RESPONSE_PREVIEW_LENGTH символов.
@@ -60,9 +59,11 @@ def sanitize_response_for_display(response: str) -> str:
 
     Raises:
         TypeError: Если response не является строкой.
+
     """
     if not isinstance(response, str):
-        raise TypeError(f"response должен быть строкой, получен {type(response).__name__}")
+        msg = f"response должен быть строкой, получен {type(response).__name__}"
+        raise TypeError(msg)
     if not response:
         return ""
 

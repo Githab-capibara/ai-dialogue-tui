@@ -9,11 +9,11 @@ from tui.constants import CSS_CLASSES, UI_IDS
 
 
 def generate_main_css() -> str:
-    """
-    Сгенерировать основной CSS из централизованных констант.
+    """Сгенерировать основной CSS из централизованных констант.
 
     Returns:
         CSS строка для приложения.
+
     """
     return f"""
 #{UI_IDS.model_selection_container} {{

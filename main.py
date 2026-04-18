@@ -27,8 +27,7 @@ logging.basicConfig(
 
 
 def main() -> int:  # pylint: disable=too-many-return-statements
-    """
-    Запустить TUI приложение с обработкой исключений.
+    """Запустить TUI приложение с обработкой исключений.
 
     Returns:
         Код выхода приложения.
@@ -36,6 +35,7 @@ def main() -> int:  # pylint: disable=too-many-return-statements
     Note:
         Оборачивает app.run() в try/except
         для перехвата необработанных исключений.
+
     """
     config = Config()
 
@@ -55,34 +55,22 @@ def main() -> int:  # pylint: disable=too-many-return-statements
     except ProviderConfigurationError as e:
         # Ошибка конфигурации
         logging.exception("Ошибка конфигурации: %s", e)
-        print(f"Ошибка конфигурации: {e}", file=sys.stderr)
         return 1
     except ProviderConnectionError as e:
         # Ошибка подключения
         logging.exception("Ошибка подключения: %s", e)
-        print(
-            f"Ошибка подключения к Ollama: {e}\nУбедитесь, что Ollama запущен и доступен.",
-            file=sys.stderr,
-        )
         return 1
     except ProviderGenerationError as e:
         # Ошибка генерации
         logging.exception("Ошибка генерации: %s", e)
-        print(f"Ошибка генерации ответа: {e}", file=sys.stderr)
         return 1
     except ProviderError as e:
         # Общая ошибка провайдера
         logging.exception("Ошибка провайдера: %s", e)
-        print(f"Ошибка провайдера моделей: {e}", file=sys.stderr)
         return 1
     except (RuntimeError, SystemError) as e:
         # Выводим понятное сообщение об ошибке
         logging.exception("Критическая ошибка приложения: %s", e)
-        print(f"Критическая ошибка приложения: {e}", file=sys.stderr)
-        print(
-            "Пожалуйста, проверьте логи или сообщите об ошибке разработчикам.",
-            file=sys.stderr,
-        )
         return 1
 
 
