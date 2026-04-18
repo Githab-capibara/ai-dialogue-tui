@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 from textual import on
@@ -44,6 +44,9 @@ from services.model_style_mapper import ModelStyleMapper
 from tui.constants import MESSAGE_STYLES, UI_IDS
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 from tui.styles import generate_main_css
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Константа таймаута для уведомлений
 DEFAULT_NOTIFY_TIMEOUT: int = 10
@@ -106,14 +109,14 @@ class ModelSelectionScreen(ModalScreen[None]):
                 yield Button("Отмена", id=UI_IDS.cancel_btn, variant="error")
 
     def _get_model_value(self, index: int) -> str | None:
-        """
-        Получить значение модели для селектора по индексу.
+        """Получить значение модели для селектора по индексу.
 
         Args:
             index: Индекс модели в списке.
 
         Returns:
             Название модели или None если список пуст.
+
         """
         if not self._available_models:
             return None
@@ -126,11 +129,11 @@ class ModelSelectionScreen(ModalScreen[None]):
         self.dismiss(None)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """
-        Обработать нажатие кнопки.
+        """Обработать нажатие кнопки.
 
         Args:
             event: Событие нажатия кнопки.
+
         """
         button_id = event.button.id
         if button_id == UI_IDS.start_btn:
@@ -161,7 +164,7 @@ class ModelSelectionScreen(ModalScreen[None]):
             )
             return
 
-        self.dismiss((model_a, model_b))  # type: ignore[arg-type]
+        self.dismiss((model_a, model_b))
 
 
 class TopicInputScreen(ModalScreen[None]):
@@ -173,16 +176,15 @@ class TopicInputScreen(ModalScreen[None]):
     ]
 
     def compose(self) -> ComposeResult:
-        with Container(id=UI_IDS.topic_input_container):
-            with Vertical(id=UI_IDS.topic_input_content):
-                yield Static("Введите тему диалога:", id=UI_IDS.topic_label)
-                yield Input(
-                    placeholder="Например: Спор о преимуществах Python перед Go",
-                    id=UI_IDS.topic_input,
-                )
-                with Horizontal(id=UI_IDS.topic_buttons):
-                    yield Button("Начать", id=UI_IDS.topic_start_btn, variant="primary")
-                    yield Button("Отмена", id=UI_IDS.topic_cancel_btn, variant="error")
+        with Container(id=UI_IDS.topic_input_container), Vertical(id=UI_IDS.topic_input_content):
+            yield Static("Введите тему диалога:", id=UI_IDS.topic_label)
+            yield Input(
+                placeholder="Например: Спор о преимуществах Python перед Go",
+                id=UI_IDS.topic_input,
+            )
+            with Horizontal(id=UI_IDS.topic_buttons):
+                yield Button("Начать", id=UI_IDS.topic_start_btn, variant="primary")
+                yield Button("Отмена", id=UI_IDS.topic_cancel_btn, variant="error")
 
     def action_submit(self) -> None:
         """Обработать нажатие Enter для подтверждения темы."""
@@ -193,11 +195,11 @@ class TopicInputScreen(ModalScreen[None]):
         self.dismiss(None)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """
-        Обработать нажатие кнопки.
+        """Обработать нажатие кнопки.
 
         Args:
             event: Событие нажатия кнопки.
+
         """
         button_id = event.button.id
         if button_id == UI_IDS.topic_start_btn:
@@ -218,7 +220,7 @@ class TopicInputScreen(ModalScreen[None]):
             )
             return
 
-        self.dismiss(topic)  # type: ignore[arg-type]
+        self.dismiss(topic)
 
 
 class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
@@ -243,20 +245,20 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         config: Config | None = None,
         provider_factory: Callable[[], ModelProvider] | None = None,
     ) -> None:
-        """
-        Инициализация приложения.
+        """Инициализация приложения.
 
         Args:
             config: Опциональная конфигурация для dependency injection.
             provider_factory: Фабрика для создания ModelProvider.
                               Если не указана, используется OllamaClient по умолчанию.
+
         """
         super().__init__()
         self._config = config or Config()
         self._provider_factory = provider_factory or (lambda: OllamaClient(host=self._config.ollama_host))
         self._client: ModelProvider | None = None
         self._controller: DialogueController | None = None
-        self._dialogue_task: asyncio.Task[None] | None = None  # type: ignore[type-arg]
+        self._dialogue_task: asyncio.Task[None] | None = None
         self._models: list[str] = []
         # Кэшируем style_mapper для производительности
         self._style_mapper = ModelStyleMapper()
@@ -268,30 +270,28 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
 
         with Container(id=UI_IDS.main_container):
             # Статус бар
-            with Container(id=UI_IDS.status_bar):
-                with Horizontal(id=UI_IDS.status_row):
-                    yield Label("Статус: ", id=UI_IDS.status_label)
-                    yield Label("Ожидание...", id=UI_IDS.status_value)
+            with Container(id=UI_IDS.status_bar), Horizontal(id=UI_IDS.status_row):
+                yield Label("Статус: ", id=UI_IDS.status_label)
+                yield Label("Ожидание...", id=UI_IDS.status_value)
 
             # Лог диалога
             yield RichLog(id=UI_IDS.dialogue_log, highlight=True, markup=True)
 
             # Панель управления
-            with Container(id=UI_IDS.controls_bar):
-                with Horizontal(id=UI_IDS.controls_row):
-                    yield Button("▶ Старт", id=UI_IDS.start_btn, variant="success")
-                    yield Button("⏸ Пауза", id=UI_IDS.pause_btn, variant="warning")
-                    yield Button("🗑 Очистить", id=UI_IDS.clear_btn, variant="default")
-                    yield Button("✕ Выход", id=UI_IDS.exit_btn, variant="error")
+            with Container(id=UI_IDS.controls_bar), Horizontal(id=UI_IDS.controls_row):
+                yield Button("▶ Старт", id=UI_IDS.start_btn, variant="success")
+                yield Button("⏸ Пауза", id=UI_IDS.pause_btn, variant="warning")
+                yield Button("🗑 Очистить", id=UI_IDS.clear_btn, variant="default")
+                yield Button("✕ Выход", id=UI_IDS.exit_btn, variant="error")
 
         yield Footer()
 
     def _on_ui_state_changed(self, state: UIState) -> None:
-        """
-        Обработчик изменения состояния UI.
+        """Обработчик изменения состояния UI.
 
         Args:
             state: Новое состояние UI от контроллера.
+
         """
         from textual.app import ScreenStackError
 
@@ -329,7 +329,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             # Показываем окно выбора моделей
             def on_models_selected(result: tuple[str, str] | None) -> None:
                 if result is None:
-                    self.exit(1)  # type: ignore[arg-type]
+                    self.exit(1)
                     return
 
                 model_a, model_b = result
@@ -398,11 +398,11 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             self._safe_update_status("[red]Неизвестная ошибка[/red]")
 
     def _safe_update_status(self, status: str) -> None:
-        """
-        Безопасно обновить статус с обработкой ошибок.
+        """Безопасно обновить статус с обработкой ошибок.
 
         Args:
             status: Строка статуса для отображения.
+
         """
         try:
             # pylint: disable=assignment-from-no-return
@@ -412,17 +412,17 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             log.warning("Не удалось обновить статус: %s", e)
 
     def _setup_conversation(self, model_a: str, model_b: str) -> None:
-        """
-        Настроить диалог после выбора моделей.
+        """Настроить диалог после выбора моделей.
 
         Args:
             model_a: Название первой модели.
             model_b: Название второй модели.
+
         """
 
         def on_topic_entered(topic: str | None) -> None:
             if topic is None:
-                self.exit(1)  # type: ignore[arg-type]
+                self.exit(1)
                 return
 
             # Санитизация темы перед использованием
@@ -432,6 +432,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             system_prompt = self._config.default_system_prompt.format(topic=sanitized_topic)
 
             # Создаём объекты с dependency injection
+            assert self._client is not None, "Client should be initialized before this callback"
             conversation = Conversation(
                 model_a=model_a,
                 model_b=model_b,
@@ -464,7 +465,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
                         f"[bold]Модель B:[/bold] [{MESSAGE_STYLES.model_b}]"
                         f"{model_b}[/{MESSAGE_STYLES.model_b}]\n"
                         f"[bold]Тема:[/bold] {sanitized_topic}\n"
-                        f"[dim]Нажмите 'Старт' для начала диалога[/dim]"
+                        f"[dim]Нажмите 'Старт' для начала диалога[/dim]",
                     )
                 except (NoMatches, LookupError, RuntimeError) as e:
                     log.warning("Не удалось записать в лог при инициализации: %s", e)
@@ -592,11 +593,11 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         return result
 
     def _write_to_log(self, message: str) -> None:
-        """
-        Безопасно записать сообщение в лог UI.
+        """Безопасно записать сообщение в лог UI.
 
         Args:
             message: Сообщение для записи.
+
         """
         try:
             dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)

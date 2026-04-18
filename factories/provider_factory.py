@@ -5,11 +5,13 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from models.config import Config
 from models.ollama_client import OllamaClient
-from models.provider import ModelProvider
+
+if TYPE_CHECKING:
+    from models.config import Config
+    from models.provider import ModelProvider
 
 
 class ProviderFactory(Protocol):
@@ -22,27 +24,27 @@ class ProviderFactory(Protocol):
 
 
 def create_ollama_provider(config: Config) -> ModelProvider:
-    """
-    Создать провайдер Ollama.
+    """Создать провайдер Ollama.
 
     Args:
         config: Конфигурация для подключения.
 
     Returns:
         Настроенный провайдер ModelProvider.
+
     """
     return OllamaClient(host=config.ollama_host)
 
 
 def create_provider_factory(config: Config) -> ProviderFactory:
-    """
-    Создать фабрику провайдеров.
+    """Создать фабрику провайдеров.
 
     Args:
         config: Конфигурация для создания провайдеров.
 
     Returns:
         Фабричная функция для создания ModelProvider.
+
     """
 
     def factory() -> ModelProvider:

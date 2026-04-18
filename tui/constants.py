@@ -12,14 +12,14 @@ from typing import Final
 
 @dataclass(frozen=True)
 class MessageStyles:
-    """
-    Стили для сообщений в логе диалога.
+    """Стили для сообщений в логе диалога.
 
     Attributes:
         model_a: Стиль для сообщений модели A.
         model_b: Стиль для сообщений модели B.
         system: Стиль для системных сообщений.
         error: Стиль для сообщений об ошибках.
+
     """
 
     model_a: str = "bold green"
@@ -30,8 +30,7 @@ class MessageStyles:
 
 @dataclass(frozen=True)
 class UIElementIDs:
-    """
-    Идентификаторы UI элементов для предотвращения magic strings.
+    """Идентификаторы UI элементов для предотвращения magic strings.
 
     Attributes:
         model_selection_container: Контейнер выбора моделей.
@@ -63,6 +62,7 @@ class UIElementIDs:
         pause_btn: Кнопка паузы.
         clear_btn: Кнопка очистки.
         exit_btn: Кнопка выхода.
+
     """
 
     # pylint: disable=too-many-instance-attributes
@@ -106,14 +106,14 @@ class UIElementIDs:
 
 @dataclass(frozen=True)
 class CSSClasses:
-    """
-    CSS классы для стилизации элементов.
+    """CSS классы для стилизации элементов.
 
     Attributes:
         model_a_message: Класс для сообщений модели A.
         model_b_message: Класс для сообщений модели B.
         system_message: Класс для системных сообщений.
         error_message: Класс для сообщений об ошибках.
+
     """
 
     model_a_message: str = "model-a-message"
@@ -127,10 +127,10 @@ UI_IDS: Final = UIElementIDs()
 CSS_CLASSES: Final = CSSClasses()
 
 __all__ = [
-    "MessageStyles",
-    "UIElementIDs",
-    "CSSClasses",
+    "CSS_CLASSES",
     "MESSAGE_STYLES",
     "UI_IDS",
-    "CSS_CLASSES",
+    "CSSClasses",
+    "MessageStyles",
+    "UIElementIDs",
 ]

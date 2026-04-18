@@ -16,7 +16,7 @@ from models.provider import MessageDict, ModelProvider
 log = logging.getLogger(__name__)
 
 # Импортируем для обратной совместимости
-__all__ = ["Conversation", "MessageDict", "MAX_CONTEXT_LENGTH", "ModelId"]
+__all__ = ["MAX_CONTEXT_LENGTH", "Conversation", "MessageDict", "ModelId"]
 
 # Константа для ограничения длины контекста
 MAX_CONTEXT_LENGTH: int = 50
@@ -35,8 +35,7 @@ class _ConversationContext:
 
 @dataclass(slots=True)
 class Conversation:
-    """
-    Управление диалогом между двумя моделями.
+    """Управление диалогом между двумя моделями.
 
     Каждая модель имеет свой независимый контекст (историю сообщений).
     Ответ одной модели добавляется в контекст другой
@@ -51,6 +50,7 @@ class Conversation:
     Note:
         Имеет 8 атрибутов что превышает стандартный лимит (7),
         но это оправдано сложностью предметной области.
+
     """
 
     # pylint: disable=too-many-instance-attributes
@@ -78,16 +78,20 @@ class Conversation:
 
         # Валидация обязательных параметров
         if not self.model_a or not isinstance(self.model_a, str):
-            raise ValueError("model_a должен быть непустой строкой")
+            msg = "model_a должен быть непустой строкой"
+            raise ValueError(msg)
         if not self.model_b or not isinstance(self.model_b, str):
-            raise ValueError("model_b должен быть непустой строкой")
+            msg = "model_b должен быть непустой строкой"
+            raise ValueError(msg)
         if not self.topic or not isinstance(self.topic, str):
-            raise ValueError("topic должен быть непустой строкой")
+            msg = "topic должен быть непустой строкой"
+            raise ValueError(msg)
         if self.model_a == self.model_b:
-            raise ValueError("model_a и model_b должны быть разными")
+            msg = "model_a и model_b должны быть разными"
+            raise ValueError(msg)
 
         _default_prompt = Config().default_system_prompt
-        effective_prompt = self.system_prompt if self.system_prompt else _default_prompt
+        effective_prompt = self.system_prompt or _default_prompt
 
         try:
             formatted_prompt = effective_prompt.format(topic=self.topic)
@@ -97,10 +101,11 @@ class Conversation:
         self._context_b.append(MessageDict(role="system", content=formatted_prompt))
 
     def _trim_context_if_needed(
-        self, context: list[MessageDict], max_len: int = MAX_CONTEXT_LENGTH
+        self,
+        context: list[MessageDict],
+        max_len: int = MAX_CONTEXT_LENGTH,
     ) -> list[MessageDict]:
-        """
-        Обрезать контекст если он превышает max_len.
+        """Обрезать контекст если он превышает max_len.
 
         Сохраняет системный промпт (первое сообщение) и последние сообщения.
         Удаляет старые сообщения из середины контекста.
@@ -111,6 +116,7 @@ class Conversation:
 
         Returns:
             Обрезанный контекст если было превышение, иначе исходный.
+
         """
         if len(context) <= max_len:
             return context
@@ -119,10 +125,7 @@ class Conversation:
 
         remaining_messages = context[-max_len:]
 
-        if system_message:
-            trimmed = [system_message] + remaining_messages
-        else:
-            trimmed = remaining_messages
+        trimmed = [system_message, *remaining_messages] if system_message else remaining_messages
 
         log.warning(
             "Контекст превышен (%d сообщений), обрезано до %d",
@@ -158,13 +161,13 @@ class Conversation:
         role: Literal["system", "user", "assistant"],
         content: str,
     ) -> None:
-        """
-        Добавить сообщение в контекст указанной модели.
+        """Добавить сообщение в контекст указанной модели.
 
         Args:
             model_id: Идентификатор модели (A или B).
             role: Роль сообщения ("user", "assistant", "system").
             content: Текст сообщения.
+
         """
         self._add_message_to_context(model_id, role, content)
         context = self._context_a if model_id == "A" else self._context_b
@@ -177,22 +180,21 @@ class Conversation:
         )
 
     def get_context(self, model_id: ModelId) -> tuple[MessageDict, ...]:
-        """
-        Получить историю сообщений для указанной модели.
+        """Получить историю сообщений для указанной модели.
 
         Args:
             model_id: Идентификатор модели (A или B).
 
         Returns:
             Кортеж сообщений в формате Ollama (неизменяемый).
+
         """
         context = self._context_a if model_id == "A" else self._context_b
         # Возвращаем tuple для безопасности и производительности
         return tuple(context)
 
     def switch_turn(self) -> None:
-        """
-        Переключить ход на другую модель.
+        """Переключить ход на другую модель.
 
         Команда (command) - изменяет состояние, ничего не возвращает.
         Для получения текущего хода используйте свойство current_turn.
@@ -207,11 +209,11 @@ class Conversation:
 
     @property
     def current_turn(self) -> ModelId:
-        """
-        Получить идентификатор модели, которой сейчас ходить.
+        """Получить идентификатор модели, которой сейчас ходить.
 
         Returns:
             Идентификатор текущей модели (A или B).
+
         """
         return self._current_turn
 
@@ -227,14 +229,14 @@ class Conversation:
         self,
         provider: ModelProvider,
     ) -> tuple[ModelId, str]:
-        """
-        Сгенерировать ответ для текущей модели.
+        """Сгенерировать ответ для текущей модели.
 
         Args:
             provider: Провайдер моделей для генерации (ModelProvider).
 
         Returns:
             Кортеж (идентификатор модели, сгенерированный ответ).
+
         """
         model_id = self.current_turn
         model_name = self.get_current_model_name()
@@ -251,8 +253,7 @@ class Conversation:
         self,
         provider: ModelProvider,
     ) -> tuple[str, str, str]:
-        """
-        Обработать один ход диалога.
+        """Обработать один ход диалога.
 
         Генерирует ответ текущей модели, добавляет его в оба контекста
         (как assistant для текущей модели и как user для другой),
@@ -263,6 +264,7 @@ class Conversation:
 
         Returns:
             Кортеж (название модели, роль "assistant", текст ответа).
+
         """
         model_id = self.current_turn
         model_name = self.get_current_model_name()
@@ -296,8 +298,7 @@ class Conversation:
             raise
 
     def clear_contexts(self) -> None:
-        """
-        Очистить оба контекста, сохранив только системный промпт и тему.
+        """Очистить оба контекста, сохранив только системный промпт и тему.
 
         Использует присваивание новых списков для простоты и читаемости.
         """
@@ -314,11 +315,11 @@ class Conversation:
         self._current_turn = "A"
 
     def get_context_stats(self) -> dict[str, int]:
-        """
-        Получить статистику контекстов.
+        """Получить статистику контекстов.
 
         Returns:
             Словарь с количеством сообщений в каждом контексте.
+
         """
         return {
             "model_a_messages": len(self._context_a),

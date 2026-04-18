@@ -5,9 +5,10 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
-from models.conversation import ModelId
+if TYPE_CHECKING:
+    from models.conversation import ModelId
 
 
 class StyleInfo(NamedTuple):
@@ -18,8 +19,7 @@ class StyleInfo(NamedTuple):
 
 
 class ModelStyleMapper:
-    """
-    Сервис для маппинга состояния модели на стиль отображения.
+    """Сервис для маппинга состояния модели на стиль отображения.
 
     Инкапсулирует логику преобразования ModelId в CSS стиль.
 
@@ -27,6 +27,7 @@ class ModelStyleMapper:
         >>> mapper = ModelStyleMapper()
         >>> model_name, style_id = mapper.get_style_info("A", "llama3")
         >>> style_id  # "model_a"
+
     """
 
     def __init__(self) -> None:
@@ -37,8 +38,7 @@ class ModelStyleMapper:
         }
 
     def get_style_info(self, model_id: ModelId, model_name: str) -> StyleInfo:
-        """
-        Получить информацию о стиле для модели.
+        """Получить информацию о стиле для модели.
 
         Args:
             model_id: Идентификатор модели (A или B).
@@ -46,18 +46,19 @@ class ModelStyleMapper:
 
         Returns:
             Кортеж (model_name, style_id).
+
         """
         style_id = self._style_map[model_id]
         return StyleInfo(model_name=model_name, style_id=style_id)
 
     def get_style_id(self, model_id: ModelId) -> str:
-        """
-        Получить идентификатор стиля для модели.
+        """Получить идентификатор стиля для модели.
 
         Args:
             model_id: Идентификатор модели (A или B).
 
         Returns:
             Идентификатор стиля (model_a или model_b).
+
         """
         return self._style_map[model_id]
