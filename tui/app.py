@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import aiohttp
 from textual import on
-from textual.app import App, ComposeResult
+from textual.app import App, ComposeResult, ScreenStackError
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.css.query import NoMatches
@@ -72,20 +72,24 @@ log = logging.getLogger(__name__)
 class ModelSelectionScreen(ModalScreen[None]):
     """Модальное окно для выбора двух моделей."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[Binding]] = [
         Binding("escape", "cancel", "Отмена"),
     ]
 
-    def __init__(
-        self,
-        models: list[str],
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self, models: list[str], *args: Any, **kwargs: Any) -> None:
+        """Initialize the model selection screen.
+
+        Args:
+            models: List of available model names.
+            *args: Additional positional arguments.
+            **kwargs: Additional keyword arguments.
+
+        """
         super().__init__(*args, **kwargs)
         self._available_models = models
 
     def compose(self) -> ComposeResult:
+        """Compose the model selection UI."""
         with Container(id=UI_IDS.model_selection_container):
             yield Static("Выберите две модели для диалога", id=UI_IDS.selection_title)
 
@@ -166,13 +170,13 @@ class ModelSelectionScreen(ModalScreen[None]):
             )
             return
 
-        self.dismiss((model_a, model_b))  # type: ignore[arg-type]
+        self.dismiss((model_a, model_b))
 
 
 class TopicInputScreen(ModalScreen[None]):
     """Модальное окно для ввода темы диалога."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[Binding]] = [
         Binding("escape", "cancel", "Отмена"),
         Binding("enter", "submit", "OK"),
     ]
@@ -222,7 +226,7 @@ class TopicInputScreen(ModalScreen[None]):
             )
             return
 
-        self.dismiss(topic)  # type: ignore[arg-type]
+        self.dismiss(topic)
 
 
 class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
@@ -233,7 +237,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
 
     CSS = CSS
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[Binding]] = [
         Binding("ctrl+q", "quit", "Выход", priority=True),
         Binding("ctrl+p", "toggle_pause", "Пауза/Старт"),
         Binding("ctrl+r", "clear_log", "Очистить"),
@@ -245,7 +249,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         config: Config | None = None,
-        provider_factory: Callable[[], "ModelProvider"] | None = None,
+        provider_factory: Callable[[], ModelProvider] | None = None,
     ) -> None:
         """Инициализация приложения.
 
@@ -268,6 +272,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         self._cleanup_done = False
 
     def compose(self) -> ComposeResult:
+        """Compose the main application UI."""
         yield Header()
 
         with Container(id=UI_IDS.main_container):
@@ -295,8 +300,6 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             state: Новое состояние UI от контроллера.
 
         """
-        from textual.app import ScreenStackError
-
         try:
             status_label: Label = self.query_one("#status-value", Label)
             status_label.update(f"[{state.status_style}]{state.status_text}[/{state.status_style}]")
@@ -331,7 +334,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             # Показываем окно выбора моделей
             def on_models_selected(result: tuple[str, str] | None) -> None:
                 if result is None:
-                    self.exit(1)  # type: ignore[arg-type]
+                    self.exit(1)
                     return
 
                 model_a, model_b = result
@@ -423,7 +426,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
 
         def on_topic_entered(topic: str | None) -> None:
             if topic is None:
-                self.exit(1)  # type: ignore[arg-type]
+                self.exit(1)
                 return
 
             # Санитизация темы перед использованием
@@ -481,8 +484,9 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
     @on(Button.Pressed, f"#{UI_IDS.start_btn}")
     def on_start_pressed(self) -> None:
         """Запуск диалога."""
-        # Проверяем инициализацию через assert для type safety
-        assert self._controller is not None, "Controller not initialized"
+        if self._controller is None:
+            log.error("Controller not initialized")
+            return
 
         if not self._controller.handle_start():
             # Ошибка уже обработана в контроллере
@@ -633,6 +637,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
 
         Args:
             e: Exception (reserved for future logging).
+
         """
         _ = e  # Suppress unused warning
         log.exception("Critical error in dialogue loop")
