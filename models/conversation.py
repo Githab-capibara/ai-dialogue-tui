@@ -30,7 +30,7 @@ class _ConversationContext:
     """Контекст для каждой модели - выделен для уменьшения атрибутов Conversation."""
 
     messages: list[MessageDict] = field(default_factory=list)
-    model_id: ModelId = field(default="A")
+    model_id: ModelId = field(default_factory=lambda: "A")
 
 
 @dataclass(slots=True)
