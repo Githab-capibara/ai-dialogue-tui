@@ -115,6 +115,7 @@ class ModelProvider(Protocol):
             Exception: Если не удалось получить список моделей.
 
         """
+        raise NotImplementedError
 
     async def generate(
         self,
@@ -136,6 +137,7 @@ class ModelProvider(Protocol):
             Exception: Если не удалось сгенерировать ответ.
 
         """
+        raise NotImplementedError
 
     async def close(self) -> None:
         """Освободить ресурсы провайдера.
