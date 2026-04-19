@@ -20,6 +20,8 @@ from models.provider import (
 )
 from tui.app import DialogueApp
 
+log = logging.getLogger(__name__)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -50,22 +52,21 @@ def main() -> int:
     except asyncio.CancelledError:
         return 0
     except KeyboardInterrupt:
-        # Нормальное завершение по Ctrl+C
         return 0
     except ProviderConfigurationError as e:
-        logging.error("Configuration error: %s", e)
+        log.exception("Configuration error: %s", e)
         return 1
     except ProviderConnectionError as e:
-        logging.error("Connection error: %s", e)
+        log.exception("Connection error: %s", e)
         return 1
     except ProviderGenerationError as e:
-        logging.error("Generation error: %s", e)
+        log.exception("Generation error: %s", e)
         return 1
     except ProviderError as e:
-        logging.error("Provider error: %s", e)
+        log.exception("Provider error: %s", e)
         return 1
     except (RuntimeError, SystemError) as e:
-        logging.error("Critical application error: %s", e)
+        log.exception("Critical application error: %s", e)
         return 1
 
 
