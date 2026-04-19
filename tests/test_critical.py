@@ -633,19 +633,16 @@ class TestProviderExceptionHandling:
 class TestDialogueAppPauseHandling:  # pylint: disable=too-few-public-methods
     """Тесты для проблемы #14 и #15: Обработка паузы и отмены задач."""
 
-    def test_on_pause_pressed_checks_conversation(self) -> None:
-        """Тест что on_pause_pressed проверяет наличие controller через assert."""
+    def test_on_pause_pressed_handles_missing_conversation(self) -> None:
+        """Тест что on_pause_pressed корректно обрабатывает отсутствие controller."""
         from tui.app import DialogueApp  # pylint: disable=import-outside-toplevel
 
         app = DialogueApp()
 
-        # Если controller нет, assert должен вызвать AssertionError
+        # Если controller нет, метод должен обработать это gracefully
         app._controller = None  # pylint: disable=protected-access
-        # Вызов должен вызывать AssertionError
-        import pytest
-
-        with pytest.raises(AssertionError, match="Controller not initialized"):
-            app.on_pause_pressed()
+        # Вызов должен завершиться без ошибки
+        app.on_pause_pressed()
 
 
 if __name__ == "__main__":

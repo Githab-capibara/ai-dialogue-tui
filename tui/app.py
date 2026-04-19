@@ -48,6 +48,8 @@ from tui.styles import generate_main_css
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from models.provider import ModelProvider
+
 # Константа таймаута для уведомлений
 DEFAULT_NOTIFY_TIMEOUT: int = 10
 
@@ -243,7 +245,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         config: Config | None = None,
-        provider_factory: Callable[[], ModelProvider] | None = None,
+        provider_factory: Callable[[], "ModelProvider"] | None = None,
     ) -> None:
         """Инициализация приложения.
 
@@ -430,8 +432,9 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             # Форматируем системный промпт
             system_prompt = self._config.default_system_prompt.format(topic=sanitized_topic)
 
-            # Создаём объекты с dependency injection
-            assert self._client is not None, "Client should be initialized before this callback"
+            if self._client is None:
+                log.error("Client not initialized")
+                return
             conversation = Conversation(
                 model_a=model_a,
                 model_b=model_b,
@@ -492,8 +495,8 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
     @on(Button.Pressed, f"#{UI_IDS.pause_btn}")
     def on_pause_pressed(self) -> None:
         """Пауза/продолжение диалога."""
-        # Проверяем инициализацию через assert для type safety
-        assert self._controller is not None, "Controller not initialized"
+        if self._controller is None:
+            return
         self._controller.handle_pause()
 
     @on(Button.Pressed, f"#{UI_IDS.clear_btn}")
@@ -524,9 +527,9 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
 
     async def _run_dialogue(self) -> None:
         """Основной цикл диалога."""
-        # Проверяем инициализацию через assert для type safety
-        assert self._controller is not None, "Controller not initialized"
-        assert self._client is not None, "Client not initialized"
+        if self._controller is None or self._client is None:
+            log.error("Controller or client not initialized")
+            return
 
         service = self._controller.service
         # Используем кэшированный style_mapper из __init__
