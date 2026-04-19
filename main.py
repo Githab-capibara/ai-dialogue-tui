@@ -26,7 +26,7 @@ logging.basicConfig(
 )
 
 
-def main() -> int:  # pylint: disable=too-many-return-statements
+def main() -> int:
     """Запустить TUI приложение с обработкой исключений.
 
     Returns:
@@ -53,24 +53,19 @@ def main() -> int:  # pylint: disable=too-many-return-statements
         # Нормальное завершение по Ctrl+C
         return 0
     except ProviderConfigurationError as e:
-        # Ошибка конфигурации
-        logging.exception("Ошибка конфигурации: %s", e)
+        logging.error("Configuration error: %s", e)
         return 1
     except ProviderConnectionError as e:
-        # Ошибка подключения
-        logging.exception("Ошибка подключения: %s", e)
+        logging.error("Connection error: %s", e)
         return 1
     except ProviderGenerationError as e:
-        # Ошибка генерации
-        logging.exception("Ошибка генерации: %s", e)
+        logging.error("Generation error: %s", e)
         return 1
     except ProviderError as e:
-        # Общая ошибка провайдера
-        logging.exception("Ошибка провайдера: %s", e)
+        logging.error("Provider error: %s", e)
         return 1
     except (RuntimeError, SystemError) as e:
-        # Выводим понятное сообщение об ошибке
-        logging.exception("Критическая ошибка приложения: %s", e)
+        logging.error("Critical application error: %s", e)
         return 1
 
 
