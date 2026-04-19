@@ -131,7 +131,6 @@ class DialogueController:
             return False
 
         self._service.start()
-        # Прямая модификация атрибута вместо replace()
         self._state.is_dialogue_active = True
         self._update_status("Диалог идёт...", "green")
         return True
@@ -162,7 +161,6 @@ class DialogueController:
         Очищает контексты диалога и сбрасывает счетчик ходов.
         """
         self._service.clear_history()
-        # Прямая модификация атрибута вместо replace()
         self._state.turn_count = 0
         self._update_status("История очищена", "dim")
 
@@ -172,7 +170,6 @@ class DialogueController:
         Устанавливает флаги is_running и is_paused в False.
         """
         self._service.stop()
-        # Прямая модификация атрибута вместо replace()
         self._state.is_dialogue_active = False
         self._update_status("Остановлен", "dim")
 
@@ -188,7 +185,6 @@ class DialogueController:
             style: Стиль для отображения (STYLE_MODEL_A или STYLE_MODEL_B).
 
         """
-        # Прямая модификация атрибутов вместо replace()
         self._state.current_model = model_name
         self._state.turn_count = self._service.turn_count
         self._update_status(f"Ход: {model_name}", style)

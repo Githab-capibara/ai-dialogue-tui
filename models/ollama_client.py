@@ -222,6 +222,8 @@ class _HTTPSessionManager:
             HTTP сессия для запросов.
 
         """
+        if self._session is not None and not self._session.closed:
+            return self._session
         async with self._lock:
             if self._session is None or self._session.closed:
                 self._session = aiohttp.ClientSession(
