@@ -579,6 +579,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         Важно: Этот метод работает в асинхронном контексте (asyncio.create_task),
         поэтому для записи в UI используем call_after_refresh вместо call_from_thread.
         """
+        _ = model_name, style  # Note: reserved for future use
         result = await service.run_dialogue_cycle()
 
         if result:
@@ -627,9 +628,10 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
     def _handle_critical_error(self, e: Exception) -> None:
         """Обработать критическую ошибку в цикле диалога.
 
-        Важно: Этот метод вызывается из асинхронного контекста (_run_dialogue),
-        поэтому используем call_after_refresh вместо call_from_thread.
+        Args:
+            e: Exception (reserved for future logging).
         """
+        _ = e  # Suppress unused warning
         log.exception("Critical error in dialogue loop")
         self.call_after_refresh(
             self._write_to_log,
