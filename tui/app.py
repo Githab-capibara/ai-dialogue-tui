@@ -1,7 +1,7 @@
-"""TUI приложение для диалога двух ИИ-моделей.
+"""TUI application for dialogue between two AI models.
 
-Этот модуль содержит только UI-компоненты и обработчики событий.
-Бизнес-логика вынесена в сервисный слой (services/dialogue_service.py).
+This module contains only UI components and event handlers.
+Business logic is moved to the service layer (services/dialogue_service.py).
 """
 
 from __future__ import annotations
@@ -48,30 +48,30 @@ from tui.styles import generate_main_css
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-# Константа таймаута для уведомлений
+# Timeout constant for notifications
 DEFAULT_NOTIFY_TIMEOUT: int = 10
 
 # =============================================================================
-# call_from_thread vs call_after_refresh в Textual
+# call_from_thread vs call_after_refresh in Textual
 # =============================================================================
-# call_from_thread: используется для threading.Thread
-# call_after_refresh: используется в asyncio.create_task, async def
+# call_from_thread: used for threading.Thread
+# call_after_refresh: used in asyncio.create_task, async def
 #
-# В этом модуле все методы работают в асинхронном контексте,
-# поэтому используется call_after_refresh, а НЕ call_from_thread!
+# In this module all methods work in async context,
+# so call_after_refresh is used, NOT call_from_thread!
 # =============================================================================
 
-# CSS генерируется из централизованных констант
+# CSS is generated from centralized constants
 CSS = generate_main_css()
 
 log = logging.getLogger(__name__)
 
 
 class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
-    """Модальное окно для выбора двух моделей."""
+    """Modal window for selecting two models."""
 
     BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
-        Binding("escape", "cancel", "Отмена"),
+        Binding("escape", "cancel", "Cancel"),
     ]
 
     def __init__(self, models: list[str], *args: Any, **kwargs: Any) -> None:
@@ -89,11 +89,11 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
     def compose(self) -> ComposeResult:
         """Compose the model selection UI."""
         with Container(id=UI_IDS.model_selection_container):
-            yield Static("Выберите две модели для диалога", id=UI_IDS.selection_title)
+            yield Static("Select two models for dialogue", id=UI_IDS.selection_title)
 
             with Vertical(id=UI_IDS.models_row):
                 with Horizontal(id=UI_IDS.model_a_container):
-                    yield Label("Модель A:", id=UI_IDS.model_a_label)
+                    yield Label("Model A:", id=UI_IDS.model_a_label)
                     yield Select(
                         [(m, m) for m in self._available_models],
                         id=UI_IDS.model_a_select,
@@ -101,7 +101,7 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
                     )
 
                 with Horizontal(id=UI_IDS.model_b_container):
-                    yield Label("Модель B:", id=UI_IDS.model_b_label)
+                    yield Label("Model B:", id=UI_IDS.model_b_label)
                     yield Select(
                         [(m, m) for m in self._available_models],
                         id=UI_IDS.model_b_select,
@@ -109,17 +109,17 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
                     )
 
             with Horizontal(id=UI_IDS.selection_buttons):
-                yield Button("Начать диалог", id=UI_IDS.start_btn, variant="primary")
-                yield Button("Отмена", id=UI_IDS.cancel_btn, variant="error")
+                yield Button("Start Dialogue", id=UI_IDS.start_btn, variant="primary")
+                yield Button("Cancel", id=UI_IDS.cancel_btn, variant="error")
 
     def _get_model_value(self, index: int) -> str | None:
-        """Получить значение модели для селектора по индексу.
+        """Get model value for selector by index.
 
         Args:
-            index: Индекс модели в списке.
+            index: Model index in list.
 
         Returns:
-            Название модели или None если список пуст.
+            Model name or None if list is empty.
 
         """
         if not self._available_models:
@@ -129,14 +129,14 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
         return self._available_models[-1]
 
     def action_cancel(self) -> None:
-        """Обработать нажатие Escape для отмены выбора модели."""
+        """Handle Escape key press to cancel selection."""
         self.dismiss(None)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Обработать нажатие кнопки.
+        """Handle button press.
 
         Args:
-            event: Событие нажатия кнопки.
+            event: Button press event.
 
         """
         button_id = event.button.id
@@ -146,7 +146,7 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
             self.dismiss(None)
 
     def _on_start_pressed(self) -> None:
-        """Обработать нажатие кнопки начала диалога."""
+        """Handle dialogue start button press."""
         model_a_select = self.query_one(f"#{UI_IDS.model_a_select}", Select)
         model_b_select = self.query_one(f"#{UI_IDS.model_b_select}", Select)
         model_a_value = model_a_select.value
@@ -154,8 +154,8 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
 
         if model_a_value is Select.BLANK or model_b_value is Select.BLANK:
             self.notify(
-                "Выберите обе модели!",
-                title="Ошибка",
+                "Please select both models!",
+                title="Error",
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
@@ -166,8 +166,8 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
 
         if model_a == model_b:
             self.notify(
-                "Выберите две разные модели!",
-                title="Ошибка",
+                "Please select two different models!",
+                title="Error",
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
@@ -177,37 +177,37 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
 
 
 class TopicInputScreen(ModalScreen[str | None]):
-    """Модальное окно для ввода темы диалога."""
+    """Modal window for entering dialogue topic."""
 
     BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
-        Binding("escape", "cancel", "Отмена"),
+        Binding("escape", "cancel", "Cancel"),
         Binding("enter", "submit", "OK"),
     ]
 
     def compose(self) -> ComposeResult:
         with Container(id=UI_IDS.topic_input_container), Vertical(id=UI_IDS.topic_input_content):
-            yield Static("Введите тему диалога:", id=UI_IDS.topic_label)
+            yield Static("Enter dialogue topic:", id=UI_IDS.topic_label)
             yield Input(
-                placeholder="Например: Спор о преимуществах Python перед Go",
+                placeholder="For example: Debate on Python advantages over Go",
                 id=UI_IDS.topic_input,
             )
             with Horizontal(id=UI_IDS.topic_buttons):
-                yield Button("Начать", id=UI_IDS.topic_start_btn, variant="primary")
-                yield Button("Отмена", id=UI_IDS.topic_cancel_btn, variant="error")
+                yield Button("Start", id=UI_IDS.topic_start_btn, variant="primary")
+                yield Button("Cancel", id=UI_IDS.topic_cancel_btn, variant="error")
 
     def action_submit(self) -> None:
-        """Обработать нажатие Enter для подтверждения темы."""
+        """Handle Enter key press to confirm topic."""
         self._submit_topic()
 
     def action_cancel(self) -> None:
-        """Обработать нажатие Escape для отмены ввода темы."""
+        """Handle Escape key press to cancel topic input."""
         self.dismiss(None)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Обработать нажатие кнопки.
+        """Handle button press.
 
         Args:
-            event: Событие нажатия кнопки.
+            event: Button press event.
 
         """
         button_id = event.button.id
@@ -222,8 +222,8 @@ class TopicInputScreen(ModalScreen[str | None]):
 
         if not topic:
             self.notify(
-                "Введите тему диалога!",
-                title="Ошибка",
+                "Please enter a topic!",
+                title="Error",
                 severity="error",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
@@ -233,33 +233,33 @@ class TopicInputScreen(ModalScreen[str | None]):
 
 
 class DialogueApp(App[None]):
-    """Основное TUI приложение для диалога ИИ-моделей.
+    """Main TUI application for AI model dialogue.
 
-    Содержит только UI-логику. Бизнес-логика вынесена в DialogueService.
+    Contains only UI logic. Business logic is moved to DialogueService.
     """
 
     CSS = CSS
 
     BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
-        Binding("ctrl+q", "quit", "Выход", priority=True),
-        Binding("ctrl+p", "toggle_pause", "Пауза/Старт"),
-        Binding("ctrl+r", "clear_log", "Очистить"),
+        Binding("ctrl+q", "quit", "Exit", priority=True),
+        Binding("ctrl+p", "toggle_pause", "Pause/Start"),
+        Binding("ctrl+r", "clear_log", "Clear"),
     ]
 
     TITLE = "AI Dialogue TUI"
-    sub_title = reactive("Диалог двух ИИ-моделей через Ollama")
+    sub_title = reactive("Dialogue between two AI models via Ollama")
 
     def __init__(
         self,
         config: Config | None = None,
         provider_factory: Callable[[], ModelProvider] | None = None,
     ) -> None:
-        """Инициализация приложения.
+        """Initialize application.
 
         Args:
-            config: Опциональная конфигурация для dependency injection.
-            provider_factory: Фабрика для создания ModelProvider.
-                              Если не указана, используется OllamaClient по умолчанию.
+            config: Optional configuration for dependency injection.
+            provider_factory: Factory for creating ModelProvider.
+                              If not specified, default OllamaClient is used.
 
         """
         super().__init__()
@@ -269,9 +269,9 @@ class DialogueApp(App[None]):
         self._controller: DialogueController | None = None
         self._dialogue_task: asyncio.Task[None] | None = None
         self._models: list[str] = []
-        # Кэшируем style_mapper для производительности
+        # Cache style_mapper for performance
         self._style_mapper = ModelStyleMapper()
-        # Флаг для идемпотентности on_unmount
+        # Flag for on_unmount idempotency
         self._cleanup_done = False
 
     def compose(self) -> ComposeResult:
@@ -279,28 +279,28 @@ class DialogueApp(App[None]):
         yield Header()
 
         with Container(id=UI_IDS.main_container):
-            # Статус бар
+            # Status bar
             with Container(id=UI_IDS.status_bar), Horizontal(id=UI_IDS.status_row):
-                yield Label("Статус: ", id=UI_IDS.status_label)
-                yield Label("Ожидание...", id=UI_IDS.status_value)
+                yield Label("Status: ", id=UI_IDS.status_label)
+                yield Label("Waiting...", id=UI_IDS.status_value)
 
-            # Лог диалога
+            # Dialogue log
             yield RichLog(id=UI_IDS.dialogue_log, highlight=True, markup=True)
 
-            # Панель управления
+            # Control panel
             with Container(id=UI_IDS.controls_bar), Horizontal(id=UI_IDS.controls_row):
-                yield Button("▶ Старт", id=UI_IDS.start_btn, variant="success")
-                yield Button("⏸ Пауза", id=UI_IDS.pause_btn, variant="warning")
-                yield Button("🗑 Очистить", id=UI_IDS.clear_btn, variant="default")
-                yield Button("✕ Выход", id=UI_IDS.exit_btn, variant="error")
+                yield Button("Start", id=UI_IDS.start_btn, variant="success")
+                yield Button("Pause", id=UI_IDS.pause_btn, variant="warning")
+                yield Button("Clear", id=UI_IDS.clear_btn, variant="default")
+                yield Button("Exit", id=UI_IDS.exit_btn, variant="error")
 
         yield Footer()
 
     def _on_ui_state_changed(self, state: UIState) -> None:
-        """Обработчик изменения состояния UI.
+        """Handle UI state change.
 
         Args:
-            state: Новое состояние UI от контроллера.
+            state: New UI state from controller.
 
         """
         try:
@@ -308,23 +308,23 @@ class DialogueApp(App[None]):
             style_tag = f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
             status_label.update(style_tag)
         except (NoMatches, ScreenStackError):
-            log.debug("Элемент #status-value недоступен для обновления")
+            log.debug("Element #status-value not available for update")
         except LookupError:
-            log.exception("LookupError при обновлении UI состояния")
+            log.exception("LookupError when updating UI state")
         except RuntimeError:
-            log.exception("RuntimeError при обновлении UI состояния")
+            log.exception("RuntimeError when updating UI state")
         except Exception as e:
-            log.exception("Ошибка при обновлении UI состояния: %s", e)
+            log.exception("Error updating UI state: %s", e)
 
     async def on_mount(self) -> None:
-        """Инициализация при запуске приложения."""
+        """Initialize on application start."""
         try:
             self._client = self._provider_factory()
             self._models = await self._client.list_models()
 
             if not self._models:
-                self._notify_error("Не найдено установленных моделей Ollama!")
-                self._safe_update_status("[red]Нет моделей[/red]")
+                self._notify_error("No Ollama models found!")
+                self._safe_update_status("[red]No models[/red]")
                 return
 
             self.push_screen(
@@ -346,7 +346,7 @@ class DialogueApp(App[None]):
             self._handle_internal_error()
 
     def _on_models_selected(self, result: tuple[str, str] | None) -> None:
-        """Обработать выбор моделей."""
+        """Handle model selection."""
         if result is None:
             self.exit()
             return
@@ -354,64 +354,64 @@ class DialogueApp(App[None]):
         self._setup_conversation(model_a, model_b)
 
     def _notify_error(self, message: str) -> None:
-        """Уведомить об ошибке."""
+        """Notify about error."""
         self.notify(
             message,
-            title="Ошибка",
+            title="Error",
             severity="error",
             timeout=DEFAULT_NOTIFY_TIMEOUT,
         )
 
     def _handle_connection_error(self) -> None:
-        """Обработать ошибку подключения."""
+        """Handle connection error."""
         log.exception("Connection error to Ollama")
-        self._notify_error("Не удалось подключиться к Ollama. Проверьте что сервис запущен.")
-        self._safe_update_status("[red]Ошибка подключения[/red]")
+        self._notify_error("Failed to connect to Ollama. Check that the service is running.")
+        self._safe_update_status("[red]Connection error[/red]")
 
     def _handle_generation_error(self) -> None:
-        """Обработать ошибку генерации."""
+        """Handle generation error."""
         log.exception("Generation error while getting models")
-        self._notify_error("Ошибка генерации ответа. Проверьте модель...")
-        self._safe_update_status("[red]Ошибка подключения[/red]")
+        self._notify_error("Generation response error. Check the model...")
+        self._safe_update_status("[red]Connection error[/red]")
 
     def _handle_config_error(self, exc: ValueError) -> None:
-        """Обработать ошибку конфигурации."""
+        """Handle configuration error."""
         log.exception("Configuration validation error")
         self._notify_error(f"Configuration error: {exc}")
         self._safe_update_status("[red]Config error[/red]")
 
     def _handle_network_error(self) -> None:
-        """Обработать сетевую ошибку."""
+        """Handle network error."""
         log.exception("HTTP client error at startup")
-        self._notify_error("Ошибка сетевого подключения")
-        self._safe_update_status("[red]Ошибка подключения[/red]")
+        self._notify_error("Network connection error")
+        self._safe_update_status("[red]Connection error[/red]")
 
     def _handle_timeout_error(self) -> None:
-        """Обработать таймаут."""
-        log.exception("Таймаут при запуске")
-        self._notify_error("Превышено время ожидания подключения")
-        self._safe_update_status("[red]Таймаут[/red]")
+        """Handle timeout."""
+        log.exception("Timeout at startup")
+        self._notify_error("Connection timeout exceeded")
+        self._safe_update_status("[red]Timeout[/red]")
 
     def _handle_internal_error(self) -> None:
-        """Обработать внутреннюю ошибку."""
+        """Handle internal error."""
         log.exception("Internal error at startup")
-        self._notify_error("Произошла непредвиденная ошибка при запуске")
-        self._safe_update_status("[red]Неизвестная ошибка[/red]")
+        self._notify_error("An unexpected error occurred at startup")
+        self._safe_update_status("[red]Unknown error[/red]")
 
     def _safe_update_status(self, status: str) -> None:
-        """Безопасно обновить статус с обработкой ошибок."""
+        """Safely update status with error handling."""
         try:
             status_label = self.query_one("#status-value", Label)
             status_label.update(status)
         except (NoMatches, LookupError, RuntimeError):
-            log.warning("Не удалось обновить статус")
+            log.warning("Failed to update status")
 
     def _setup_conversation(self, model_a: str, model_b: str) -> None:
-        """Настроить диалог после выбора моделей.
+        """Set up dialogue after model selection.
 
         Args:
-            model_a: Название первой модели.
-            model_b: Название второй модели.
+            model_a: First model name.
+            model_b: Second model name.
 
         """
 
@@ -420,10 +420,10 @@ class DialogueApp(App[None]):
                 self.exit()
                 return
 
-            # Санитизация темы перед использованием
+            # Sanitize topic before use
             sanitized_topic = sanitize_topic(topic)
 
-            # Форматируем системный промпт
+            # Format system prompt
             system_prompt = self._config.default_system_prompt.format(topic=sanitized_topic)
 
             if self._client is None:
@@ -445,27 +445,27 @@ class DialogueApp(App[None]):
                 on_state_changed=self._on_ui_state_changed,
             )
 
-            # Обновляем заголовок и статус через call_after_refresh
-            # чтобы UI успел обновиться после закрытия модального окна
+            # Update title and status via call_after_refresh
+            # so UI has time to update after modal closes
             def _finalize_setup() -> None:
-                self.sub_title = f"{model_a} ↔ {model_b} | Тема: {sanitized_topic}"
-                ready_state = UIState(status_text="Готов к запуску", status_style="green")
+                self.sub_title = f"{model_a} <-> {model_b} | Topic: {sanitized_topic}"
+                ready_state = UIState(status_text="Ready to start", status_style="green")
                 self._on_ui_state_changed(ready_state)
 
-                # Логируем начало с обработкой ошибок
+                # Log initialization with error handling
                 try:
                     dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
                     dialog_log.write(
-                        f"[bold]=== Диалог начат ===[/bold]\n"
-                        f"[bold]Модель A:[/bold] [{MESSAGE_STYLES.model_a}]"
+                        f"[bold]=== Dialogue started ===[/bold]\n"
+                        f"[bold]Model A:[/bold] [{MESSAGE_STYLES.model_a}]"
                         f"{model_a}[/{MESSAGE_STYLES.model_a}]\n"
-                        f"[bold]Модель B:[/bold] [{MESSAGE_STYLES.model_b}]"
+                        f"[bold]Model B:[/bold] [{MESSAGE_STYLES.model_b}]"
                         f"{model_b}[/{MESSAGE_STYLES.model_b}]\n"
-                        f"[bold]Тема:[/bold] {sanitized_topic}\n"
-                        "[dim]Нажмите 'Старт' для начала диалога[/dim]",
+                        f"[bold]Topic:[/bold] {sanitized_topic}\n"
+                        "[dim]Press 'Start' to begin dialogue[/dim]",
                     )
                 except (NoMatches, LookupError, RuntimeError):
-                    log.warning("Не удалось записать в лог при инициализации")
+                    log.warning("Failed to write to log during initialization")
 
             self.call_after_refresh(_finalize_setup)
 
@@ -473,60 +473,60 @@ class DialogueApp(App[None]):
 
     @on(Button.Pressed, f"#{UI_IDS.start_btn}")
     def on_start_pressed(self) -> None:
-        """Запуск диалога."""
+        """Start dialogue."""
         if self._controller is None:
             log.error("Controller not initialized")
             return
 
         if not self._controller.handle_start():
-            # Ошибка уже обработана в контроллере
+            # Error already handled in controller
             return
 
-        # Запускаем основной цикл диалога
+        # Start main dialogue loop
         self._dialogue_task = asyncio.create_task(self._run_dialogue())
-        self.notify("Диалог запущен!", title="Старт", severity="information")
+        self.notify("Dialogue started!", title="Start", severity="information")
 
     @on(Button.Pressed, f"#{UI_IDS.pause_btn}")
     def on_pause_pressed(self) -> None:
-        """Пауза/продолжение диалога."""
+        """Pause/resume dialogue."""
         if self._controller is None:
             return
         self._controller.handle_pause()
 
     @on(Button.Pressed, f"#{UI_IDS.clear_btn}")
     def on_clear_pressed(self) -> None:
-        """Очистка лога и контекстов."""
+        """Clear log and contexts."""
         if self._controller:
             self._controller.handle_clear()
 
         dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
         dialog_log.clear()
-        dialog_log.write("[dim]История очищена[/dim]")
+        dialog_log.write("[dim]History cleared[/dim]")
 
-        self.notify("История очищена!", title="Очистка", severity="information")
+        self.notify("History cleared!", title="Clear", severity="information")
 
     @on(Button.Pressed, f"#{UI_IDS.exit_btn}")
     def on_exit_pressed(self) -> None:
-        """Выход из приложения."""
+        """Exit application."""
         self.exit()
 
     def action_toggle_pause(self) -> None:
-        """Переключить паузу."""
+        """Toggle pause."""
         if self._controller:
             self._controller.handle_pause()
 
     def action_clear_log(self) -> None:
-        """Очистить лог (горячая клавиша)."""
+        """Clear log (hotkey)."""
         self.on_clear_pressed()
 
     async def _run_dialogue(self) -> None:
-        """Основной цикл диалога."""
+        """Run main dialogue loop."""
         if self._controller is None or self._client is None:
             log.error("Controller or client not initialized")
             return
 
         service = self._controller.service
-        # Используем кэшированный style_mapper из __init__
+        # Use cached style_mapper from __init__
         style_mapper = self._style_mapper
 
         try:
@@ -542,17 +542,17 @@ class DialogueApp(App[None]):
                 try:
                     await self._process_dialogue_turn(service, style_info.model_name, style_info.style_id)
                 except ProviderError as e:
-                    # Унифицированная обработка всех ProviderError
-                    log.warning("Ошибка провайдера в цикле диалога: %s", e)
+                    # Unified handling of all ProviderError
+                    log.warning("Provider error in dialogue loop: %s", e)
                     self._handle_dialogue_error(style_info.model_name)
                     raise
 
                 await asyncio.sleep(self._config.pause_between_messages)
 
         except asyncio.CancelledError:
-            log.debug("Диалог отменён")
+            log.debug("Dialogue cancelled")
         except ProviderError:
-            log.debug("ProviderError обработан")
+            log.debug("ProviderError handled")
         except (RuntimeError, SystemError, OSError) as e:
             self._handle_critical_error(e)
         finally:
@@ -561,7 +561,7 @@ class DialogueApp(App[None]):
                 await self._controller.cleanup()
 
     def _is_task_cancelled(self) -> bool:
-        """Проверить отменена ли текущая задача."""
+        """Check if current task is cancelled."""
         current_task = asyncio.current_task()
         return current_task is not None and current_task.cancelled()
 
@@ -571,62 +571,62 @@ class DialogueApp(App[None]):
         _model_name: str,
         style: str,
     ) -> DialogueTurnResult | None:
-        """Обработать один ход диалога и вывести результат."""
+        """Process one dialogue turn and output result."""
         result = await service.run_dialogue_cycle()
 
         if result:
             formatted_response = sanitize_response_for_display(result.response)
-            turn_msg = f"\n[{style}]Ход {service.turn_count}: {result.model_name}[/]\n  {formatted_response}"
+            turn_msg = f"\n[{style}]Turn {service.turn_count}: {result.model_name}[/]\n  {formatted_response}"
             message = turn_msg
             self.call_after_refresh(self._write_to_log, message)
 
         return result
 
     def _write_to_log(self, message: str) -> None:
-        """Безопасно записать сообщение в лог UI."""
+        """Safely write message to UI log."""
         try:
             dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
             dialog_log.write(message)
         except (NoMatches, LookupError, RuntimeError):
-            log.warning("Не удалось записать в лог")
+            log.warning("Failed to write to log")
 
     def _handle_dialogue_error(self, model_name: str) -> None:
-        """Обработать ошибку генерации ответа.
+        """Handle response generation error.
 
-        Этот метод вызывается из асинхронного контекста (_process_dialogue_turn),
-        поэтому используем call_after_refresh вместо call_from_thread.
+        This method is called from async context (_process_dialogue_turn),
+        so we use call_after_refresh instead of call_from_thread.
         """
-        error_msg = f"\n[{MESSAGE_STYLES.error}]Ошибка ({model_name})[/]"
-        # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в
-        # потоке
+        error_msg = f"\n[{MESSAGE_STYLES.error}]Error ({model_name})[/]"
+        # Use call_after_refresh since we are in async context, not
+        # in a thread
         self.call_after_refresh(self._write_to_log, error_msg)
         if self._controller:
             self._controller.update_for_error(model_name)
         self.notify(
-            "Ошибка генерации ответа",
-            title="Ошибка",
+            "Response generation error",
+            title="Error",
             severity="error",
             timeout=DEFAULT_NOTIFY_TIMEOUT,
         )
 
     def _handle_critical_error(self, _e: BaseException) -> None:
-        """Обработать критическую ошибку в цикле диалога."""
+        """Handle critical error in dialogue loop."""
         log.exception("Critical error in dialogue loop")
         self.call_after_refresh(
             self._write_to_log,
-            f"\n[{MESSAGE_STYLES.error}]Критическая ошибка[/]",
+            f"\n[{MESSAGE_STYLES.error}]Critical error[/]",
         )
 
     async def on_unmount(self) -> None:
-        """Очистка при закрытии приложения."""
-        # Проверяем флаг для идемпотентности
+        """Clean up on application close."""
+        # Check flag for idempotency
         if self._cleanup_done:
             return
 
         try:
             self._cleanup_done = True
 
-            # Отменяем задачу диалога
+            # Cancel dialogue task
             if self._dialogue_task and not self._dialogue_task.done():
                 self._dialogue_task.cancel()
                 try:
@@ -636,7 +636,7 @@ class DialogueApp(App[None]):
                 finally:
                     self._dialogue_task = None
 
-            # Очищаем контроллер и клиент
+            # Clean up controller and client
             try:
                 if self._controller:
                     await self._controller.cleanup()
@@ -647,6 +647,6 @@ class DialogueApp(App[None]):
                 self._client = None
 
         except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as e:
-            log.warning("Ошибка при очистке ресурсов: %s", e)
+            log.warning("Error during resource cleanup: %s", e)
         except RuntimeError:
             log.exception("Unexpected error during cleanup")

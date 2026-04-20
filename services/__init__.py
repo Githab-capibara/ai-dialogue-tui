@@ -1,4 +1,4 @@
-"""Сервисный слой приложения AI Dialogue TUI."""
+"""Service layer for AI Dialogue TUI application."""
 
 from services.dialogue_runner import DialogueRunner
 from services.dialogue_service import DialogueService, DialogueTurnResult

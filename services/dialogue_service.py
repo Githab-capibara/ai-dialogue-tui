@@ -1,6 +1,6 @@
-"""Сервисный слой для управления бизнес-логикой диалога.
+"""Service layer for managing dialogue business logic.
 
-Этот модуль содержит сервис для управления диалогом между моделями.
+This module contains the service for managing dialogue between models.
 """
 
 from __future__ import annotations
@@ -20,13 +20,13 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class DialogueTurnResult:
-    """Результат одного хода диалога.
+    """Result of one dialogue turn.
 
     Attributes:
-        model_name: Название модели которая сделала ход.
-        model_id: Идентификатор модели (A или B).
-        role: Роль сообщения (всегда "assistant").
-        response: Сгенерированный текст ответа.
+        model_name: Name of the model that made the turn.
+        model_id: Model identifier (A or B).
+        role: Message role (always "assistant").
+        response: Generated response text.
 
     """
 
@@ -37,11 +37,11 @@ class DialogueTurnResult:
 
 
 class DialogueService:
-    """Сервис для управления бизнес-логикой диалога.
+    """Service for managing dialogue business logic.
 
-    Инкапсулирует логику запуска, паузы, остановки и выполнения
-    циклов диалога. Работает с абстракциями (ModelProvider, Conversation),
-    не с конкретными реализациями.
+    Encapsulates the logic of starting, pausing, stopping, and executing
+    dialogue cycles. Works with abstractions (ModelProvider, Conversation),
+    not with concrete implementations.
     """
 
     def __init__(
@@ -50,12 +50,12 @@ class DialogueService:
         provider: ModelProvider,
         config: Config | None = None,
     ) -> None:
-        """Инициализация сервиса диалога.
+        """Initialize dialogue service.
 
         Args:
-            conversation: Объект диалога для управления контекстами.
-            provider: Провайдер моделей для генерации ответов.
-            config: Конфигурация для параметров (паузы, таймауты).
+            conversation: Conversation object for managing contexts.
+            provider: Model provider for generating responses.
+            config: Configuration for parameters (pauses, timeouts).
 
         """
         self._conversation = conversation
@@ -67,76 +67,76 @@ class DialogueService:
 
     @property
     def conversation(self) -> Conversation:
-        """Получить объект диалога."""
+        """Get conversation object."""
         return self._conversation
 
     @property
     def provider(self) -> ModelProvider:
-        """Получить провайдер моделей."""
+        """Get model provider."""
         return self._provider
 
     @property
     def is_running(self) -> bool:
-        """Проверить запущен ли диалог."""
+        """Check if dialogue is running."""
         return self._is_running
 
     @property
     def is_paused(self) -> bool:
-        """Проверить находится ли диалог на паузе."""
+        """Check if dialogue is paused."""
         return self._is_paused
 
     @property
     def turn_count(self) -> int:
-        """Получить количество сделанных ходов."""
+        """Get number of turns made."""
         return self._turn_count
 
     def start(self) -> None:
-        """Запустить диалог.
+        """Start dialogue.
 
-        Устанавливает флаг _is_running в True и сбрасывает паузу.
+        Sets _is_running flag to True and resets pause.
         """
         self._is_running = True
         self._is_paused = False
 
     def pause(self) -> None:
-        """Поставить диалог на паузу.
+        """Pause dialogue.
 
-        Устанавливает флаг _is_paused в True.
-        Диалог остается запущенным (is_running=True).
+        Sets _is_paused flag to True.
+        Dialogue remains running (is_running=True).
         """
         self._is_paused = True
 
     def resume(self) -> None:
-        """Возобновить диалог после паузы.
+        """Resume dialogue after pause.
 
-        Сбрасывает флаг _is_paused в False.
+        Resets _is_paused flag to False.
         """
         self._is_paused = False
 
     def stop(self) -> None:
-        """Остановить диалог.
+        """Stop dialogue.
 
-        Сбрасывает флаги _is_running и _is_paused.
+        Resets _is_running and _is_paused flags.
         """
         self._is_running = False
         self._is_paused = False
 
     def clear_history(self) -> None:
-        """Очистить историю диалога.
+        """Clear dialogue history.
 
-        Очищает контексты обеих моделей и сбрасывает счетчик ходов.
+        Clears contexts of both models and resets turn counter.
         """
         self._conversation.clear_contexts()
         self._turn_count = 0
 
     async def run_dialogue_cycle(self) -> DialogueTurnResult | None:
-        """Выполнить один цикл диалога.
+        """Execute one dialogue cycle.
 
-        Генерирует ответ текущей модели, обновляет контексты,
-        переключает ход и increment счетчик.
+        Generates response for current model, updates contexts,
+        switches turn, and increments counter.
 
         Returns:
-            DialogueTurnResult или None если диалог не запущен.
+            DialogueTurnResult or None if dialogue is not running.
 
         """
         if not self._is_running or self._is_paused:
@@ -157,12 +157,12 @@ class DialogueService:
             )
 
         except ProviderError:
-            log.exception("Ошибка провайдера при выполнении цикла диалога")
+            log.exception("Provider error during dialogue cycle execution")
             raise
 
     async def cleanup(self) -> None:
-        """Очистить ресурсы сервиса.
+        """Clean up service resources.
 
-        Закрывает соединение с провайдером моделей.
+        Closes connection to model provider.
         """
         await self._provider.close()

@@ -1,21 +1,21 @@
-"""Тесты для проверки всех исправлений из аудита кода.
+"""Tests for verifying all fixes from code audit.
 
-Этот файл содержит тесты для проверки следующих исправлений:
-1. Broad Exception Handler - конкретные исключения перехватываются
-2. DIP violation - provider_factory внедряется
-3. Sanitizer type validation - TypeError на None
-4. Assert checks - assert работает
-5. ProviderError unified handling - все ошибки обрабатываются одинаково
-6. Exception chaining - __cause__ сохраняется
-7. XSS protection - markup символы экранируются
-8. Context dictionary - словарь контекстов работает
-9. Tuple return - возвращается tuple
-10. Cache size limit - кэш ограничивается
-11. MessageDict total=True - валидация словаря
+This file contains tests for verifying the following fixes:
+1. Broad Exception Handler - specific exceptions are caught
+2. DIP violation - provider_factory is injected
+3. Sanitizer type validation - TypeError on None
+4. Assert checks - assert works
+5. ProviderError unified handling - all errors handled uniformly
+6. Exception chaining - __cause__ is preserved
+7. XSS protection - markup symbols are escaped
+8. Context dictionary - context dictionary works
+9. Tuple return - returns tuple
+10. Cache size limit - cache is limited
+11. MessageDict total=True - dictionary validation
 
 Note:
-    Тесты используют доступ к внутренним атрибутам и импорты внутри функций,
-    что оправдано для тестирования.
+    Tests use access to internal attributes and imports inside functions,
+    which is justified for testing purposes.
 
 """
 
@@ -40,30 +40,30 @@ from models.provider import (
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 
 # =============================================================================
-# 1. Broad Exception Handler - тест что конкретные исключения перехватываются
+# 1. Broad Exception Handler - test that specific exceptions are caught
 # =============================================================================
 
 
 class TestBroadExceptionHandler:
-    """Тесты для проверки обработки конкретных исключений."""
+    """Tests for verifying specific exception handling."""
 
     @pytest.mark.asyncio
     async def test_json_decode_error_handling(self):
         """
-        Тест: JSONDecodeError перехватывается и преобразуется в ProviderGenerationError.
+        Test: JSONDecodeError is caught and converted to ProviderGenerationError.
 
-        Проверяет, что при некорректном JSON от API возникает ProviderGenerationError
-        с сохранённой цепочкой исключений (__cause__).
+        Verifies that invalid JSON from API raises ProviderGenerationError
+        with preserved exception chain (__cause__).
         """
         # Arrange
         config = Config(ollama_host="http://localhost:11434")
         client = OllamaClient(config=config)
 
-        # Создаем mock сессии которая возвращает некорректный JSON
+        # Create mock session that returns invalid JSON
         mock_response = AsyncMock()
         mock_response.status = 200
 
-        # Используем json.JSONDecodeError вместо ContentTypeError
+        # Use json.JSONDecodeError instead of ContentTypeError
         mock_response.json = AsyncMock(
             side_effect=aiohttp.ClientResponseError(
                 request_info=MagicMock(),
@@ -82,21 +82,21 @@ class TestBroadExceptionHandler:
             with pytest.raises(ProviderError) as exc_info:
                 await client.list_models()
 
-            # Проверяем что исключение имеет цепочку
+            # Verify exception has chain
             assert exc_info.value.__cause__ is not None
 
     @pytest.mark.asyncio
     async def test_connection_error_handling(self):
         """
-        Тест: ClientError перехватывается как ProviderConnectionError.
+        Test: ClientError is caught as ProviderConnectionError.
 
-        Проверяет, что ошибки подключения к API преобразуются в ProviderConnectionError.
+        Verifies that API connection errors are converted to ProviderConnectionError.
         """
         # Arrange
         config = Config(ollama_host="http://localhost:11434")
         client = OllamaClient(config=config)
 
-        # Создаем mock сессии которая выбрасывает ClientError
+        # Create mock session that throws ClientError
         mock_session = AsyncMock()
         mock_session.get = MagicMock(side_effect=aiohttp.ClientError("Connection refused"))
 
@@ -105,22 +105,22 @@ class TestBroadExceptionHandler:
             with pytest.raises(ProviderConnectionError) as exc_info:
                 await client.list_models()
 
-            # Проверяем что исключение имеет цепочку
+            # Verify exception has chain
             assert exc_info.value.__cause__ is not None
-            assert "не удалось подключиться" in str(exc_info.value).lower()
+            assert "could not connect" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
     async def test_timeout_error_handling(self):
         """
-        Тест: asyncio.TimeoutError перехватывается как ProviderConnectionError.
+        Test: asyncio.TimeoutError is caught as ProviderConnectionError.
 
-        Проверяет, что таймауты преобразуются в ProviderConnectionError.
+        Verifies that timeouts are converted to ProviderConnectionError.
         """
         # Arrange
         config = Config(ollama_host="http://localhost:11434")
         client = OllamaClient(config=config)
 
-        # Создаем mock сессии которая выбрасывает TimeoutError
+        # Create mock session that throws TimeoutError
         mock_session = AsyncMock()
         mock_session.get = MagicMock(side_effect=asyncio.TimeoutError())
 
@@ -133,18 +133,18 @@ class TestBroadExceptionHandler:
 
 
 # =============================================================================
-# 2. DIP violation - тест что provider_factory внедряется
+# 2. DIP violation - test that provider_factory is injected
 # =============================================================================
 
 
 class TestDependencyInjection:
-    """Тесты для проверки внедрения зависимостей через provider_factory."""
+    """Tests for verifying dependency injection via provider_factory."""
 
     def test_provider_factory_can_be_injected(self):
         """
-        Тест: provider_factory может быть внедрён вместо конкретной реализации.
+        Test: provider_factory can be injected instead of concrete implementation.
 
-        Проверяет, что можно передать кастомную фабрику провайдера.
+        Verifies that custom provider factory can be passed.
         """
         # Arrange
         custom_provider = MagicMock()
@@ -155,7 +155,7 @@ class TestDependencyInjection:
         def provider_factory():
             return custom_provider
 
-        # Act - проверяем что фабрика возвращает наш моковый провайдер
+        # Act - verify factory returns our mock provider
         result = provider_factory()
 
         # Assert
@@ -164,9 +164,9 @@ class TestDependencyInjection:
 
     def test_ollama_client_uses_injected_config(self):
         """
-        Тест: OllamaClient использует внедрённую конфигурацию.
+        Test: OllamaClient uses injected configuration.
 
-        Проверяет, что можно внедрить кастомную конфигурацию.
+        Verifies that custom configuration can be injected.
         """
         # Arrange
         custom_config = Config(
@@ -183,30 +183,30 @@ class TestDependencyInjection:
 
 
 # =============================================================================
-# 3. Sanitizer type validation - тест что TypeError на None
+# 3. Sanitizer type validation - test that TypeError on None
 # =============================================================================
 
 
 class TestSanitizerTypeValidation:
-    """Тесты для проверки валидации типов в sanitizer."""
+    """Tests for verifying type validation in sanitizer."""
 
     def test_sanitize_topic_rejects_none(self):
         """
-        Тест: sanitize_topic выбрасывает TypeError при None.
+        Test: sanitize_topic raises TypeError on None.
 
-        Проверяет, что функция не принимает None как входное значение.
+        Verifies that function does not accept None as input.
         """
         # Act & Assert
         with pytest.raises(TypeError) as exc_info:
             sanitize_topic(None)  # type: ignore
 
-        assert "строкой" in str(exc_info.value)
+        assert "string" in str(exc_info.value)
 
     def test_sanitize_topic_rejects_non_string(self):
         """
-        Тест: sanitize_topic выбрасывает TypeError для не-строки.
+        Test: sanitize_topic raises TypeError for non-string.
 
-        Проверяет, что функция отвергает другие типы данных.
+        Verifies that function rejects other data types.
         """
         # Act & Assert
         with pytest.raises(TypeError):
@@ -217,19 +217,19 @@ class TestSanitizerTypeValidation:
 
     def test_sanitize_response_rejects_none(self):
         """
-        Тест: sanitize_response_for_display выбрасывает TypeError при None.
+        Test: sanitize_response_for_display raises TypeError on None.
 
-        Проверяет, что функция не принимает None.
+        Verifies that function does not accept None.
         """
         # Act & Assert
         with pytest.raises(TypeError) as exc_info:
             sanitize_response_for_display(None)  # type: ignore
 
-        assert "строкой" in str(exc_info.value)
+        assert "string" in str(exc_info.value)
 
     def test_sanitize_response_rejects_non_string(self):
         """
-        Тест: sanitize_response_for_display выбрасывает TypeError для не-строки.
+        Test: sanitize_response_for_display raises TypeError for non-string.
         """
         # Act & Assert
         with pytest.raises(TypeError):
@@ -237,35 +237,35 @@ class TestSanitizerTypeValidation:
 
 
 # =============================================================================
-# 4. Assert checks - тест что assert работает
+# 4. Assert checks - test that assert works
 # =============================================================================
 
 
 class TestAssertChecks:
-    """Тесты для проверки assert проверок в коде."""
+    """Tests for verifying assert checks in code."""
 
     def test_assert_validates_client_not_none(self):
         """
-        Тест: assert проверяет что клиент не None.
+        Test: assert checks that client is not None.
 
-        Проверяет, что в коде есть assert проверки перед использованием.
+        Verifies that there are assert checks before usage.
         """
         # Arrange
         import inspect
 
         from tui.app import DialogueApp
 
-        # Act - получаем исходный код
+        # Act - get source code
         source = inspect.getsource(DialogueApp)
 
-        # Assert - проверяем что есть assert проверки
+        # Assert - verify assert checks exist
         assert "assert" in source or "is not None" in source
 
     def test_conversation_initialized_flag(self):
         """
-        Тест: Conversation имеет флаг _initialized.
+        Test: Conversation has _initialized flag.
 
-        Проверяет, что есть проверка инициализации.
+        Verifies that initialization check exists.
         """
         # Arrange
         conversation = Conversation("model_a", "model_b", "test")
@@ -276,18 +276,18 @@ class TestAssertChecks:
 
 
 # =============================================================================
-# 5. ProviderError unified handling - тест что все ошибки обрабатываются одинаково
+# 5. ProviderError unified handling - test that all errors handled uniformly
 # =============================================================================
 
 
 class TestProviderErrorUnifiedHandling:
-    """Тесты для проверки единой обработки ProviderError."""
+    """Tests for verifying unified ProviderError handling."""
 
     def test_all_provider_errors_inherit_from_base(self):
         """
-        Тест: все ProviderError исключения наследуются от базового.
+        Test: all ProviderError exceptions inherit from base.
 
-        Проверяет, что иерархия исключений правильная.
+        Verifies that exception hierarchy is correct.
         """
         # Arrange & Act
         connection_error = ProviderConnectionError("connection")
@@ -299,9 +299,9 @@ class TestProviderErrorUnifiedHandling:
 
     def test_provider_error_has_message(self):
         """
-        Тест: ProviderError сохраняет сообщение.
+        Test: ProviderError preserves message.
 
-        Проверяет, что сообщение доступно через str().
+        Verifies that message is accessible via str().
         """
         # Arrange
         error = ProviderError("test message")
@@ -311,9 +311,9 @@ class TestProviderErrorUnifiedHandling:
 
     def test_provider_error_preserves_original_exception(self):
         """
-        Тест: ProviderError сохраняет оригинальное исключение.
+        Test: ProviderError preserves original exception.
 
-        Проверяет, что original_exception доступно.
+        Verifies that original_exception is accessible.
         """
         # Arrange
         original = ValueError("original")
@@ -325,15 +325,15 @@ class TestProviderErrorUnifiedHandling:
     @pytest.mark.asyncio
     async def test_unified_error_handling_in_client(self):
         """
-        Тест: все ошибки в клиенте преобразуются в ProviderError.
+        Test: all errors in client are converted to ProviderError.
 
-        Проверяет, что разные типы ошибок统一 обрабатываются.
+        Verifies that different error types are handled uniformly.
         """
         # Arrange
         config = Config(ollama_host="http://localhost:11434")
         client = OllamaClient(config=config)
 
-        # Создаем mock который выбрасывает KeyError
+        # Create mock that throws KeyError
         mock_session = AsyncMock()
         mock_session.get = MagicMock(side_effect=KeyError("missing key"))
 
@@ -342,24 +342,24 @@ class TestProviderErrorUnifiedHandling:
             with pytest.raises(ProviderError) as exc_info:
                 await client.list_models()
 
-            # Все ошибки должны быть ProviderError или подклассом
+            # All errors should be ProviderError or subclass
             assert isinstance(exc_info.value, ProviderError)
 
 
 # =============================================================================
-# 6. Exception chaining - тест что __cause__ сохраняется
+# 6. Exception chaining - test that __cause__ is preserved
 # =============================================================================
 
 
 class TestExceptionChaining:
-    """Тесты для проверки сохранения цепочки исключений."""
+    """Tests for verifying exception chain preservation."""
 
     @pytest.mark.asyncio
     async def test_exception_chain_preserved(self):
         """
-        Тест: __cause__ сохраняется при преобразовании исключений.
+        Test: __cause__ is preserved when converting exceptions.
 
-        Проверяет, что оригинальное исключение доступно через __cause__.
+        Verifies that original exception is accessible via __cause__.
         """
         # Arrange
         config = Config(ollama_host="http://localhost:11434")
@@ -379,33 +379,33 @@ class TestExceptionChaining:
 
     def test_provider_error_cause_property(self):
         """
-        Тест: ProviderError.original_exception возвращает переданное исключение.
+        Test: ProviderError.original_exception returns passed exception.
 
-        Проверяет, что свойство original_exception работает.
+        Verifies that original_exception property works.
         """
         # Arrange
         original = RuntimeError("cause")
         error = ProviderError("wrapper", original_exception=original)
 
-        # Assert - original_exception доступно через свойство
-        # __cause__ может не устанавливаться автоматически в Python
+        # Assert - original_exception accessible via property
+        # __cause__ may not be set automatically in Python
         assert error.original_exception is original
 
 
 # =============================================================================
-# 7. XSS protection - тест что markup символы экранируются
+# 7. XSS protection - test that markup symbols are escaped
 # =============================================================================
 
 
 class TestXSSProtection:
-    """Тесты для проверки XSS защиты через экранирование markup."""
+    """Tests for verifying XSS protection via markup escaping."""
 
     @pytest.mark.security
     def test_square_brackets_escaped(self):
         """
-        Тест: квадратные скобки экранируются.
+        Test: square brackets are escaped.
 
-        Проверяет, что [ и ] преобразуются в [[ и ]].
+        Verifies that [ and ] are converted to [[ and ]].
         """
         # Arrange
         malicious_input = "test [bold]injected[/bold]"
@@ -413,18 +413,18 @@ class TestXSSProtection:
         # Act
         result = sanitize_response_for_display(malicious_input)
 
-        # Assert - проверяем что скобки экранированы (удвоены)
+        # Assert - verify brackets are escaped (doubled)
         assert "[[" in result
         assert "]]" in result
-        # Оригинальный паттерн теперь содержит экранированные скобки
+        # Original pattern now contains escaped brackets
         assert "[[bold]]" in result
 
     @pytest.mark.security
     def test_curly_braces_escaped(self):
         """
-        Тест: фигурные скобки экранируются.
+        Test: curly braces are escaped.
 
-        Проверяет, что { и } преобразуются в {{ и }}.
+        Verifies that { and } are converted to {{ and }}.
         """
         # Arrange
         malicious_input = "test {injected}"
@@ -439,9 +439,9 @@ class TestXSSProtection:
     @pytest.mark.security
     def test_html_entities_escaped(self):
         """
-        Тест: HTML сущности экранируются.
+        Test: HTML entities are escaped.
 
-        Проверяет, что < и > преобразуются в &lt; и &gt;.
+        Verifies that < and > are converted to &lt; and &gt;.
         """
         # Arrange
         malicious_input = "<script>alert('xss')</script>"
@@ -457,9 +457,9 @@ class TestXSSProtection:
     @pytest.mark.security
     def test_special_characters_escaped(self):
         """
-        Тест: специальные символы Textual экранируются.
+        Test: special Textual characters are escaped.
 
-        Проверяет, что *, _, `, @, # экранируются.
+        Verifies that *, _, `, @, # are escaped.
         """
         # Arrange
         malicious_input = "*bold* _italic_ `code` @class #id"
@@ -477,9 +477,9 @@ class TestXSSProtection:
     @pytest.mark.security
     def test_sanitize_topic_escapes_injection(self):
         """
-        Тест: sanitize_topic предотвращает инъекцию промпта.
+        Test: sanitize_topic prevents prompt injection.
 
-        Проверяет, что фигурные скобки в теме экранируются.
+        Verifies that curly braces in topic are escaped.
         """
         # Arrange
         malicious_topic = "test {injected prompt}"
@@ -487,26 +487,26 @@ class TestXSSProtection:
         # Act
         result = sanitize_topic(malicious_topic)
 
-        # Assert - проверяем что скобки экранированы (удвоены)
+        # Assert - verify braces are escaped (doubled)
         assert "{{" in result
         assert "}}" in result
-        # Экранированный паттерн содержит двойные скобки
+        # Escaped pattern contains double braces
         assert "{{injected" in result
 
 
 # =============================================================================
-# 8. Context dictionary - тест что словарь контекстов работает
+# 8. Context dictionary - test that context dictionary works
 # =============================================================================
 
 
 class TestContextDictionary:
-    """Тесты для проверки словаря контекстов в Conversation."""
+    """Tests for verifying context dictionary in Conversation."""
 
     def test_conversation_has_separate_contexts(self):
         """
-        Тест: Conversation имеет раздельные контексты для моделей A и B.
+        Test: Conversation has separate contexts for models A and B.
 
-        Проверяет, что _context_a и _context_b существуют.
+        Verifies that _context_a and _context_b exist.
         """
         # Arrange
         conversation = Conversation("model_a", "model_b", "test")
@@ -518,29 +518,29 @@ class TestContextDictionary:
 
     def test_contexts_are_independent_lists(self):
         """
-        Тест: контексты независимы.
+        Test: contexts are independent.
 
-        Проверяет, что добавление в один контекст не влияет на другой.
+        Verifies that adding to one context does not affect the other.
         """
         # Arrange
         conversation = Conversation("model_a", "model_b", "test")
 
-        # Сохраняем исходную длину (там может быть system сообщение)
+        # Save original length (there may be system message)
         initial_len_b = len(conversation._context_b)
 
-        # Act - добавляем сообщение только в контекст A (model_id первый
-        # параметр!)
+        # Act - add message only to context A (model_id is first
+        # parameter!)
         conversation.add_message("A", "user", "message for A")
 
-        # Assert - контекст A увеличился, B остался тем же
+        # Assert - context A increased, B stayed the same
         assert len(conversation._context_a) > 0
         assert len(conversation._context_b) == initial_len_b
 
     def test_get_context_returns_correct_model_context(self):
         """
-        Тест: get_context возвращает правильный контекст.
+        Test: get_context returns correct context.
 
-        Проверяет, что для модели A возвращается _context_a.
+        Verifies that for model A, _context_a is returned.
         """
         # Arrange
         conversation = Conversation("model_a", "model_b", "test")
@@ -551,28 +551,28 @@ class TestContextDictionary:
         context_a = conversation.get_context("A")
         context_b = conversation.get_context("B")
 
-        # Assert - проверяем что сообщения добавлены в правильные контексты
-        # (system сообщение + наше сообщение = 2)
+        # Assert - verify messages added to correct contexts
+        # (system message + our message = 2)
         assert len(context_a) >= 1
         assert len(context_b) >= 1
-        # Проверяем что последнее сообщение в каждом контексте правильное
+        # Verify last message in each context is correct
         assert context_a[-1]["content"] == "msg A"
         assert context_b[-1]["content"] == "msg B"
 
 
 # =============================================================================
-# 9. Tuple return - тест что возвращается tuple
+# 9. Tuple return - test that tuple is returned
 # =============================================================================
 
 
 class TestTupleReturn:
-    """Тесты для проверки что методы возвращают tuple."""
+    """Tests for verifying methods return tuple."""
 
     def test_get_context_returns_tuple(self):
         """
-        Тест: get_context возвращает tuple.
+        Test: get_context returns tuple.
 
-        Проверяет, что возвращаемое значение - tuple (неизменяемый).
+        Verifies that return value is tuple (immutable).
         """
         # Arrange
         conversation = Conversation("model_a", "model_b", "test")
@@ -586,11 +586,11 @@ class TestTupleReturn:
 
     def test_list_models_returns_list(self):
         """
-        Тест: list_models возвращает list.
+        Test: list_models returns list.
 
-        Проверяет тип возвращаемого значения.
+        Verifies return type.
         """
-        # Arrange - проверяем аннотацию типа
+        # Arrange - verify type annotation
         import inspect
 
         from models.ollama_client import OllamaClient
@@ -598,73 +598,73 @@ class TestTupleReturn:
         # Act
         sig = inspect.signature(OllamaClient.list_models)
 
-        # Assert - проверяем что return annotation содержит list
+        # Assert - verify return annotation contains list
         assert "list" in str(sig.return_annotation)
 
 
 # =============================================================================
-# 10. Cache size limit - тест что кэш ограничивается
+# 10. Cache size limit - test that cache is limited
 # =============================================================================
 
 
 class TestCacheSizeLimit:
-    """Тесты для проверки ограничения размера кэша."""
+    """Tests for verifying cache size limit."""
 
     def test_models_cache_uses_ttl_only(self):
         """
-        Тест: _ModelsCache использует только TTL для инвалидации.
+        Test: _ModelsCache uses only TTL for invalidation.
 
-        Проверяет, что кэш инвалидируется только по истечении времени.
+        Verifies that cache is invalidated only on time expiration.
         """
         # Arrange
         cache = _ModelsCache(ttl=300)
         cache.set(["model1", "model2"])
 
-        # Act & Assert - кэш возвращает данные
+        # Act & Assert - cache returns data
         result = cache.get()
         assert result == ["model1", "model2"]
 
-        # После истечения TTL кэш инвалидируется
+        # After TTL expires, cache is invalidated
         import time
 
-        time.sleep(0.1)  # Ждем немного для TTL
-        # Примечание: в реальном использовании TTL 300 секунд
+        time.sleep(0.1)  # Wait a bit for TTL
+        # Note: in real usage TTL is 300 seconds
 
 
 # =============================================================================
-# 11. MessageDict total=True - тест на валидацию
+# 11. MessageDict total=True - test on validation
 # =============================================================================
 
 
 class TestMessageDictValidation:
-    """Тесты для проверки валидации MessageDict."""
+    """Tests for verifying MessageDict validation."""
 
     def test_message_dict_has_required_fields(self):
         """
-        Тест: MessageDict требует role и content.
+        Test: MessageDict requires role and content.
 
-        Проверяет, что TypedDict с total=True требует все поля.
+        Verifies that TypedDict with total=True requires all fields.
         """
-        # Arrange & Act - проверяем аннотацию
+        # Arrange & Act - verify annotation
 
-        # Assert - проверяем что MessageDict это TypedDict
+        # Assert - verify MessageDict is TypedDict
         assert hasattr(MessageDict, "__annotations__")
         assert "role" in MessageDict.__annotations__
         assert "content" in MessageDict.__annotations__
 
     def test_message_dict_role_literal(self):
         """
-        Тест: role должен быть одним из допустимых значений.
+        Test: role must be one of valid values.
 
-        Проверяет, что role это Literal["system", "user", "assistant"].
+        Verifies that role is Literal["system", "user", "assistant"].
         """
         # Arrange
         import typing
 
-        # Act - получаем аннотацию role
+        # Act - get role annotation
         role_annotation = MessageDict.__annotations__["role"]
 
-        # Assert - проверяем что это Literal
+        # Assert - verify it's Literal
         assert (
             "Literal" in str(role_annotation)
             or "Literal" in str(typing.get_origin(role_annotation))
@@ -673,9 +673,9 @@ class TestMessageDictValidation:
 
     def test_message_dict_content_str(self):
         """
-        Тест: content должен быть строкой.
+        Test: content must be string.
 
-        Проверяет, что content аннотирован как str.
+        Verifies that content is annotated as str.
         """
         # Arrange
         content_annotation = MessageDict.__annotations__["content"]
@@ -685,9 +685,9 @@ class TestMessageDictValidation:
 
     def test_valid_message_dict(self):
         """
-        Тест: корректный MessageDict принимается.
+        Test: correct MessageDict is accepted.
 
-        Проверяет, что словарь с role и content работает.
+        Verifies that dictionary with role and content works.
         """
         # Arrange
         message: MessageDict = {"role": "user", "content": "test"}
@@ -699,9 +699,9 @@ class TestMessageDictValidation:
     @pytest.mark.asyncio
     async def test_ollama_client_validates_message_dict(self):
         """
-        Тест: OllamaClient валидирует MessageDict.
+        Test: OllamaClient validates MessageDict.
 
-        Проверяет, что generate проверяет структуру сообщений.
+        Verifies that generate checks message structure.
         """
         # Arrange
         config = Config(ollama_host="http://localhost:11434")
@@ -716,19 +716,19 @@ class TestMessageDictValidation:
 
 
 # =============================================================================
-# Интеграционные тесты
+# Integration tests
 # =============================================================================
 
 
 class TestIntegration:
-    """Интеграционные тесты для проверки взаимодействия компонентов."""
+    """Integration tests for verifying component interaction."""
 
     @pytest.mark.asyncio
     async def test_full_error_handling_chain(self):
         """
-        Тест: полная цепочка обработки ошибок.
+        Test: full error handling chain.
 
-        Проверяет, что ошибки правильно распространяются через слои.
+        Verifies that errors propagate correctly through layers.
         """
         # Arrange
         config = Config(ollama_host="http://localhost:11434")
@@ -743,7 +743,7 @@ class TestIntegration:
             with pytest.raises(ProviderConnectionError) as exc_info:
                 await client.list_models()
 
-            # Assert - проверяем всю цепочку
+            # Assert - verify entire chain
             assert isinstance(exc_info.value, ProviderError)
             assert exc_info.value.__cause__ is original_error
             assert exc_info.value.original_exception is original_error
@@ -751,9 +751,9 @@ class TestIntegration:
     @pytest.mark.security
     def test_xss_protection_end_to_end(self):
         """
-        Тест: XSS защита end-to-end.
+        Test: XSS protection end-to-end.
 
-        Проверяет, что malicious input полностью экранируется.
+        Verifies that malicious input is fully escaped.
         """
         # Arrange
         malicious_inputs = [
@@ -766,11 +766,11 @@ class TestIntegration:
         # Act & Assert
         for malicious in malicious_inputs:
             result = sanitize_response_for_display(malicious)
-            # Проверяем что оригинальные символы экранированы
-            # < и > становятся &lt; и &gt;
-            # [ и ] становятся [[ и ]]
-            # { и } становятся {{ и }}
-            # * и _ становятся \* и \_
-            assert "<script>" not in result  # HTML теги экранированы
-            # Проверяем что экранирование произошло
-            assert result != malicious  # Результат отличается от оригинала
+            # Verify original symbols are escaped
+            # < and > become &lt; and &gt;
+            # [ and ] become [[ and ]]
+            # { and } become {{ and }}
+            # * and _ become \* and \_
+            assert "<script>" not in result  # HTML tags escaped
+            # Verify escaping happened
+            assert result != malicious  # Result differs from original

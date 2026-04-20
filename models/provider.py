@@ -1,7 +1,7 @@
-"""Абстракции для провайдеров языковых моделей.
+"""Abstractions for language model providers.
 
-Этот модуль определяет протоколы и типы для dependency injection.
-Позволяет заменять реализацию провайдера без изменения доменной логики.
+This module defines protocols and types for dependency injection.
+Allows replacing provider implementation without changing domain logic.
 """
 
 from __future__ import annotations
@@ -10,10 +10,10 @@ from typing import Any, Literal, Protocol, TypedDict, runtime_checkable
 
 
 class ProviderError(Exception):
-    """Базовое исключение для ошибок провайдера моделей.
+    """Base exception for model provider errors.
 
-    Используется как базовый класс для специфичных исключений провайдера.
-    Содержит информацию об оригинальном исключении для отладки.
+    Used as a base class for provider-specific exceptions.
+    Contains original exception information for debugging.
     """
 
     __slots__ = ("_original_exception",)
@@ -23,11 +23,11 @@ class ProviderError(Exception):
         message: str,
         original_exception: Exception | None = None,
     ) -> None:
-        """Инициализация исключения.
+        """Initialize exception.
 
         Args:
-            message: Сообщение об ошибке.
-            original_exception: Оригинальное исключение для цепочки.
+            message: Error message.
+            original_exception: Original exception for chaining.
 
         """
         super().__init__(message)
@@ -35,52 +35,52 @@ class ProviderError(Exception):
 
     @property
     def original_exception(self) -> Exception | None:
-        """Получить оригинальное исключение."""
+        """Get the original exception."""
         return self._original_exception
 
 
 class ProviderConfigurationError(ProviderError):
-    """Исключение для ошибок конфигурации провайдера.
+    """Exception for provider configuration errors.
 
-    Возникает при некорректной конфигурации провайдера:
-    - Некорректный URL хоста
-    - Неверные параметры аутентификации
-    - Отсутствующие обязательные настройки
+    Raised for incorrect provider configuration:
+    - Invalid host URL
+    - Incorrect authentication parameters
+    - Missing required settings
     """
 
     __slots__ = ()
 
 
 class ProviderConnectionError(ProviderError):
-    """Исключение для ошибок подключения к провайдеру.
+    """Exception for provider connection errors.
 
-    Возникает при проблемах с сетевым подключением:
-    - Недоступность хоста
-    - Таймауты соединения
-    - Ошибки сети
+    Raised for network connection problems:
+    - Host unavailable
+    - Connection timeouts
+    - Network errors
     """
 
     __slots__ = ()
 
 
 class ProviderGenerationError(ProviderError):
-    """Исключение для ошибок генерации ответа.
+    """Exception for response generation errors.
 
-    Возникает при проблемах с генерацией ответа моделью:
-    - Ошибки API провайдера
-    - Некорректный формат ответа
-    - Ошибки валидации ответа
+    Raised for response generation problems:
+    - Provider API errors
+    - Invalid response format
+    - Response validation errors
     """
 
     __slots__ = ()
 
 
 class MessageDict(TypedDict, total=True):
-    """Структура сообщения в формате совместимом с Ollama.
+    """Message structure in Ollama-compatible format.
 
     Attributes:
-        role: Роль отправителя (system, user, assistant).
-        content: Текст сообщения.
+        role: Sender role (system, user, assistant).
+        content: Message text.
 
     """
 
@@ -93,14 +93,14 @@ ModelId = Literal["A", "B"]
 
 @runtime_checkable
 class ModelProvider(Protocol):
-    """Протокол для провайдеров языковых моделей.
+    """Protocol for language model providers.
 
-    Определяет интерфейс для взаимодействия с различными LLM-провайдерами.
-    Позволяет использовать dependency injection для тестируемости и заменяемости.
+    Defines the interface for interacting with various LLM providers.
+    Allows using dependency injection for testability and replaceability.
     """
 
     async def list_models(self) -> list[str]:
-        """Получить список доступных моделей."""
+        """Get list of available models."""
         ...  # pragma: no cover
 
     async def generate(
@@ -109,10 +109,9 @@ class ModelProvider(Protocol):
         messages: list[MessageDict],
         **kwargs: Any,
     ) -> str:
-        """Сгенерировать ответ от модели."""
+        """Generate response from model."""
         ...  # pragma: no cover
 
     async def close(self) -> None:
-        """Освободить ресурсы провайдера."""
-        ...  # pragma: no cover
+        """Release provider resources."""
         ...  # pragma: no cover

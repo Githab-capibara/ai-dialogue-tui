@@ -1,12 +1,12 @@
 """
-Тесты для проверки архитектурных исправлений.
+Tests for verifying architectural fixes.
 
-Содержит тесты для:
-- DRY: Отсутствие дублирования в add_message
-- KISS: Разделение _run_dialogue на меньшие методы
-- YAGNI: Удаление неиспользуемого DialogueUICallback
-- SRP: Вынесение утилит из app.py
-- Удаление config.py wrapper
+Contains tests for:
+- DRY: No duplication in add_message
+- KISS: Splitting _run_dialogue into smaller methods
+- YAGNI: Removing unused DialogueUICallback
+- SRP: Extracting utilities from app.py
+- Removing config.py wrapper
 """
 
 from __future__ import annotations
@@ -22,10 +22,10 @@ from models.conversation import Conversation
 
 
 class TestDRYFix:
-    """Тест: отсутствие дублирования кода в add_message."""
+    """Test: no code duplication in add_message."""
 
     def test_add_message_no_duplication(self) -> None:
-        """Тест что add_message не содержит дублирующегося кода."""
+        """Test that add_message does not contain duplicated code."""
         conversation_file = Path("models/conversation.py")
         content = conversation_file.read_text(encoding="utf-8")
 
@@ -55,7 +55,7 @@ class TestDRYFix:
         assert not has_duplicate_if, "Duplicate if statements found in add_message"
 
     def test_helper_method_exists(self) -> None:
-        """Тест что helper метод для добавления сообщений существует."""
+        """Test that helper method for adding messages exists."""
         conversation = Conversation(
             model_a="llama3",
             model_b="mistral",
@@ -65,10 +65,10 @@ class TestDRYFix:
 
 
 class TestKISSFix:  # pylint: disable=too-few-public-methods
-    """Тест: разделение _run_dialogue на меньшие методы."""
+    """Test: splitting _run_dialogue into smaller methods."""
 
     def test_run_dialogue_split(self) -> None:
-        """Тест что _run_dialogue разделен на меньшие методы."""
+        """Test that _run_dialogue is split into smaller methods."""
         app_file = Path("tui/app.py")
         content = app_file.read_text(encoding="utf-8")
 
@@ -81,13 +81,13 @@ class TestKISSFix:  # pylint: disable=too-few-public-methods
         ]
 
         class MethodFinder(ast.NodeVisitor):  # pylint: disable=too-few-public-methods
-            """AST visitor для поиска методов в файле."""
+            """AST visitor for finding methods in file."""
 
             def __init__(self) -> None:
                 self.methods: set[str] = set()
 
             def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # pylint: disable=invalid-name
-                """Посетить определение функции и записать её имя."""
+                """Visit function definition and record its name."""
                 self.methods.add(node.name)
                 self.generic_visit(node)
 
@@ -99,10 +99,10 @@ class TestKISSFix:  # pylint: disable=too-few-public-methods
 
 
 class TestYAGNIFix:
-    """Тест: удаление неиспользуемого DialogueUICallback."""
+    """Test: removing unused DialogueUICallback."""
 
     def test_dialogue_ui_callback_removed(self) -> None:
-        """Тест что DialogueUICallback удален из сервиса."""
+        """Test that DialogueUICallback is removed from service."""
         service_file = Path("services/dialogue_service.py")
         content = service_file.read_text(encoding="utf-8")
 
@@ -110,7 +110,7 @@ class TestYAGNIFix:
         assert "ui_callback" not in content.lower()
 
     def test_dialogue_service_init_no_callback(self) -> None:
-        """Тест что DialogueService не принимает ui_callback."""
+        """Test that DialogueService does not accept ui_callback."""
         source_file = Path("services/dialogue_service.py")
         content = source_file.read_text(encoding="utf-8")
 
@@ -118,10 +118,10 @@ class TestYAGNIFix:
 
 
 class TestSRPFix:  # pylint: disable=too-few-public-methods
-    """Тест: вынесение утилит из app.py."""
+    """Test: extracting utilities from app.py."""
 
     def test_utility_functions_moved(self) -> None:
-        """Тест что утилиты удалены из app.py и styles.py."""
+        """Test that utilities are removed from app.py and styles.py."""
         styles_file = Path("tui/styles.py")
         content = styles_file.read_text(encoding="utf-8")
 
@@ -130,10 +130,10 @@ class TestSRPFix:  # pylint: disable=too-few-public-methods
 
 
 class TestConfigWrapperRemoval:  # pylint: disable=too-few-public-methods
-    """Тест: удаление config.py wrapper."""
+    """Test: removing config.py wrapper."""
 
     def test_config_wrapper_removed(self) -> None:
-        """Тест что config.py удален."""
+        """Test that config.py is removed."""
         config_file = Path("config.py")
 
         if config_file.exists():
@@ -142,10 +142,10 @@ class TestConfigWrapperRemoval:  # pylint: disable=too-few-public-methods
 
 
 class TestArchitectureIntegrity:
-    """Интеграционные тесты архитектуры."""
+    """Integration tests for architecture."""
 
     def test_no_circular_dependencies(self) -> None:
-        """Тест отсутствия циклических зависимостей."""
+        """Test absence of circular dependencies."""
         modules = [
             "models.conversation",
             "models.ollama_client",
@@ -162,7 +162,7 @@ class TestArchitectureIntegrity:
                 pytest.fail(f"Failed to import {module}: {e}")
 
     def test_conversation_uses_protocol(self) -> None:
-        """Тест что Conversation использует Protocol для DI."""
+        """Test that Conversation uses Protocol for DI."""
         conversation = Conversation(
             model_a="llama3",
             model_b="mistral",
@@ -177,7 +177,7 @@ class TestArchitectureIntegrity:
         assert hasattr(conversation, "generate_response")
 
     def test_service_uses_abstractions(self) -> None:
-        """Тест что сервис использует абстракции."""
+        """Test that service uses abstractions."""
         from services.dialogue_service import (
             DialogueService,  # pylint: disable=import-outside-toplevel
         )

@@ -1,6 +1,6 @@
-"""Сервис для маппинга моделей на стили отображения.
+"""Service for mapping models to display styles.
 
-Этот модуль содержит логику преобразования состояния модели в UI стили.
+This module contains logic for converting model state to UI styles.
 """
 
 from __future__ import annotations
@@ -12,44 +12,44 @@ if TYPE_CHECKING:
 
 
 class StyleInfo(NamedTuple):
-    """Информация о стиле для модели."""
+    """Style information for a model."""
 
     model_name: str
     style_id: str
 
 
 class ModelStyleMapper:
-    """Сервис для маппинга состояния модели на стиль отображения."""
+    """Service for mapping model state to display style."""
 
     def __init__(self) -> None:
-        """Инициализация маппера стилей."""
+        """Initialize style mapper."""
         self._style_map: dict[ModelId, str] = {
             "A": "model_a",
             "B": "model_b",
         }
 
     def get_style_info(self, model_id: ModelId, model_name: str) -> StyleInfo:
-        """Получить информацию о стиле для модели.
+        """Get style information for model.
 
         Args:
-            model_id: Идентификатор модели (A или B).
-            model_name: Название модели.
+            model_id: Model identifier (A or B).
+            model_name: Model name.
 
         Returns:
-            Кортеж (model_name, style_id).
+            Tuple (model_name, style_id).
 
         """
         style_id = self._style_map[model_id]
         return StyleInfo(model_name=model_name, style_id=style_id)
 
     def get_style_id(self, model_id: ModelId) -> str:
-        """Получить идентификатор стиля для модели.
+        """Get style identifier for model.
 
         Args:
-            model_id: Идентификатор модели (A или B).
+            model_id: Model identifier (A or B).
 
         Returns:
-            Идентификатор стиля (model_a или model_b).
+            Style identifier (model_a or model_b).
 
         """
         return self._style_map[model_id]

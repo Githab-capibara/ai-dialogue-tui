@@ -1,6 +1,6 @@
-"""Асинхронный клиент для взаимодействия с Ollama API.
+"""Async client for interacting with Ollama API.
 
-Этот модуль реализует протокол ModelProvider для работы с Ollama API.
+This module implements the ModelProvider protocol for working with Ollama API.
 """
 
 from __future__ import annotations
@@ -33,48 +33,48 @@ if TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
-# Кэшированные дефолтные опции для производительности
+# Cached default options for performance
 _DEFAULT_OPTIONS: Final = {
     "temperature": DEFAULT_TEMPERATURE,
     "num_predict": DEFAULT_MAX_TOKENS,
 }
 
-# TTL для кэша моделей (5 минут)
+# TTL for models cache (5 minutes)
 _MODELS_CACHE_TTL: Final = 300
 
 
 class _RequestValidator:
-    """Валидация запросов к Ollama API.
+    """Request validation for Ollama API.
 
-    Инкапсулирует логику валидации входных параметров для API запросов.
+    Encapsulates input parameter validation logic for API requests.
     """
 
     __slots__ = ()
 
     @staticmethod
     def validate_host(host: str) -> None:
-        """Валидировать URL хоста.
+        """Validate host URL.
 
         Args:
-            host: URL хоста для валидации.
+            host: Host URL to validate.
 
         Raises:
-            ValueError: Если URL некорректный.
+            ValueError: If URL is invalid.
 
         """
         if not validate_ollama_url(host):
-            msg = f"Некорректный URL хоста: {host}"
+            msg = f"Invalid host URL: {host}"
             raise ValueError(msg)
 
     @staticmethod
     def validate_messages(messages: Sequence[Mapping[str, Any]]) -> None:
-        """Валидировать messages для generate метода.
+        """Validate messages for generate method.
 
         Args:
-            messages: Параметр messages для валидации.
+            messages: Messages parameter to validate.
 
         Raises:
-            ValueError: Если messages некорректный.
+            ValueError: If messages is invalid.
 
         """
         if not isinstance(messages, list):
@@ -91,27 +91,27 @@ class _RequestValidator:
 
 
 class _ResponseHandler:
-    """Обработка ответов от Ollama API.
+    """Response handling from Ollama API.
 
-    Инкапсулирует логику обработки и валидации ответов API.
+    Encapsulates response processing and validation logic.
     """
 
     __slots__ = ()
 
     @staticmethod
     def validate_status_code(status: int, operation: str) -> None:
-        """Валидировать HTTP статус код ответа.
+        """Validate HTTP status code of response.
 
         Args:
-            status: HTTP статус код.
-            operation: Название операции для сообщения об ошибке.
+            status: HTTP status code.
+            operation: Operation name for error message.
 
         Raises:
-            ProviderGenerationError: Если статус код не 200.
+            ProviderGenerationError: If status code is not 200.
 
         """
         if status != 200:  # noqa: PLR2004
-            msg = f"Ошибка {operation}: HTTP {status}"
+            msg = f"Error {operation}: HTTP {status}"
             raise ProviderGenerationError(msg)
 
     @staticmethod
@@ -119,33 +119,33 @@ class _ResponseHandler:
         data: Mapping[str, Any],
         operation: str,
     ) -> dict[str, Any]:
-        """Валидировать и распарсить JSON ответ.
+        """Validate and parse JSON response.
 
         Args:
-            data: Данные для валидации.
-            operation: Название операции для сообщения об ошибке.
+            data: Data to validate.
+            operation: Operation name for error message.
 
         Returns:
-            Распарсенные данные.
+            Parsed data.
 
         Raises:
-            ProviderGenerationError: Если формат некорректный.
+            ProviderGenerationError: If format is invalid.
 
         """
         if not isinstance(data, dict):
-            msg = f"Некорректный формат ответа API ({operation})"
+            msg = f"Invalid API response format ({operation})"
             raise ProviderGenerationError(msg)
         return data
 
     @staticmethod
     def extract_models_list(data: dict[str, Any]) -> list[str]:
-        """Извлечь список моделей из ответа API.
+        """Extract models list from API response.
 
         Args:
-            data: Данные ответа API.
+            data: API response data.
 
         Returns:
-            Список названий моделей.
+            List of model names.
 
         """
         models = data.get("models", [])
@@ -160,13 +160,13 @@ class _ResponseHandler:
 
     @staticmethod
     def extract_generation_response(data: dict[str, Any]) -> str:
-        """Извлечь текст ответа из ответа API генерации.
+        """Extract response text from generation API response.
 
         Args:
-            data: Данные ответа API.
+            data: API response data.
 
         Returns:
-            Текст ответа или пустая строка.
+            Response text or empty string.
 
         """
         message = data.get("message", {})
@@ -178,25 +178,25 @@ class _ResponseHandler:
 
 
 class _HTTPSessionManager:
-    """Управление HTTP-сессиями для Ollama API.
+    """HTTP session management for Ollama API.
 
-    Инкапсулирует логику создания, получения и закрытия HTTP-сессий.
-    Вынесен для улучшения связности и тестируемости.
+    Encapsulates HTTP session creation, retrieval, and closing logic.
+    Extracted for improved cohesion and testability.
 
     Note:
-        Реализует пулинг соединений через aiohttp.ClientSession:
-        - Одна сессия используется для всех запросов к Ollama
-        - Соединения автоматически переиспользуются (HTTP keep-alive)
-        - Сессия создаётся лениво при первом запросе
-        - Автоматическое пересоздание при закрытии
-        - Таймаут настраивается через конфигурацию
+        Implements connection pooling via aiohttp.ClientSession:
+        - One session is used for all requests to Ollama
+        - Connections are automatically reused (HTTP keep-alive)
+        - Session is created lazily on first request
+        - Automatic recreation on close
+        - Timeout configured via configuration
 
     Scalability:
-        Текущая реализация использует одну сессию на экземпляр OllamaClient.
-        Для высоконагруженных сценариев можно рассмотреть:
-        - Пул сессий с ограничением максимального количества соединений
-        - Балансировку между несколькими экземплярами Ollama
-        - Кэширование ответов моделей
+        Current implementation uses one session per OllamaClient instance.
+        For high-load scenarios, consider:
+        - Session pool with max connection limit
+        - Load balancing across multiple Ollama instances
+        - Model response caching
 
     """
 
@@ -206,12 +206,12 @@ class _HTTPSessionManager:
         conn_timeout: int = 10,
         sock_read_timeout: int = 60,
     ) -> None:
-        """Инициализация менеджера сессий.
+        """Initialize session manager.
 
         Args:
-            timeout: Общий таймаут запросов в секундах.
-            conn_timeout: Таймаут подключения в секундах.
-            sock_read_timeout: Таймаут чтения сокета в секундах.
+            timeout: Total request timeout in seconds.
+            conn_timeout: Connection timeout in seconds.
+            sock_read_timeout: Socket read timeout in seconds.
 
         """
         self._timeout = timeout
@@ -221,10 +221,10 @@ class _HTTPSessionManager:
         self._lock = asyncio.Lock()
 
     async def get_session(self) -> aiohttp.ClientSession:
-        """Получить или создать HTTP сессию.
+        """Get or create HTTP session.
 
         Returns:
-            HTTP сессия для запросов.
+            HTTP session for requests.
 
         """
         if self._session is not None and not self._session.closed:
@@ -241,23 +241,23 @@ class _HTTPSessionManager:
             return self._session
 
     async def close(self) -> None:
-        """Закрыть HTTP сессию."""
+        """Close HTTP session."""
         if self._session and not self._session.closed:
             with contextlib.suppress(aiohttp.ClientError, asyncio.TimeoutError):
                 await self._session.close()
 
 
 class _ModelsCache:
-    """Кэширование списка моделей.
+    """Model list caching.
 
-    Реализует простой TTL-кэш для результата list_models.
+    Implements a simple TTL cache for list_models result.
     """
 
     def __init__(self, ttl: int = _MODELS_CACHE_TTL) -> None:
-        """Инициализация кэша.
+        """Initialize cache.
 
         Args:
-            ttl: Время жизни кэша в секундах.
+            ttl: Cache time-to-live in seconds.
 
         """
         self._ttl = ttl
@@ -265,10 +265,10 @@ class _ModelsCache:
         self._cache_timestamp: float | None = None
 
     def _is_cache_valid(self) -> bool:
-        """Проверить валидность кэша.
+        """Check cache validity.
 
         Returns:
-            True если кэш валилен.
+            True if cache is valid.
 
         """
         if self._models is None or self._cache_timestamp is None:
@@ -278,10 +278,10 @@ class _ModelsCache:
         return (current_time - self._cache_timestamp) < self._ttl
 
     def get(self) -> list[str] | None:
-        """Получить закэшированные модели если кэш валиден.
+        """Get cached models if cache is valid.
 
         Returns:
-            Список моделей или None если кэш не валиден.
+            List of models or None if cache is invalid.
 
         """
         if self._is_cache_valid():
@@ -289,42 +289,42 @@ class _ModelsCache:
         return None
 
     def set(self, models: list[str]) -> None:
-        """Сохранить модели в кэш.
+        """Store models in cache.
 
         Args:
-            models: Список моделей для кэширования.
+            models: List of models to cache.
 
         """
         self._models = models
         self._cache_timestamp = time.time()
 
     def invalidate(self) -> None:
-        """Очистить кэш."""
+        """Clear cache."""
         self._models = None
         self._cache_timestamp = None
 
 
 class OllamaClient:
-    """Асинхронный клиент для работы с локальным Ollama API.
+    """Async client for working with local Ollama API.
 
-    Реализует протокол ModelProvider для dependency injection.
+    Implements the ModelProvider protocol for dependency injection.
     """
 
     def __init__(self, host: str | None = None, config: Config | None = None) -> None:
-        """Инициализация клиента.
+        """Initialize client.
 
         Args:
-            host: URL хоста Ollama (по умолчанию из конфига).
-            config: Конфигурация для dependency injection.
+            host: Ollama host URL (default from config).
+            config: Configuration for dependency injection.
 
         Raises:
-            ValueError: Если host некорректный.
+            ValueError: If host is invalid.
 
         """
         self._config = config or Config()
         self.host = host or self._config.ollama_host
 
-        # Валидация host параметра через вынесенный класс
+        # Validate host parameter via extracted class
         _RequestValidator.validate_host(self.host)
 
         self._http_manager = _HTTPSessionManager(
@@ -335,29 +335,29 @@ class OllamaClient:
         self._models_cache = _ModelsCache(ttl=_MODELS_CACHE_TTL)
 
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Получить HTTP сессию через менеджер."""
+        """Get HTTP session via manager."""
         return await self._http_manager.get_session()
 
     async def close(self) -> None:
-        """Закрыть HTTP сессию и очистить кэш."""
+        """Close HTTP session and clear cache."""
         await self._http_manager.close()
         self._models_cache.invalidate()
 
     async def list_models(self) -> list[str]:
-        """Получить список доступных локальных моделей.
+        """Get list of available local models.
 
-        Использует кэширование для улучшения производительности.
-        Кэш действителен в течение _MODELS_CACHE_TTL секунд.
+        Uses caching to improve performance.
+        Cache is valid for _MODELS_CACHE_TTL seconds.
 
         Returns:
-            Список названий моделей.
+            List of model names.
 
         Raises:
-            ProviderConnectionError: Если не удалось подключиться к Ollama.
-            ProviderGenerationError: Если не удалось получить данные.
+            ProviderConnectionError: If unable to connect to Ollama.
+            ProviderGenerationError: If unable to get data.
 
         """
-        # Проверяем кэш
+        # Check cache
         cached_models = self._models_cache.get()
         if cached_models is not None:
             return cached_models
@@ -367,38 +367,38 @@ class OllamaClient:
 
         try:
             async with session.get(url) as response:
-                # Валидация статуса
+                # Status validation
                 _ResponseHandler.validate_status_code(response.status, "list_models")
 
-                # Обработка JSON с валидацией
+                # JSON processing with validation
                 try:
                     data = await response.json()
                 except json.JSONDecodeError as e:
-                    msg = "Некорректный JSON в ответе API"
+                    msg = "Invalid JSON in API response"
                     raise ProviderGenerationError(msg) from e
 
-                # Валидация структуры ответа
+                # Response structure validation
                 _ResponseHandler.parse_json_response(data, "list_models")
 
-                # Извлечение списка моделей
+                # Extract models list
                 models = _ResponseHandler.extract_models_list(data)
 
-                # Кэшируем результат
+                # Cache the result
                 self._models_cache.set(models)
 
                 return models
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
-            msg = f"Не удалось подключиться к Ollama ({self.host})"
+            msg = f"Failed to connect to Ollama ({self.host})"
             raise ProviderConnectionError(
                 msg,
                 err,
             ) from err
         except ProviderError:
-            _logger.debug("ProviderError при получении списка моделей")
+            _logger.debug("ProviderError when getting models list")
             raise
         except (json.JSONDecodeError, KeyError, TypeError) as err:
-            msg = f"Ошибка валидации ответа API: {err}"
+            msg = f"API response validation error: {err}"
             raise ProviderGenerationError(msg) from err
         except OSError as err:
             msg = f"IO error: {err}"
@@ -411,29 +411,29 @@ class OllamaClient:
         messages: list[MessageDict],
         **kwargs: Any,
     ) -> str:
-        """Сгенерировать ответ от модели.
+        """Generate response from model.
 
         Args:
-            model: Название модели.
-            messages: Список сообщений в формате Ollama.
-            **kwargs: Дополнительные параметры генерации.
+            model: Model name.
+            messages: List of messages in Ollama format.
+            **kwargs: Additional generation parameters.
 
         Returns:
-            Сгенерированный текст.
+            Generated text.
 
         Raises:
-            ProviderError: Если генерация не удалась.
-            ValueError: Если messages некорректный.
+            ProviderError: If generation failed.
+            ValueError: If messages is invalid.
 
         """
-        # Валидация параметра messages
+        # Validate messages parameter
         _RequestValidator.validate_messages(messages)
 
         session = await self._get_session()
         url = urljoin(self.host, "/api/chat")
 
-        # Кэшированные дефолтные опции для производительности
-        # Note: num_predict = max_tokens в терминах Ollama API
+        # Cached default options for performance
+        # Note: num_predict = max_tokens in Ollama API terms
         options = {
             "temperature": kwargs.get("temperature", self._config.temperature),
         }
@@ -452,37 +452,34 @@ class OllamaClient:
 
         try:
             async with session.post(url, json=payload) as response:
-                # Валидация статуса
+                # Status validation
                 _ResponseHandler.validate_status_code(response.status, "generate")
 
-                # Обработка JSON с валидацией
+                # JSON processing with validation
                 try:
                     data = await response.json()
                 except json.JSONDecodeError as e:
-                    msg = "Некорректный JSON в ответе API"
+                    msg = "Invalid JSON in API response"
                     raise ProviderGenerationError(msg) from e
 
-                # Валидация структуры ответа
+                # Response structure validation
                 _ResponseHandler.parse_json_response(data, "generate")
 
-                # Извлечение ответа
+                # Extract response
                 return _ResponseHandler.extract_generation_response(data)
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
-            timeout_info = f"Таймаут: {self._config.sock_read_timeout}с"
-            msg = (
-                f"Не удалось подключиться к Ollama ({self.host}). "
-                f"{timeout_info}. Попробуйте увеличить таймаут в настройках."
-            )
+            timeout_info = f"Timeout: {self._config.sock_read_timeout}s"
+            msg = f"Failed to connect to Ollama ({self.host}). {timeout_info}. Try increasing the timeout in settings."
             raise ProviderConnectionError(
                 msg,
                 err,
             ) from err
         except ProviderError:
-            _logger.debug("ProviderError при генерации ответа")
+            _logger.debug("ProviderError during response generation")
             raise
         except (json.JSONDecodeError, KeyError, TypeError) as err:
-            msg = f"Ошибка валидации ответа API: {err}"
+            msg = f"API response validation error: {err}"
             raise ProviderGenerationError(msg) from err
         except OSError as err:
             msg = f"IO error: {err}"

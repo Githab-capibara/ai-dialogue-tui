@@ -1,20 +1,20 @@
-"""Тесты для проверки новых исправлений из аудита кода.
+"""Tests for verifying new fixes from code audit.
 
-Этот файл содержит тесты для проверки следующих исправлений:
-1. models/conversation.py - remaining_messages обрезается корректно
-2. models/conversation.py:154-159 - add_message не дублирует код
-3. tui/app.py:220 - пустой binding ctrl+c удалён из BINDINGS
-4. models/ollama_client.py:208-212 - asyncio.Lock используется в _HTTPSessionManager
-5. services/dialogue_service.py:172 - log.exception используется вместо log.warning
-6. controllers/dialogue_controller.py:78 - state возвращает копию (replace())
-7. models/ollama_client.py:212 - _get_session работает корректно
-8. tui/app.py:317 - ProviderConnectionError и ProviderGenerationError обрабатываются раздельно
-9. tui/app.py:556-559 - cleanup вызывается при остановке
-10. models/conversation.py:131-138 - _add_message_to_context работает корректно
+This file contains tests for verifying the following fixes:
+1. models/conversation.py - remaining_messages is trimmed correctly
+2. models/conversation.py:154-159 - add_message does not duplicate code
+3. tui/app.py:220 - empty binding ctrl+c removed from BINDINGS
+4. models/ollama_client.py:208-212 - asyncio.Lock used in _HTTPSessionManager
+5. services/dialogue_service.py:172 - log.exception used instead of log.warning
+6. controllers/dialogue_controller.py:78 - state returns copy (replace())
+7. models/ollama_client.py:212 - _get_session works correctly
+8. tui/app.py:317 - ProviderConnectionError and ProviderGenerationError handled separately
+9. tui/app.py:556-559 - cleanup called on stop
+10. models/conversation.py:131-138 - _add_message_to_context works correctly
 
 Note:
-    Тесты используют доступ к внутренним атрибутам и импорты внутри функций,
-    что оправдано для тестирования.
+    Tests use access to internal attributes and imports inside functions,
+    which is justified for testing purposes.
 
 """
 
@@ -35,26 +35,26 @@ from services.dialogue_service import DialogueService
 from tui.app import DialogueApp
 
 # =============================================================================
-# 1. Тест: models/conversation.py:108-110 - remaining_messages = context[-max_len:]
+# 1. Test: models/conversation.py:108-110 - remaining_messages = context[-max_len:]
 # =============================================================================
 
 
 class TestTrimContextFix:
-    """Тесты для проверки исправления в _trim_context_if_needed."""
+    """Tests for verifying fix in _trim_context_if_needed."""
 
     def test_trim_context_uses_negative_slicing(self):
-        """Проверить, что используется отрицательная индексация context[-max_len:]."""
+        """Verify that negative indexing context[-max_len:] is used."""
         source = inspect.getsource(Conversation._trim_context_if_needed)
         assert "context[-max_len:]" in source
 
     def test_trim_context_no_meaningless_condition(self):
-        """Проверить, что нет бессмысленного условия."""
+        """Verify that there is no meaningless condition."""
         source = inspect.getsource(Conversation._trim_context_if_needed)
         assert "if remaining_messages" not in source
         assert "remaining_messages and" not in source
 
     def test_trim_context_with_large_context(self):
-        """Проверить обрезку контекста с большим количеством сообщений."""
+        """Verify context trimming with large number of messages."""
         conversation = Conversation("model_a", "model_b", "test_topic")
         conversation._context_a = [MagicMock() for _ in range(MAX_CONTEXT_LENGTH + 10)]
         conversation._context_a[0] = {"role": "system", "content": "System prompt"}
@@ -66,26 +66,26 @@ class TestTrimContextFix:
 
 
 # =============================================================================
-# 2. Тест: models/conversation.py:154-159 - add_message не дублирует код
+# 2. Test: models/conversation.py:154-159 - add_message does not duplicate code
 # =============================================================================
 
 
 class TestAddMessageNoDuplication:
-    """Тесты для проверки отсутствия дублирования кода в add_message."""
+    """Tests for verifying no code duplication in add_message."""
 
     def test_add_message_uses_helper_method(self):
-        """Проверить, что add_message использует _add_message_to_context."""
+        """Verify that add_message uses _add_message_to_context."""
         source = inspect.getsource(Conversation.add_message)
         assert "_add_message_to_context" in source
 
     def test_add_message_no_direct_context_append(self):
-        """Проверить, что нет прямого добавления в контекст в add_message."""
+        """Verify that there is no direct context append in add_message."""
         source = inspect.getsource(Conversation.add_message)
         assert "self._context_a.append" not in source
         assert "self._context_b.append" not in source
 
     def test_add_message_calls_helper(self):
-        """Проверить, что add_message вызывает вспомогательный метод."""
+        """Verify that add_message calls helper method."""
         from models import conversation as conv_module
 
         conversation = Conversation("model_a", "model_b", "test_topic")
@@ -95,28 +95,28 @@ class TestAddMessageNoDuplication:
 
 
 # =============================================================================
-# 3. Тест: tui/app.py:220 - пустой binding ctrl+c удалён из BINDINGS
+# 3. Test: tui/app.py:220 - empty binding ctrl+c removed from BINDINGS
 # =============================================================================
 
 
 class TestEmptyCtrlCBindingRemoved:
-    """Тесты для проверки удаления пустого binding ctrl+c."""
+    """Tests for verifying empty ctrl+c binding removal."""
 
     def test_ctrl_c_binding_not_in_bindings(self):
-        """Проверить, что ctrl+c binding отсутствует в BINDINGS."""
+        """Verify that ctrl+c binding is absent in BINDINGS."""
         bindings = DialogueApp.BINDINGS
         for binding in bindings:
             assert binding.key != "ctrl+c"
             assert binding.key != "ctrl+c()"
 
     def test_no_empty_action_binding(self):
-        """Проверить, что нет binding с пустым действием."""
+        """Verify that there is no binding with empty action."""
         source = inspect.getsource(DialogueApp)
         assert 'Binding("ctrl+c", "", ' not in source
         assert 'Binding("ctrl+c", None,' not in source
 
     def test_bindings_only_has_valid_actions(self):
-        """Проверить, что все bindings имеют валидные действия."""
+        """Verify that all bindings have valid actions."""
         bindings = DialogueApp.BINDINGS
         for binding in bindings:
             assert binding.action
@@ -124,31 +124,31 @@ class TestEmptyCtrlCBindingRemoved:
 
 
 # =============================================================================
-# 4. Тест: models/ollama_client.py:208-212 - asyncio.Lock используется в _HTTPSessionManager
+# 4. Test: models/ollama_client.py:208-212 - asyncio.Lock used in _HTTPSessionManager
 # =============================================================================
 
 
 class TestHTTPSessionManagerUsesLock:
-    """Тесты для проверки использования asyncio.Lock в _HTTPSessionManager."""
+    """Tests for verifying asyncio.Lock usage in _HTTPSessionManager."""
 
     def test_session_manager_has_lock_attribute(self):
-        """Проверить, что _HTTPSessionManager имеет атрибут _lock."""
+        """Verify that _HTTPSessionManager has _lock attribute."""
         manager = _HTTPSessionManager(timeout=60)
         assert hasattr(manager, "_lock")
 
     def test_lock_is_asyncio_lock(self):
-        """Проверить, что _lock является asyncio.Lock."""
+        """Verify that _lock is asyncio.Lock."""
         manager = _HTTPSessionManager(timeout=60)
         assert isinstance(manager._lock, asyncio.Lock)
 
     def test_get_session_uses_lock(self):
-        """Проверить, что get_session использует async with self._lock."""
+        """Verify that get_session uses async with self._lock."""
         source = inspect.getsource(_HTTPSessionManager.get_session)
         assert "async with self._lock" in source
 
     @pytest.mark.asyncio
     async def test_get_session_is_thread_safe(self):
-        """Проверить, что get_session работает с блокировкой."""
+        """Verify that get_session works with locking."""
         manager = _HTTPSessionManager(timeout=60)
 
         async def get_sessions():
@@ -159,41 +159,41 @@ class TestHTTPSessionManagerUsesLock:
 
 
 # =============================================================================
-# 5. Тест: services/dialogue_service.py:172 - log.exception используется
+# 5. Test: services/dialogue_service.py:172 - log.exception used
 # =============================================================================
 
 
 class TestDialogueServiceUsesLogException:
-    """Тесты для проверки использования log.exception в DialogueService."""
+    """Tests for verifying log.exception usage in DialogueService."""
 
     def test_run_dialogue_cycle_uses_log_exception(self):
-        """Проверить, что используется log.exception вместо log.warning."""
+        """Verify that log.exception is used instead of log.warning."""
         source = inspect.getsource(DialogueService.run_dialogue_cycle)
         assert "log.exception" in source
 
     def test_provider_error_caught_with_exception_logging(self):
-        """Проверить обработку ProviderError с log.exception."""
+        """Verify ProviderError handling with log.exception."""
         source = inspect.getsource(DialogueService.run_dialogue_cycle)
         assert "ProviderError" in source
         assert "log.exception" in source
 
 
 # =============================================================================
-# 6. Тест: controllers/dialogue_controller.py:78 - state возвращает копию (replace())
+# 6. Test: controllers/dialogue_controller.py:78 - state returns copy (replace())
 # =============================================================================
 
 
 class TestControllerStateReturnsCopy:
-    """Тесты для проверки возврата копии state в DialogueController."""
+    """Tests for verifying state copy return in DialogueController."""
 
     def test_state_property_uses_constructor(self):
-        """Проверить, что state использует конструктор для возврата копии."""
+        """Verify that state uses constructor for copy return."""
         source = inspect.getsource(DialogueController.state.fget)
         assert "UIState(" in source
         assert "replace(" not in source
 
     def test_state_returns_independent_copy(self):
-        """Проверить, что возвращаемый state не связан с внутренним состоянием."""
+        """Verify that returned state is not linked to internal state."""
         mock_service = MagicMock()
         mock_service.is_running = False
         mock_service.is_paused = False
@@ -207,22 +207,22 @@ class TestControllerStateReturnsCopy:
 
 
 # =============================================================================
-# 7. Тест: models/ollama_client.py:212 - _get_session работает корректно
+# 7. Test: models/ollama_client.py:212 - _get_session works correctly
 # =============================================================================
 
 
 class TestHTTPSessionManagerGetSession:
-    """Тесты для проверки работы _get_session (alias для get_session)."""
+    """Tests for verifying _get_session (alias for get_session) works."""
 
     def test_get_session_method_exists(self):
-        """Проверить, что метод get_session существует."""
+        """Verify that get_session method exists."""
         manager = _HTTPSessionManager(timeout=60)
         assert hasattr(manager, "get_session")
         assert callable(manager.get_session)
 
     @pytest.mark.asyncio
     async def test_get_session_creates_new_session(self):
-        """Проверить, что get_session создаёт новую сессию при первой вызове."""
+        """Verify that get_session creates new session on first call."""
         manager = _HTTPSessionManager(timeout=60)
         session = await manager.get_session()
         assert session is not None
@@ -230,7 +230,7 @@ class TestHTTPSessionManagerGetSession:
 
     @pytest.mark.asyncio
     async def test_get_session_reuses_existing_session(self):
-        """Проверить, что get_session переиспользует существующую сессию."""
+        """Verify that get_session reuses existing session."""
         manager = _HTTPSessionManager(timeout=60)
         session1 = await manager.get_session()
         session2 = await manager.get_session()
@@ -238,7 +238,7 @@ class TestHTTPSessionManagerGetSession:
 
     @pytest.mark.asyncio
     async def test_get_session_creates_new_after_close(self):
-        """Проверить, что создаётся новая сессия после закрытия старой."""
+        """Verify that new session is created after closing old one."""
         manager = _HTTPSessionManager(timeout=60)
         session1 = await manager.get_session()
         await session1.close()
@@ -247,32 +247,32 @@ class TestHTTPSessionManagerGetSession:
 
 
 # =============================================================================
-# 8. Тест: ProviderConnectionError и ProviderGenerationError обрабатываются раздельно
+# 8. Test: ProviderConnectionError and ProviderGenerationError handled separately
 # =============================================================================
 
 
 class TestSeparateExceptionHandling:
-    """Тесты для проверки раздельной обработки исключений в app.py."""
+    """Tests for verifying separate exception handling in app.py."""
 
     def test_on_mount_has_specific_handlers(self):
-        """Проверить наличие специфичных обработчиков для исключений."""
+        """Verify presence of specific exception handlers."""
         source = inspect.getsource(DialogueApp.on_mount)
-        # Проверяем что есть специфичные обработчики
+        # Verify specific handlers exist
         assert "ProviderConnectionError" in source or "aiohttp.ClientError" in source
         assert "ProviderGenerationError" in source or "asyncio.TimeoutError" in source
 
     def test_connection_error_handler_exists(self):
-        """Проверить обработку ProviderConnectionError."""
+        """Verify ProviderConnectionError handling."""
         source = inspect.getsource(DialogueApp.on_mount)
         assert "ProviderConnectionError" in source
 
     def test_generation_error_handler_exists(self):
-        """Проверить обработку ProviderGenerationError."""
+        """Verify ProviderGenerationError handling."""
         source = inspect.getsource(DialogueApp.on_mount)
         assert "ProviderGenerationError" in source
 
     def test_no_generic_exception_handler(self):
-        """Проверить, что нет общего обработчика исключений."""
+        """Verify that there is no generic exception handler."""
         source = inspect.getsource(DialogueApp.on_mount)
         if "except Exception" in source or "except ProviderError" in source:
             assert "ProviderConnectionError" in source
@@ -280,26 +280,26 @@ class TestSeparateExceptionHandling:
 
 
 # =============================================================================
-# 9. Тест: tui/app.py:556-559 - cleanup вызывается при остановке
+# 9. Test: tui/app.py:556-559 - cleanup called on stop
 # =============================================================================
 
 
 class TestCleanupOnUnmount:
-    """Тесты для проверки вызова cleanup при остановке приложения."""
+    """Tests for verifying cleanup call on application stop."""
 
     def test_on_unmount_calls_cleanup(self):
-        """Проверить, что on_unmount вызывает cleanup."""
+        """Verify that on_unmount calls cleanup."""
         source = inspect.getsource(DialogueApp.on_unmount)
         assert "await self._controller.cleanup()" in source
 
     def test_on_unmount_cancels_dialogue_task(self):
-        """Проверить, что on_unmount отменяет задачу диалога."""
+        """Verify that on_unmount cancels dialogue task."""
         source = inspect.getsource(DialogueApp.on_unmount)
         assert "_dialogue_task.cancel()" in source or "cancel()" in source
 
     @pytest.mark.asyncio
     async def test_on_unmount_handles_cleanup_error(self):
-        """Проверить обработку ошибок при cleanup."""
+        """Verify error handling during cleanup."""
         app = DialogueApp()
 
         mock_task = AsyncMock()
@@ -315,7 +315,7 @@ class TestCleanupOnUnmount:
 
     @pytest.mark.asyncio
     async def test_on_unmount_calls_controller_cleanup(self):
-        """Проверить вызов cleanup у контроллера."""
+        """Verify controller cleanup call."""
         app = DialogueApp()
 
         mock_task = AsyncMock()
@@ -332,20 +332,20 @@ class TestCleanupOnUnmount:
 
 
 # =============================================================================
-# 10. Тест: models/conversation.py:131-138 - _add_message_to_context работает корректно
+# 10. Test: models/conversation.py:131-138 - _add_message_to_context works correctly
 # =============================================================================
 
 
 class TestAddMessageToContext:
-    """Тесты для проверки работы _add_message_to_context."""
+    """Tests for verifying _add_message_to_context works."""
 
     def test_add_message_to_context_exists(self):
-        """Проверить существование метода _add_message_to_context."""
+        """Verify existence of _add_message_to_context method."""
         conversation = Conversation("model_a", "model_b", "test_topic")
         assert hasattr(conversation, "_add_message_to_context")
 
     def test_add_message_to_context_trims_when_needed(self):
-        """Проверить обрезку контекста при достижении лимита."""
+        """Verify context trimming when limit is reached."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
         initial_context_len = MAX_CONTEXT_LENGTH - 1
@@ -356,7 +356,7 @@ class TestAddMessageToContext:
         assert len(conversation._context_a) <= MAX_CONTEXT_LENGTH
 
     def test_add_message_to_context_adds_to_correct_model(self):
-        """Проверить добавление сообщения в правильный контекст модели."""
+        """Verify message is added to correct model context."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
         conversation._add_message_to_context("A", "user", "message for A")
@@ -368,7 +368,7 @@ class TestAddMessageToContext:
         assert len(conversation._context_a) == 2
 
     def test_add_message_to_context_handles_message_dict(self):
-        """Проверить создание MessageDict при добавлении."""
+        """Verify MessageDict creation on add."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
         conversation._add_message_to_context("A", "user", "test content")
@@ -379,31 +379,31 @@ class TestAddMessageToContext:
 
 
 # =============================================================================
-# Интеграционные тесты
+# Integration tests
 # =============================================================================
 
 
 class TestIntegration:
-    """Интеграционные тесты для проверки взаимодействия компонентов."""
+    """Integration tests for verifying component interaction."""
 
     def test_conversation_trim_and_add_message_flow(self):
-        """Проверить полный поток обрезки и добавления сообщений."""
+        """Verify complete trim and add message flow."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
         for i in range(MAX_CONTEXT_LENGTH + 5):
             conversation.add_message("A", "user", f"message {i}")
 
-        # Контекст должен быть обрезан до MAX_CONTEXT_LENGTH или меньше
+        # Context should be trimmed to MAX_CONTEXT_LENGTH or less
         assert len(conversation._context_a) <= MAX_CONTEXT_LENGTH
-        # Trim логика сохраняет system message + последние сообщения
-        # После добавления 55 сообщений (0-54) и trim до 49, последнее будет
+        # Trim logic preserves system message + latest messages
+        # After adding 55 messages (0-54) and trim to 49, last will be
         # message 54
         assert conversation._context_a[-1]["role"] == "user"
-        # Первое сообщение должно быть системным промптом
+        # First message should be system prompt
         assert conversation._context_a[0]["role"] == "system"
 
     def test_controller_state_immutability(self):
-        """Проверить неизменяемость state после возврата из controller."""
+        """Verify state immutability after return from controller."""
         mock_service = MagicMock()
         mock_service.is_running = False
         mock_service.is_paused = False
@@ -415,7 +415,7 @@ class TestIntegration:
 
     @pytest.mark.asyncio
     async def test_session_manager_concurrent_access(self):
-        """Проверить безопасность параллельного доступа к session manager."""
+        """Verify concurrent access safety to session manager."""
         manager = _HTTPSessionManager(timeout=60)
 
         async def get_session_twice():

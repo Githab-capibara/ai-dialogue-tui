@@ -1,7 +1,7 @@
-"""Константы UI для TUI приложения.
+"""UI constants for TUI application.
 
-Этот модуль содержит все константы для стилизации и идентификации
-UI элементов.
+This module contains all constants for styling and identifying
+UI elements.
 """
 
 from __future__ import annotations
@@ -12,13 +12,13 @@ from typing import Final
 
 @dataclass(frozen=True, slots=True)
 class MessageStyles:
-    """Стили для сообщений в логе диалога.
+    """Styles for messages in dialogue log.
 
     Attributes:
-        model_a: Стиль для сообщений модели A.
-        model_b: Стиль для сообщений модели B.
-        system: Стиль для системных сообщений.
-        error: Стиль для сообщений об ошибках.
+        model_a: Style for model A messages.
+        model_b: Style for model B messages.
+        system: Style for system messages.
+        error: Style for error messages.
 
     """
 
@@ -30,7 +30,7 @@ class MessageStyles:
 
 @dataclass(frozen=True, slots=True)
 class UIElementIDs:
-    """Идентификаторы UI элементов для предотвращения magic strings."""
+    """UI element identifiers to prevent magic strings."""
 
     # Model Selection Screen
     model_selection_container: str = "model-selection-container"
@@ -71,13 +71,13 @@ class UIElementIDs:
 
 @dataclass(frozen=True, slots=True)
 class CSSClasses:
-    """CSS классы для стилизации элементов.
+    """CSS classes for element styling.
 
     Attributes:
-        model_a_message: Класс для сообщений модели A.
-        model_b_message: Класс для сообщений модели B.
-        system_message: Класс для системных сообщений.
-        error_message: Класс для сообщений об ошибках.
+        model_a_message: Class for model A messages.
+        model_b_message: Class for model B messages.
+        system_message: Class for system messages.
+        error_message: Class for error messages.
 
     """
 
