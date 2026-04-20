@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import html
 import re
-from functools import lru_cache
 
 MAX_RESPONSE_PREVIEW_LENGTH: int = 100
 
@@ -35,12 +34,6 @@ __all__ = [
     "sanitize_response_for_display",
     "sanitize_topic",
 ]
-
-
-@lru_cache(maxsize=128)
-def _compile_sanitizer() -> tuple[str, ...]:
-    """Cache pattern for topic sanitization."""
-    return ()
 
 
 def sanitize_topic(topic: str) -> str:

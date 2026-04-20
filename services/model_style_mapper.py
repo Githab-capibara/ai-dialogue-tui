@@ -21,12 +21,10 @@ class StyleInfo(NamedTuple):
 class ModelStyleMapper:
     """Service for mapping model state to display style."""
 
-    def __init__(self) -> None:
-        """Initialize style mapper."""
-        self._style_map: dict[ModelId, str] = {
-            "A": "model_a",
-            "B": "model_b",
-        }
+    _STYLE_MAP: dict[str, str] = {
+        "A": "model_a",
+        "B": "model_b",
+    }
 
     def get_style_info(self, model_id: ModelId, model_name: str) -> StyleInfo:
         """Get style information for model.
@@ -39,10 +37,10 @@ class ModelStyleMapper:
             Tuple (model_name, style_id).
 
         """
-        style_id = self._style_map[model_id]
+        style_id = self._STYLE_MAP[model_id]
         return StyleInfo(model_name=model_name, style_id=style_id)
 
-    def get_style_id(self, model_id: ModelId) -> str:
+    def _get_style_id(self, model_id: ModelId) -> str:
         """Get style identifier for model.
 
         Args:
@@ -52,4 +50,4 @@ class ModelStyleMapper:
             Style identifier (model_a or model_b).
 
         """
-        return self._style_map[model_id]
+        return self._STYLE_MAP[model_id]
