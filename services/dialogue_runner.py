@@ -111,21 +111,21 @@ class DialogueRunner:
                     result = await self._process_turn()
                     if result and on_turn:
                         on_turn(result)
-                except ProviderError as e:
-                    log.warning("Ошибка провайдера в цикле диалога: %s", e)
+                except ProviderError as exc:
+                    log.warning("Ошибка провайдера в цикле диалога: %s", exc)
                     if on_error:
                         model_name = self._service.conversation.get_current_model_name()
                         on_error(model_name)
 
-                await asyncio.sleep(self._config.pause_between_messages)
+                    await asyncio.sleep(self._config.pause_between_messages)
 
         except asyncio.CancelledError:
             log.debug("Диалог отменён")
             raise
         except ProviderError:
             log.debug("ProviderError обработан в цикле диалога")
-        except (RuntimeError, SystemError, OSError):
-            log.exception("Critical error in dialogue loop")
+        except (RuntimeError, SystemError, OSError) as exc:
+            log.exception("Critical error in dialogue loop: %s", exc)
         finally:
             self._service.stop()
 
@@ -140,8 +140,8 @@ class DialogueRunner:
 
     def _is_task_cancelled(self) -> bool:
         """Проверить отменена ли текущая задача."""
-        current_task = asyncio.current_task()
-        return current_task is not None and current_task.cancelled()
+        task = asyncio.current_task()
+        return task is not None and task.cancelled()
 
     async def cleanup(self) -> None:
         """Очистить ресурсы раннера."""

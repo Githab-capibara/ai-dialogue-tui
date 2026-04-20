@@ -232,7 +232,7 @@ class TopicInputScreen(ModalScreen[str | None]):
         self.dismiss(topic)
 
 
-class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
+class DialogueApp(App[None]):
     """Основное TUI приложение для диалога ИИ-моделей.
 
     Содержит только UI-логику. Бизнес-логика вынесена в DialogueService.
@@ -305,15 +305,16 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         """
         try:
             status_label: Label = self.query_one("#status-value", Label)
-            status_label.update(f"[{state.status_style}]{state.status_text}[/{state.status_style}]")
+            style_tag = f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
+            status_label.update(style_tag)
         except (NoMatches, ScreenStackError):
             log.debug("Элемент #status-value недоступен для обновления")
         except LookupError:
             log.exception("LookupError при обновлении UI состояния")
         except RuntimeError:
             log.exception("RuntimeError при обновлении UI состояния")
-        except Exception:
-            log.exception("Ошибка при обновлении UI состояния")
+        except Exception as e:
+            log.exception("Ошибка при обновлении UI состояния: %s", e)
 
     async def on_mount(self) -> None:
         """Инициализация при запуске приложения."""
@@ -455,7 +456,8 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             # чтобы UI успел обновиться после закрытия модального окна
             def _finalize_setup() -> None:
                 self.sub_title = f"{model_a} ↔ {model_b} | Тема: {sanitized_topic}"
-                self._on_ui_state_changed(UIState(status_text="Готов к запуску", status_style="green"))
+                ready_state = UIState(status_text="Готов к запуску", status_style="green")
+                self._on_ui_state_changed(ready_state)
 
                 # Логируем начало с обработкой ошибок
                 try:
@@ -467,14 +469,13 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
                         f"[bold]Модель B:[/bold] [{MESSAGE_STYLES.model_b}]"
                         f"{model_b}[/{MESSAGE_STYLES.model_b}]\n"
                         f"[bold]Тема:[/bold] {sanitized_topic}\n"
-                        f"[dim]Нажмите 'Старт' для начала диалога[/dim]",
+                        "[dim]Нажмите 'Старт' для начала диалога[/dim]",
                     )
                 except (NoMatches, LookupError, RuntimeError):
                     log.warning("Не удалось записать в лог при инициализации")
 
             self.call_after_refresh(_finalize_setup)
 
-        self.push_screen(TopicInputScreen(), callback=on_topic_entered)
         self.push_screen(TopicInputScreen(), callback=on_topic_entered)
 
     @on(Button.Pressed, f"#{UI_IDS.start_btn}")
@@ -583,7 +584,8 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
 
         if result:
             formatted_response = sanitize_response_for_display(result.response)
-            message = f"\n[{style}]Ход {service.turn_count}: {result.model_name}[/]\n  {formatted_response}"
+            turn_msg = f"\n[{style}]Ход {service.turn_count}: {result.model_name}[/]\n  {formatted_response}"
+            message = turn_msg
             self.call_after_refresh(self._write_to_log, message)
 
         return result
@@ -599,12 +601,8 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
     def _handle_dialogue_error(self, model_name: str) -> None:
         """Обработать ошибку генерации ответа.
 
-        Важно: Этот метод вызывается из асинхронного контекста (_process_dialogue_turn),
+        Этот метод вызывается из асинхронного контекста (_process_dialogue_turn),
         поэтому используем call_after_refresh вместо call_from_thread.
-
-        call_from_thread должен использоваться ТОЛЬКО когда метод вызывается из
-        отдельного потока (threading.Thread). Для асинхронного контекста (asyncio)
-        используйте call_after_refresh или call_later.
         """
         error_msg = f"\n[{MESSAGE_STYLES.error}]Ошибка ({model_name})[/]"
         # Используем call_after_refresh т.к. мы в асинхронном контексте, а не в

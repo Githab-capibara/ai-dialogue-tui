@@ -398,9 +398,9 @@ class OllamaClient:
         except ProviderError:
             _logger.debug("ProviderError при получении списка моделей")
             raise
-        except (json.JSONDecodeError, KeyError, TypeError) as e:
-            msg = f"Ошибка валидации ответа API: {e}"
-            raise ProviderGenerationError(msg) from e
+        except (json.JSONDecodeError, KeyError, TypeError) as err:
+            msg = f"Ошибка валидации ответа API: {err}"
+            raise ProviderGenerationError(msg) from err
         except OSError as err:
             msg = f"IO error: {err}"
             _logger.debug("OSError: %s", err)
