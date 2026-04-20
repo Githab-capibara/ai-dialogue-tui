@@ -1,6 +1,6 @@
-"""Контроллеры для управления состоянием UI приложения AI Dialogue TUI.
+"""Controllers for managing UI state of AI Dialogue TUI application.
 
-Этот модуль содержит контроллеры для связи бизнес-логики с UI.
+This module contains controllers for connecting business logic with UI.
 """
 
 from __future__ import annotations
@@ -16,18 +16,18 @@ if TYPE_CHECKING:
 
 @dataclass(slots=True)
 class UIState:
-    """Состояние UI для отображения.
+    """UI state for display.
 
     Attributes:
-        status_text: Текст для отображения в статус-баре.
-        status_style: Стиль для статус-бара (green, yellow, red, etc.).
-        turn_count: Количество сделанных ходов.
-        current_model: Название текущей модели (если известна).
-        is_dialogue_active: Активен ли диалог в данный момент.
+        status_text: Text to display in status bar.
+        status_style: Style for status bar (green, yellow, red, etc.).
+        turn_count: Number of turns made.
+        current_model: Current model name (if known).
+        is_dialogue_active: Whether dialogue is active.
 
     """
 
-    status_text: str = "Ожидание..."
+    status_text: str = "Waiting..."
     status_style: str = "dim"
     turn_count: int = 0
     current_model: str | None = None
@@ -35,14 +35,14 @@ class UIState:
 
 
 class DialogueController:
-    """Контроллер для управления состоянием UI на основе сервиса диалога.
+    """Controller for managing UI state based on dialogue service.
 
-    Связывает бизнес-логику (DialogueService) с UI-компонентами.
-    Обрабатывает команды от пользователя и обновляет состояние UI.
+    Connects business logic (DialogueService) with UI components.
+    Handles user commands and updates UI state.
 
     Attributes:
-        service: Сервис диалога для управления бизнес-логикой.
-        on_state_changed: Callback для уведомления об изменении состояния UI.
+        service: Dialogue service for managing business logic.
+        on_state_changed: Callback for UI state change notifications.
 
     """
 
@@ -51,11 +51,11 @@ class DialogueController:
         service: DialogueService,
         on_state_changed: Callable[[UIState], None] | None = None,
     ) -> None:
-        """Инициализация контроллера.
+        """Initialize controller.
 
         Args:
-            service: Сервис диалога для управления.
-            on_state_changed: Callback вызываемый при изменении состояния UI.
+            service: Dialogue service to manage.
+            on_state_changed: Callback called when UI state changes.
 
         """
         self._service = service
@@ -64,13 +64,13 @@ class DialogueController:
 
     @property
     def state(self) -> UIState:
-        """Получить текущее состояние UI.
+        """Get current UI state.
 
         Returns:
-            Текущее состояние UI.
+            Current UI state.
 
         """
-        # Возвращаем копию для безопасности через конструктор
+        # Return copy for safety via constructor
         return UIState(
             status_text=self._state.status_text,
             status_style=self._state.status_style,
@@ -81,16 +81,16 @@ class DialogueController:
 
     @property
     def service(self) -> DialogueService:
-        """Получить сервис диалога.
+        """Get dialogue service.
 
         Returns:
-            Сервис диалога.
+            Dialogue service.
 
         """
         return self._service
 
     def _notify_state_changed(self) -> None:
-        """Уведомить об изменении состояния UI через callback."""
+        """Notify UI state change via callback."""
         if self._on_state_changed:
             self._on_state_changed(self._state)
 
@@ -99,11 +99,11 @@ class DialogueController:
         text: str,
         style: str,
     ) -> None:
-        """Обновить статус и уведомить об изменении.
+        """Update status and notify change.
 
         Args:
-            text: Новый текст статуса.
-            style: Стиль для отображения.
+            text: New status text.
+            style: Display style.
 
         """
         self._state.status_text = text
@@ -111,88 +111,88 @@ class DialogueController:
         self._notify_state_changed()
 
     def handle_start(self) -> bool:
-        """Обработать команду запуска диалога.
+        """Handle dialogue start command.
 
         Returns:
-            True если диалог успешно запущен, False если есть ошибки.
+            True if dialogue started successfully, False if there are errors.
 
         """
         if self._service.is_running and not self._service.is_paused:
-            self._update_status("Диалог уже запущен", "yellow")
+            self._update_status("Dialogue already running", "yellow")
             return False
 
         self._service.start()
         self._state.is_dialogue_active = True
-        self._update_status("Диалог идёт...", "green")
+        self._update_status("Dialogue running...", "green")
         return True
 
     def handle_pause(self) -> bool:
-        """Обработать команду паузы/продолжения.
+        """Handle pause/resume command.
 
         Returns:
-            True если команда выполнена, False если диалог не настроен.
+            True if command executed, False if dialogue not configured.
 
         """
         if not self._service.is_running:
-            self._update_status("Диалог не запущен", "red")
+            self._update_status("Dialogue not started", "red")
             return False
 
         if self._service.is_paused:
             self._service.resume()
-            self._update_status("Диалог идёт...", "green")
+            self._update_status("Dialogue running...", "green")
         else:
             self._service.pause()
-            self._update_status("На паузе", "yellow")
+            self._update_status("Paused", "yellow")
 
         return True
 
     def handle_clear(self) -> None:
-        """Обработать команду очистки истории.
+        """Handle history clear command.
 
-        Очищает контексты диалога и сбрасывает счетчик ходов.
+        Clears dialogue contexts and resets turn counter.
         """
         self._service.clear_history()
         self._state.turn_count = 0
-        self._update_status("История очищена", "dim")
+        self._update_status("History cleared", "dim")
 
     def handle_stop(self) -> None:
-        """Обработать команду остановки диалога.
+        """Handle dialogue stop command.
 
-        Устанавливает флаги is_running и is_paused в False.
+        Sets is_running and is_paused flags to False.
         """
         self._service.stop()
         self._state.is_dialogue_active = False
-        self._update_status("Остановлен", "dim")
+        self._update_status("Stopped", "dim")
 
     def update_for_turn(
         self,
         model_name: str,
         style: str,
     ) -> None:
-        """Обновить состояние для нового хода диалога.
+        """Update state for new dialogue turn.
 
         Args:
-            model_name: Название модели которая делает ход.
-            style: Стиль для отображения (STYLE_MODEL_A или STYLE_MODEL_B).
+            model_name: Name of model making the turn.
+            style: Display style (STYLE_MODEL_A or STYLE_MODEL_B).
 
         """
         self._state.current_model = model_name
         self._state.turn_count = self._service.turn_count
-        self._update_status(f"Ход: {model_name}", style)
+        self._update_status(f"Turn: {model_name}", style)
 
     def update_for_error(self, model_name: str) -> None:
-        """Обновить состояние при ошибке.
+        """Update state on error.
 
         Args:
-            model_name: Название модели где произошла ошибка.
+            model_name: Name of model where error occurred.
 
         """
-        self._update_status(f"Ошибка: {model_name}", "red")
+        self._update_status(f"Error: {model_name}", "red")
 
     async def cleanup(self) -> None:
-        """Очистить ресурсы контроллера и сервиса.
+        """Clean up controller and service resources.
 
-        Вызывает cleanup сервиса диалога для освобождения ресурсов.
+        Calls dialogue service cleanup to release resources.
         """
         await self._service.cleanup()
 

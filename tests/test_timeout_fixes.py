@@ -1,12 +1,12 @@
-"""Тесты для проверки исправлений проблем с таймаутами.
+"""Tests for verifying timeout issue fixes.
 
-Этот модуль содержит тесты для проверки:
-1. Валидации параметра sock_read_timeout в Config
-2. Правильной передачи sock_read_timeout в _HTTPSessionManager
-3. Корректного сообщения об ошибке таймаута
+This module contains tests for verifying:
+1. sock_read_timeout parameter validation in Config
+2. Proper passing of sock_read_timeout to _HTTPSessionManager
+3. Correct timeout error message
 
 Note:
-    Тесты используют доступ к внутренним атрибутам для тестирования.
+    Tests use access to internal attributes for testing purposes.
 
 """
 
@@ -27,7 +27,7 @@ def create_async_mock_response(
     status: int = 200,
     json_data: Any = None,
 ) -> AsyncMock:
-    """Создать мок для HTTP ответа."""
+    """Create mock for HTTP response."""
     mock_response = AsyncMock()
     mock_response.status = status
 
@@ -42,7 +42,7 @@ def create_session_mock(
     response: AsyncMock | None = None,
     raise_on_enter: Exception | None = None,
 ) -> AsyncMock:
-    """Создать мок для HTTP сессии."""
+    """Create mock for HTTP session."""
     mock_context_manager = AsyncContextManagerMock(response=response, raise_on_enter=raise_on_enter)
     mock_session = AsyncMock()
     mock_session.get = MagicMock(return_value=mock_context_manager)
@@ -52,7 +52,7 @@ def create_session_mock(
 
 
 def create_mock_get_session(mock_session: AsyncMock):
-    """Создать функцию для мока _get_session метода."""
+    """Create function for mocking _get_session method."""
 
     async def mock_get_session(_self: OllamaClient) -> Any:
         return mock_session
@@ -61,7 +61,7 @@ def create_mock_get_session(mock_session: AsyncMock):
 
 
 class AsyncContextManagerMock:
-    """Мок для асинхронного контекстного менеджера."""
+    """Mock for async context manager."""
 
     def __init__(self, response: Any = None, raise_on_enter: Exception | None = None) -> None:
         self._response = response
@@ -77,39 +77,39 @@ class AsyncContextManagerMock:
 
 
 class TestSockReadTimeoutValidation:
-    """Тесты для валидации sock_read_timeout в Config."""
+    """Tests for sock_read_timeout validation in Config."""
 
     def test_default_sock_read_timeout(self) -> None:
-        """Тест что дефолтное значение sock_read_timeout установлено правильно."""
+        """Test that default sock_read_timeout is set correctly."""
         config = Config()
         assert config.sock_read_timeout == 300
 
     def test_custom_sock_read_timeout(self) -> None:
-        """Тест что кастомное значение sock_read_timeout принимается."""
+        """Test that custom sock_read_timeout value is accepted."""
         config = Config(sock_read_timeout=600)
         assert config.sock_read_timeout == 600
 
     def test_sock_read_timeout_validation_min(self) -> None:
-        """Тест минимального значения sock_read_timeout."""
+        """Test minimum sock_read_timeout value."""
         config = Config(sock_read_timeout=1)
         assert config.sock_read_timeout == 1
 
     def test_sock_read_timeout_validation_out_of_range(self) -> None:
-        """Тест что sock_read_timeout вне диапазона вызывает ошибку."""
+        """Test that sock_read_timeout out of range raises error."""
         with pytest.raises(ValueError, match="sock_read_timeout"):
             Config(sock_read_timeout=0)
 
     def test_sock_read_timeout_validation_negative(self) -> None:
-        """Тест что отрицательное значение sock_read_timeout вызывает ошибку."""
+        """Test that negative sock_read_timeout raises error."""
         with pytest.raises(ValueError, match="sock_read_timeout"):
             Config(sock_read_timeout=-1)
 
 
 class TestHTTPSessionManagerTimeout:
-    """Тесты для проверки передачи таймаутов в _HTTPSessionManager."""
+    """Tests for verifying timeout passing to _HTTPSessionManager."""
 
     def test_session_manager_uses_custom_sock_read_timeout(self) -> None:
-        """Тест что _HTTPSessionManager использует переданный sock_read_timeout."""
+        """Test that _HTTPSessionManager uses passed sock_read_timeout."""
         manager = _HTTPSessionManager(
             timeout=60,
             conn_timeout=10,
@@ -118,29 +118,29 @@ class TestHTTPSessionManagerTimeout:
         assert manager._sock_read_timeout == 300
 
     def test_session_manager_default_sock_read_timeout(self) -> None:
-        """Тест что _HTTPSessionManager имеет дефолтное значение sock_read_timeout."""
+        """Test that _HTTPSessionManager has default sock_read_timeout."""
         manager = _HTTPSessionManager(timeout=60)
         assert manager._sock_read_timeout == 60
 
     def test_ollama_client_passes_sock_read_timeout(self) -> None:
-        """Тест что OllamaClient передаёт sock_read_timeout в _HTTPSessionManager."""
+        """Test that OllamaClient passes sock_read_timeout to _HTTPSessionManager."""
         config = Config(sock_read_timeout=300)
         client = OllamaClient(config=config)
         assert client._http_manager._sock_read_timeout == 300
 
     def test_ollama_client_default_sock_read_timeout(self) -> None:
-        """Тест что OllamaClient использует дефолтное значение из Config."""
+        """Test that OllamaClient uses default value from Config."""
         config = Config()
         client = OllamaClient(config=config)
         assert client._http_manager._sock_read_timeout == 300
 
 
 class TestTimeoutErrorHandling:
-    """Тесты для проверки обработки ошибок таймаута."""
+    """Tests for verifying timeout error handling."""
 
     @pytest.mark.asyncio
     async def test_generate_timeout_error_message(self) -> None:
-        """Тест что при timeout ошибке выводится информативное сообщение."""
+        """Test that informative message is shown on timeout error."""
         mock_context_manager = AsyncContextManagerMock(
             raise_on_enter=ServerTimeoutError("Timeout on reading data from socket")
         )
@@ -156,12 +156,12 @@ class TestTimeoutErrorHandling:
                 await client.generate("llama3", [{"role": "user", "content": "test"}])
 
             error_message = str(exc_info.value)
-            assert "Таймаут" in error_message
-            assert "300с" in error_message
+            assert "Timeout" in error_message
+            assert "300s" in error_message
 
     @pytest.mark.asyncio
     async def test_generate_timeout_error_suggests_increase(self) -> None:
-        """Тест что при timeout ошибке предлагается увеличить таймаут."""
+        """Test that increasing timeout is suggested on timeout error."""
         mock_context_manager = AsyncContextManagerMock(
             raise_on_enter=ServerTimeoutError("Timeout on reading data from socket")
         )
@@ -177,7 +177,7 @@ class TestTimeoutErrorHandling:
                 await client.generate("llama3", [{"role": "user", "content": "test"}])
 
             error_message = str(exc_info.value)
-            assert "увеличить таймаут" in error_message.lower()
+            assert "increase" in error_message.lower()
 
 
 if __name__ == "__main__":

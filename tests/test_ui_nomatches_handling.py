@@ -1,4 +1,4 @@
-"""Тесты для обработки недоступности UI элементов при активных модальных окнах."""
+"""Tests for handling UI element unavailability with active modal dialogs."""
 
 # pylint: disable=protected-access,import-outside-toplevel
 
@@ -14,46 +14,46 @@ from tui.app import DialogueApp
 
 
 class TestUINoMatchesHandling:
-    """Тесты для предотвращения ошибок NoMatches при работе с модальными окнами."""
+    """Tests for preventing NoMatches errors when working with modal dialogs."""
 
     def test_on_ui_state_changed_no_matches_logged_as_debug(
         self,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """
-        Тест проверяет, что NoMatches исключение логируется на уровне DEBUG.
+        Test verifies that NoMatches exception is logged at DEBUG level.
 
-        Сценарий: элемент #status-value недоступен (модальное окно активно),
-        ошибка должна быть обработана без ERROR логирования.
+        Scenario: #status-value element unavailable (modal dialog active),
+        error should be handled without ERROR logging.
         """
         config = Config()
         app = DialogueApp(config=config)
-        test_state = UIState(status_text="Тест", status_style="green")
+        test_state = UIState(status_text="Test", status_style="green")
 
-        # Вызываем метод когда UI ещё не смонтирован
+        # Call method when UI is not yet mounted
         with caplog.at_level("DEBUG"):
             app._on_ui_state_changed(test_state)
 
-        # Проверяем что было записано DEBUG сообщение
-        assert "Элемент #status-value недоступен для обновления" in caplog.text
-        # Проверяем что ERROR не было
-        assert "Ошибка при обновлении UI состояния" not in caplog.text
+        # Verify DEBUG message was recorded
+        assert "Element #status-value unavailable for update" in caplog.text
+        # Verify ERROR was not logged
+        assert "Error updating UI state" not in caplog.text
 
     def test_on_ui_state_changed_runtime_error_logged_as_error(
         self,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """
-        Тест проверяет, что RuntimeError логируется на уровне ERROR.
+        Test verifies that RuntimeError is logged at ERROR level.
 
-        Сценарий: неожиданная ошибка при обновлении UI должна быть
-        залогирована как ERROR с полным traceback.
+        Scenario: unexpected error during UI update should be
+        logged as ERROR with full traceback.
         """
         config = Config()
         app = DialogueApp(config=config)
-        test_state = UIState(status_text="Тест", status_style="green")
+        test_state = UIState(status_text="Test", status_style="green")
 
-        # Мок query_one для выброса RuntimeError
+        # Mock query_one to raise RuntimeError
         def mock_query_one(selector: str, widget_type: type) -> Label:
             if selector == "#status-value" and widget_type == Label:
                 raise RuntimeError("Test runtime error")
@@ -64,21 +64,21 @@ class TestUINoMatchesHandling:
         with caplog.at_level("ERROR"):
             app._on_ui_state_changed(test_state)
 
-        # Проверяем что ERROR было записано
-        assert "RuntimeError при обновлении UI состояния" in caplog.text
+        # Verify ERROR was recorded
+        assert "RuntimeError updating UI state" in caplog.text
 
     def test_on_ui_state_changed_lookup_error_logged_as_error(
         self,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """
-        Тест проверяет, что LookupError логируется на уровне ERROR.
+        Test verifies that LookupError is logged at ERROR level.
         """
         config = Config()
         app = DialogueApp(config=config)
-        test_state = UIState(status_text="Тест", status_style="green")
+        test_state = UIState(status_text="Test", status_style="green")
 
-        # Мок query_one для выброса LookupError
+        # Mock query_one to raise LookupError
         def mock_query_one(selector: str, widget_type: type) -> Label:
             if selector == "#status-value" and widget_type == Label:
                 raise LookupError("Test lookup error")
@@ -89,23 +89,23 @@ class TestUINoMatchesHandling:
         with caplog.at_level("ERROR"):
             app._on_ui_state_changed(test_state)
 
-        # Проверяем что ERROR было записано
-        assert "LookupError при обновлении UI состояния" in caplog.text
+        # Verify ERROR was recorded
+        assert "LookupError updating UI state" in caplog.text
 
     def test_on_ui_state_changed_screen_stack_error_logged_as_debug(
         self,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """
-        Тест проверяет, что ScreenStackError логируется на уровне DEBUG.
+        Test verifies that ScreenStackError is logged at DEBUG level.
         """
         from textual.app import ScreenStackError
 
         config = Config()
         app = DialogueApp(config=config)
-        test_state = UIState(status_text="Тест", status_style="green")
+        test_state = UIState(status_text="Test", status_style="green")
 
-        # Мок query_one для выброса ScreenStackError
+        # Mock query_one to raise ScreenStackError
         def mock_query_one(selector: str, widget_type: type) -> Label:
             if selector == "#status-value" and widget_type == Label:
                 raise ScreenStackError("Test screen stack error")
@@ -116,23 +116,23 @@ class TestUINoMatchesHandling:
         with caplog.at_level("DEBUG"):
             app._on_ui_state_changed(test_state)
 
-        # Проверяем что DEBUG было записано
-        assert "Элемент #status-value недоступен для обновления" in caplog.text
+        # Verify DEBUG was recorded
+        assert "Element #status-value unavailable for update" in caplog.text
 
     def test_on_ui_state_changed_no_matches_does_not_reraise(self) -> None:
         """
-        Тест проверяет, что NoMatches не вызывает повторного выброса исключения.
+        Test verifies that NoMatches does not cause re-raise.
 
-        Метод должен обработать исключение и продолжить работу без ошибок.
+        Method should handle exception and continue without errors.
         """
         config = Config()
         app = DialogueApp(config=config)
-        test_state = UIState(status_text="Тест", status_style="green")
+        test_state = UIState(status_text="Test", status_style="green")
 
-        # Это не должно вызывать исключение
+        # This should not raise exception
         app._on_ui_state_changed(test_state)
 
-        # Если код дошёл сюда - тест пройден
+        # If code reached here - test passed
         assert True
 
 

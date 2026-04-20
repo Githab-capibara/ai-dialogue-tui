@@ -1,7 +1,7 @@
-"""Тесты для проверки исправлений, внесенных в код.
+"""Tests for verifying code fixes.
 
 Note:
-    Тесты используют доступ к внутренним атрибутам, что оправдано для тестирования.
+    Tests use access to internal attributes, which is justified for testing purposes.
 
 """
 
@@ -22,11 +22,11 @@ from models.ollama_client import OllamaClient
 
 
 class TestFixes:
-    """Тесты для проверки исправлений критических проблем."""
+    """Tests for verifying critical issue fixes."""
 
     @pytest.mark.asyncio
     async def test_ollama_client_list_models_uses_list_comprehension(self):
-        """Тест, что list_models использует list comprehension для производительности."""
+        """Test that list_models uses list comprehension for performance."""
         # Arrange
         # Create mock session and response like in existing tests
         mock_response = AsyncMock()
@@ -65,7 +65,7 @@ class TestFixes:
 
     @pytest.mark.asyncio
     async def test_ollama_client_generate_uses_cached_default_options(self):
-        """Тест, что generate использует кэшированные дефолтные опции."""
+        """Test that generate uses cached default options."""
         # Arrange
         # Create mock session and response like in existing tests
         mock_response = AsyncMock()
@@ -101,28 +101,28 @@ class TestFixes:
         # num_predict is not set when max_tokens=-1 (unlimited)
 
     def test_conversation_handles_malformed_system_prompt(self):
-        """Тест, что Conversation корректно обрабатывает некорректный системный промпт."""
+        """Test that Conversation correctly handles malformed system prompt."""
         # Arrange
         # Create conversation with custom system_prompt that has invalid format
         conversation = Conversation(
             model_a="model_a",
             model_b="model_b",
-            topic="тема",
-            system_prompt="Привет {nonexistent}!",
+            topic="topic",
+            system_prompt="Hello {nonexistent}!",
         )
 
         # Act & Assert
-        # При некорректном промпте используется fallback
+        # With invalid prompt, fallback is used
         context_a = conversation.get_context("A")
         assert len(context_a) > 0
-        # Fallback prompt на английском
+        # Fallback prompt in English
         assert "helpful assistant" in context_a[0]["content"]
-        assert "тема" in context_a[0]["content"]
+        assert "topic" in context_a[0]["content"]
 
     def test_conversation_get_context_returns_copy_for_safety(self):
-        """Тест, что get_context возвращает tuple для безопасности и производительности."""
+        """Test that get_context returns tuple for safety and performance."""
         # Arrange
-        conversation = Conversation("model_a", "model_b", "тема")
+        conversation = Conversation("model_a", "model_b", "topic")
         conversation.add_message("A", "user", "test message")
 
         # Act
@@ -140,9 +140,7 @@ class TestFixes:
         # behavior
 
     def test_tui_app_uses_ui_constants_not_hardcoded_strings(self):
-        """Тест, что TUI приложение использует константы UI
-        вместо жестко закодированных строк.
-        """
+        """Test that TUI application uses UI constants instead of hardcoded strings."""
         # This test verifies the fix by checking that the code no longer contains
         # hardcoded "#dialogue-log" strings
         # Since we can't easily test the UI without running it, we'll verify
@@ -158,7 +156,7 @@ class TestFixes:
         assert "UI_IDS.dialogue_log" in content
 
     def test_controller_handles_state_as_dataclass_properly(self):
-        """Тест, что контроллер правильно обрабатывает UIState как dataclass."""
+        """Test that controller correctly handles UIState as dataclass."""
         # Arrange
 
         # Create a mock service
@@ -188,7 +186,7 @@ class TestFixes:
         assert controller.state.is_dialogue_active is True
 
     def test_config_validate_ollama_url_has_correct_exception_handling(self):
-        """Тест, что validate_ollama_url имеет правильную обработку исключений."""
+        """Test that validate_ollama_url has correct exception handling."""
         # Act & Assert
         # Should only catch ValueError, not TypeError
         # Valid URLs
@@ -210,10 +208,10 @@ class TestFixes:
 
 
 class TestAsyncioAPICorrectness:
-    """Тесты для проверки корректного использования asyncio API."""
+    """Tests for verifying correct asyncio API usage."""
 
     def test_task_cancelled_method_exists(self):
-        """Тест, что asyncio.Task имеет атрибут .cancelled (Python 3.11+)."""
+        """Test that asyncio.Task has .cancelled attribute (Python 3.11+)."""
         import asyncio
 
         from tui.app import DialogueApp
@@ -223,7 +221,7 @@ class TestAsyncioAPICorrectness:
         assert not hasattr(asyncio.Task, "is_cancelled")
 
     def test_app_uses_correct_cancelled_method(self):
-        """Тест, что _is_task_cancelled использует правильный метод .cancelled()."""
+        """Test that _is_task_cancelled uses correct method .cancelled()."""
         with open("/home/d/ai-dialogue-tui/tui/app.py", "r", encoding="utf-8") as f:
             content = f.read()
 

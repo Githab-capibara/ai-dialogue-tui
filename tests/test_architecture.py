@@ -1,11 +1,11 @@
 """
-Тесты архитектуры для проверки разделения слоёв и dependency injection.
+Architecture tests for verifying layer separation and dependency injection.
 
-Этот модуль проверяет что:
-1. Domain слой не зависит от Infrastructure
-2. Presentation слой зависит от абстракций, не от реализаций
-3. Dependency injection работает корректно
-4. Можно заменить реализацию ModelProvider без изменения домена
+This module verifies that:
+1. Domain layer does not depend on Infrastructure
+2. Presentation layer depends on abstractions, not implementations
+3. Dependency injection works correctly
+4. ModelProvider implementation can be swapped without changing domain
 """
 
 from __future__ import annotations
@@ -25,23 +25,23 @@ from services.dialogue_service import DialogueService
 
 
 class TestArchitectureLayers:
-    """Тесты для проверки разделения слоёв архитектуры."""
+    """Tests for verifying architecture layer separation."""
 
     def test_conversation_does_not_import_ollama_client(self) -> None:
         """
-        Проверка что Conversation не импортирует OllamaClient.
+        Verify that Conversation does not import OllamaClient.
 
-        Это критично для соблюдения Clean Architecture - домен не должен
-        зависеть от инфраструктуры.
+        This is critical for Clean Architecture - domain should not
+        depend on infrastructure.
         """
-        # Читаем исходный код файла conversation.py
+        # Read source code of conversation.py
         with open("models/conversation.py", encoding="utf-8") as f:
             source = f.read()
 
-        # Парсим AST
+        # Parse AST
         tree = ast.parse(source)
 
-        # Ищем импорты
+        # Find imports
         imports = []
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -51,77 +51,77 @@ class TestArchitectureLayers:
                 if node.module:
                     imports.append(node.module)
 
-        # Проверяем что нет импорта OllamaClient
+        # Verify no OllamaClient import
         assert "models.ollama_client" not in imports
         assert "ollama_client" not in imports
 
     def test_conversation_imports_model_provider(self) -> None:
         """
-        Проверка что Conversation импортирует ModelProvider протокол.
+        Verify that Conversation imports ModelProvider protocol.
 
-        Домен должен зависеть от абстракций.
+        Domain should depend on abstractions.
         """
         with open("models/conversation.py", encoding="utf-8") as f:
             source = f.read()
 
-        # Проверяем что ModelProvider импортируется
+        # Verify ModelProvider is imported
         assert "ModelProvider" in source
         assert "from models.provider import" in source
 
     def test_ollama_client_implements_model_provider(self) -> None:
         """
-        Проверка что OllamaClient реализует протокол ModelProvider.
+        Verify that OllamaClient implements ModelProvider protocol.
 
-        Инфраструктура должна реализовывать абстракции.
+        Infrastructure must implement abstractions.
         """
-        # Проверяем что OllamaClient имеет необходимые методы
+        # Verify OllamaClient has required methods
         assert hasattr(OllamaClient, "list_models")
         assert hasattr(OllamaClient, "generate")
         assert hasattr(OllamaClient, "close")
 
-        # Проверяем что методы асинхронные
+        # Verify methods are async
         assert inspect.iscoroutinefunction(OllamaClient.list_models)
         assert inspect.iscoroutinefunction(OllamaClient.generate)
         assert inspect.iscoroutinefunction(OllamaClient.close)
 
     def test_dialogue_service_uses_model_provider_protocol(self) -> None:
         """
-        Проверка что DialogueService использует ModelProvider протокол.
+        Verify that DialogueService uses ModelProvider protocol.
 
-        Сервисный слой должен зависеть от абстракций.
+        Service layer must depend on abstractions.
         """
         with open("services/dialogue_service.py", encoding="utf-8") as f:
             source = f.read()
 
-        # Проверяем что используется ModelProvider
+        # Verify ModelProvider is used
         assert "ModelProvider" in source
         assert "from models.provider import" in source
 
-        # Проверяем что не используется прямой импорт OllamaClient
+        # Verify no direct OllamaClient import
         assert "from models.ollama_client import OllamaClient" not in source
 
     def test_dialogue_controller_uses_service(self) -> None:
         """
-        Проверка что DialogueController использует DialogueService.
+        Verify that DialogueController uses DialogueService.
 
-        Контроллер должен зависеть от сервиса, не от домена напрямую.
+        Controller should depend on service, not on domain directly.
         """
         with open("controllers/dialogue_controller.py", encoding="utf-8") as f:
             source = f.read()
 
-        # Проверяем что используется DialogueService
+        # Verify DialogueService is used
         assert "DialogueService" in source
         assert "from services.dialogue_service import" in source
 
 
 class TestDependencyInjection:
-    """Тесты для проверки работы dependency injection."""
+    """Tests for verifying dependency injection functionality."""
 
     def test_conversation_accepts_model_provider(self) -> None:
         """
-        Проверка что Conversation принимает ModelProvider через DI.
+        Verify that Conversation accepts ModelProvider via DI.
 
-        Метод generate_response должен принимать ModelProvider.
+        generate_response method must accept ModelProvider.
         """
         conversation = Conversation(
             model_a="test-a",
@@ -129,7 +129,7 @@ class TestDependencyInjection:
             topic="test",
         )
 
-        # Проверяем сигнатуру метода
+        # Verify method signature
         sig = inspect.signature(conversation.generate_response)
         params = list(sig.parameters.values())
 
@@ -138,36 +138,36 @@ class TestDependencyInjection:
 
     def test_dialogue_service_injects_dependencies(self) -> None:
         """
-        Проверка что DialogueService получает зависимости через конструктор.
+        Verify that DialogueService receives dependencies via constructor.
 
-        Все зависимости должны внедряться извне.
+        All dependencies must be injected externally.
         """
-        # Создаём мок провайдера
+        # Create provider mock
         mock_provider = AsyncMock(spec=ModelProvider)
         mock_provider.list_models.return_value = ["test"]
         mock_provider.generate.return_value = "test response"
         mock_provider.close.return_value = None
 
-        # Создаём conversation
+        # Create conversation
         conversation = Conversation(
             model_a="test-a",
             model_b="test-b",
             topic="test",
         )
 
-        # Внедряем зависимости через конструктор
+        # Inject dependencies via constructor
         service = DialogueService(
             conversation=conversation,
             provider=mock_provider,
         )
 
-        # Проверяем что зависимости сохранены
+        # Verify dependencies are saved
         assert service.conversation is conversation
         assert service.provider is mock_provider
 
     def test_dialogue_controller_injects_service(self) -> None:
         """
-        Проверка что DialogueController получает сервис через конструктор.
+        Verify that DialogueController receives service via constructor.
         """
         mock_provider = AsyncMock(spec=ModelProvider)
         conversation = Conversation(
@@ -180,76 +180,76 @@ class TestDependencyInjection:
             provider=mock_provider,
         )
 
-        # Внедряем сервис через конструктор
+        # Inject service via constructor
         controller = DialogueController(service=service)
 
-        # Проверяем что сервис сохранён
+        # Verify service is saved
         assert controller.service is service
 
 
 class TestModelProviderProtocol:
-    """Тесты для проверки протокола ModelProvider."""
+    """Tests for verifying ModelProvider protocol."""
 
     def test_model_provider_protocol_definition(self) -> None:
         """
-        Проверка что ModelProvider протокол определён корректно.
+        Verify that ModelProvider protocol is defined correctly.
 
-        Протокол должен иметь все необходимые методы.
+        Protocol must have all required methods.
         """
-        # Проверяем что протокол имеет необходимые методы
+        # Verify protocol has required methods
         assert hasattr(ModelProvider, "list_models")
         assert hasattr(ModelProvider, "generate")
         assert hasattr(ModelProvider, "close")
 
     def test_mock_provider_can_be_created(self) -> None:
         """
-        Проверка что можно создать мок реализацию ModelProvider.
+        Verify that mock ModelProvider implementation can be created.
 
-        Это важно для тестируемости.
+        This is important for testability.
         """
         mock_provider = AsyncMock(spec=ModelProvider)
         mock_provider.list_models.return_value = ["model1", "model2"]
         mock_provider.generate.return_value = "response"
         mock_provider.close.return_value = None
 
-        # Проверяем что мок работает
+        # Verify mock works
         assert isinstance(mock_provider, ModelProvider)
 
     @pytest.mark.asyncio
     async def test_mock_provider_works_with_conversation(self) -> None:
         """
-        Проверка что мок провайдер работает с Conversation.
+        Verify that mock provider works with Conversation.
 
-        Это доказывает что Conversation зависит от абстракции, не от реализации.
+        This proves that Conversation depends on abstraction, not implementation.
         """
-        # Создаём мок провайдер
+        # Create mock provider
         mock_provider = AsyncMock(spec=ModelProvider)
         mock_provider.generate.return_value = "Test response from mock"
 
-        # Создаём conversation
+        # Create conversation
         conversation = Conversation(
             model_a="test-a",
             model_b="test-b",
             topic="test",
         )
 
-        # Используем мок с conversation
+        # Use mock with conversation
         model_id, response = await conversation.generate_response(mock_provider)
 
-        # Проверяем результат
+        # Verify result
         assert model_id == "A"
         assert response == "Test response from mock"
         mock_provider.generate.assert_called_once()
 
 
 class TestServiceLayer:
-    """Тесты для проверки сервисного слоя."""
+    """Tests for verifying service layer."""
 
     def test_dialogue_service_has_state_management(self) -> None:
         """
-        Проверка что DialogueService управляет состоянием.
+        Verify that DialogueService manages state.
 
-        Сервис должен иметь флаги is_running, is_paused.
+        Service must have is_running, is_paused flags.
         """
         mock_provider = AsyncMock(spec=ModelProvider)
         conversation = Conversation(
@@ -262,33 +262,33 @@ class TestServiceLayer:
             provider=mock_provider,
         )
 
-        # Начальное состояние
+        # Initial state
         assert not service.is_running
         assert not service.is_paused
 
-        # После запуска
+        # After start
         service.start()
         assert service.is_running
         assert not service.is_paused
 
-        # После паузы
+        # After pause
         service.pause()
         assert service.is_running
         assert service.is_paused
 
-        # После возобновления
+        # After resume
         service.resume()
         assert service.is_running
         assert not service.is_paused
 
-        # После остановки
+        # After stop
         service.stop()
         assert not service.is_running
         assert not service.is_paused
 
     def test_dialogue_service_clear_history(self) -> None:
         """
-        Проверка что DialogueService.clear_history работает.
+        Verify that DialogueService.clear_history works.
         """
         mock_provider = AsyncMock(spec=ModelProvider)
         conversation = Conversation(
@@ -297,7 +297,7 @@ class TestServiceLayer:
             topic="test",
         )
 
-        # Добавляем сообщение
+        # Add message
         conversation.add_message("A", "user", "test")
         initial_count = len(conversation.get_context("A"))
 
@@ -306,16 +306,16 @@ class TestServiceLayer:
             provider=mock_provider,
         )
 
-        # Очищаем историю
+        # Clear history
         service.clear_history()
 
-        # Проверяем что контекст очищен
+        # Verify context is cleared
         assert len(conversation.get_context("A")) < initial_count
 
     @pytest.mark.asyncio
     async def test_dialogue_service_run_cycle(self) -> None:
         """
-        Проверка что DialogueService.run_dialogue_cycle работает.
+        Verify that DialogueService.run_dialogue_cycle works.
         """
         mock_provider = AsyncMock(spec=ModelProvider)
         mock_provider.generate.return_value = "Test response"
@@ -331,13 +331,13 @@ class TestServiceLayer:
             provider=mock_provider,
         )
 
-        # Запускаем сервис
+        # Start service
         service.start()
 
-        # Выполняем цикл
+        # Execute cycle
         result = await service.run_dialogue_cycle()
 
-        # Проверяем результат
+        # Verify result
         assert result is not None
         assert result.model_name == "test-a"
         assert result.response == "Test response"
@@ -345,11 +345,11 @@ class TestServiceLayer:
 
 
 class TestControllerLayer:
-    """Тесты для проверки слоя контроллеров."""
+    """Tests for verifying controller layer."""
 
     def test_controller_handles_start(self) -> None:
         """
-        Проверка что DialogueController.handle_start работает.
+        Verify that DialogueController.handle_start works.
         """
         mock_provider = AsyncMock(spec=ModelProvider)
         conversation = Conversation(
@@ -363,16 +363,16 @@ class TestControllerLayer:
         )
         controller = DialogueController(service=service)
 
-        # Обработаем старт
+        # Handle start
         result = controller.handle_start()
 
-        # Проверяем результат
+        # Verify result
         assert result is True
         assert service.is_running
 
     def test_controller_handles_pause(self) -> None:
         """
-        Проверка что DialogueController.handle_pause работает.
+        Verify that DialogueController.handle_pause works.
         """
         mock_provider = AsyncMock(spec=ModelProvider)
         conversation = Conversation(
@@ -386,17 +386,17 @@ class TestControllerLayer:
         )
         controller = DialogueController(service=service)
 
-        # Запускаем и ставим на паузу
+        # Start and pause
         service.start()
         result = controller.handle_pause()
 
-        # Проверяем результат
+        # Verify result
         assert result is True
         assert service.is_paused
 
     def test_controller_handles_clear(self) -> None:
         """
-        Проверка что DialogueController.handle_clear работает.
+        Verify that DialogueController.handle_clear works.
         """
         mock_provider = AsyncMock(spec=ModelProvider)
         conversation = Conversation(
@@ -404,7 +404,7 @@ class TestControllerLayer:
             model_b="test-b",
             topic="test",
         )
-        # Добавляем сообщение
+        # Add message
         conversation.add_message("A", "user", "test")
 
         service = DialogueService(
@@ -413,33 +413,33 @@ class TestControllerLayer:
         )
         controller = DialogueController(service=service)
 
-        # Очищаем
+        # Clear
         controller.handle_clear()
 
-        # Проверяем что счётчик сброшен
+        # Verify counter is reset
         assert controller.state.turn_count == 0
 
 
 class TestCleanArchitecture:
     """
-    Интеграционные тесты для проверки Clean Architecture.
+    Integration tests for verifying Clean Architecture.
 
-    Проверяют что зависимости направлены в правильную сторону:
-    Domain ← Presentation ← Infrastructure
+    Verify that dependencies are directed correctly:
+    Domain <- Presentation <- Infrastructure
     """
 
     def test_domain_has_no_infrastructure_dependencies(self) -> None:
         """
-        Проверка что домен не зависит от инфраструктуры.
+        Verify that domain does not depend on infrastructure.
 
-        Conversation должен импортировать только:
-        - config (конфигурация)
-        - models.provider (абстракции)
+        Conversation must only import:
+        - config (configuration)
+        - models.provider (abstractions)
         """
         with open("models/conversation.py", encoding="utf-8") as f:
             source = f.read()
 
-        # Проверяем что нет импортов инфраструктуры
+        # Verify no infrastructure imports
         assert "from models.ollama_client" not in source
         assert "import models.ollama_client" not in source
         assert "from services" not in source
@@ -448,31 +448,31 @@ class TestCleanArchitecture:
 
     def test_presentation_depends_on_abstractions(self) -> None:
         """
-        Проверка что presentation слой зависит от абстракций.
+        Verify that presentation layer depends on abstractions.
 
-        DialogueApp должен импортировать ModelProvider протокол,
-        а не только конкретную реализацию OllamaClient.
+        DialogueApp must import ModelProvider protocol,
+        not only OllamaClient implementation.
         """
         with open("tui/app.py", encoding="utf-8") as f:
             source = f.read()
 
-        # Проверяем что используются абстракции
+        # Verify abstractions are used
         assert "DialogueService" in source
         assert "DialogueController" in source
 
     def test_can_swap_provider_implementation(self) -> None:
         """
-        Проверка что можно заменить реализацию провайдера.
+        Verify that provider implementation can be swapped.
 
-        Это ключевое преимущество dependency injection.
+        This is a key advantage of dependency injection.
         """
 
-        # Создаём альтернативную реализацию
+        # Create alternative implementation
         class AlternativeProvider:
-            """Альтернативная реализация ModelProvider для теста."""
+            """Alternative ModelProvider implementation for testing."""
 
             async def list_models(self) -> list[str]:
-                """Получить список моделей."""
+                """Get list of models."""
                 return ["alt-model"]
 
             async def generate(
@@ -481,17 +481,17 @@ class TestCleanArchitecture:
                 messages: list[dict[str, str]],  # type: ignore[override]
                 # pylint: disable=unused-argument
             ) -> str:
-                """Сгенерировать ответ."""
+                """Generate response."""
                 return f"Alternative response from {model}"
 
             async def close(self) -> None:
-                """Закрыть соединение."""
+                """Close connection."""
 
-        # Используем альтернативный провайдер
-        # (это работает потому что Conversation зависит от протокола)
+        # Use alternative provider
+        # (this works because Conversation depends on protocol)
         provider = AlternativeProvider()
 
-        # Проверяем что работает
+        # Verify it works
         assert isinstance(provider, ModelProvider)
 
 

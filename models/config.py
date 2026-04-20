@@ -1,7 +1,7 @@
-"""Конфигурация приложения AI Dialogue TUI.
+"""AI Dialogue TUI application configuration.
 
-Этот модуль содержит константы по умолчанию и класс конфигурации
-с полной валидацией параметров.
+This module contains default constants and a configuration class
+with full parameter validation.
 """
 
 from __future__ import annotations
@@ -10,35 +10,35 @@ from dataclasses import dataclass
 from typing import Final
 from urllib.parse import urlparse
 
-# Константы по умолчанию для параметров генерации
+# Default constants for generation parameters
 DEFAULT_TEMPERATURE: Final = 0.7
-DEFAULT_MAX_TOKENS: Final = -1  # Без лимита
-DEFAULT_REQUEST_TIMEOUT: Final = 60  # секунд на запрос к Ollama
-DEFAULT_SOCK_READ_TIMEOUT: Final = 300  # 5 минут на чтение ответа
-DEFAULT_PAUSE_BETWEEN_MESSAGES: Final = 1.0  # секунд между сообщениями
+DEFAULT_MAX_TOKENS: Final = -1  # No limit
+DEFAULT_REQUEST_TIMEOUT: Final = 60  # seconds per request to Ollama
+DEFAULT_SOCK_READ_TIMEOUT: Final = 300  # 5 minutes for reading response
+DEFAULT_PAUSE_BETWEEN_MESSAGES: Final = 1.0  # seconds between messages
 
-# Диапазоны валидации
+# Validation ranges
 MIN_TEMPERATURE: Final = 0.0
 MAX_TEMPERATURE: Final = 1.0
-MIN_MAX_TOKENS: Final = -1  # -1 означает без лимита
+MIN_MAX_TOKENS: Final = -1  # -1 means no limit
 MIN_REQUEST_TIMEOUT: Final = 1
 MIN_SOCK_READ_TIMEOUT: Final = 1
 MIN_PAUSE_BETWEEN_MESSAGES: Final = 0.0
 
 
 def validate_ollama_url(url: str) -> bool:
-    """Валидировать URL Ollama хоста.
+    """Validate Ollama host URL.
 
-    Проверяет:
-    - Наличие схемы (http или https)
-    - Наличие netloc (хост)
-    - Корректность формата
+    Checks:
+    - Presence of scheme (http or https)
+    - Presence of netloc (host)
+    - Correct format
 
     Args:
-        url: URL для валидации.
+        url: URL to validate.
 
     Returns:
-        True если URL корректный.
+        True if URL is valid.
 
     Examples:
         >>> validate_ollama_url("http://localhost:11434")
@@ -54,10 +54,10 @@ def validate_ollama_url(url: str) -> bool:
 
     try:
         parsed = urlparse(url)
-        # Проверка схемы (только http или https)
+        # Check scheme (only http or https)
         if parsed.scheme not in ("http", "https"):
             return False
-        # Проверка наличия хоста
+        # Check for presence of host
         return bool(parsed.netloc)
     except ValueError:
         return False
@@ -69,16 +69,16 @@ def _validate_numeric_range(
     max_value: float | None = None,
     param_name: str = "parameter",
 ) -> None:
-    """Универсальная валидация числового параметра в диапазоне.
+    """Universal validation of a numeric parameter in range.
 
     Args:
-        value: Значение для валидации.
-        min_value: Минимальное допустимое значение.
-        max_value: Максимальное допустимое значение (None для бесконечности).
-        param_name: Имя параметра для сообщения об ошибке.
+        value: Value to validate.
+        min_value: Minimum allowed value.
+        max_value: Maximum allowed value (None for infinity).
+        param_name: Parameter name for error message.
 
     Raises:
-        ValueError: Если значение вне диапазона.
+        ValueError: If value is out of range.
 
     Examples:
         >>> _validate_numeric_range(5, 0, 10, "test")  # OK
@@ -86,21 +86,21 @@ def _validate_numeric_range(
 
     """
     if value < min_value:
-        msg = f"{param_name} должен быть >= {min_value}, получено {value}"
+        msg = f"{param_name} must be >= {min_value}, got {value}"
         raise ValueError(msg)
     if max_value is not None and value > max_value:
-        msg = f"{param_name} должен быть <= {max_value}, получено {value}"
+        msg = f"{param_name} must be <= {max_value}, got {value}"
         raise ValueError(msg)
 
 
 def _validate_temperature(value: float) -> None:
-    """Валидировать параметр temperature.
+    """Validate temperature parameter.
 
     Args:
-        value: Значение temperature для валидации.
+        value: Temperature value to validate.
 
     Raises:
-        ValueError: Если значение вне диапазона [0.0, 1.0].
+        ValueError: If value is out of range [0.0, 1.0].
 
     """
     _validate_numeric_range(
@@ -112,13 +112,13 @@ def _validate_temperature(value: float) -> None:
 
 
 def _validate_max_tokens(value: int) -> None:
-    """Валидировать параметр max_tokens.
+    """Validate max_tokens parameter.
 
     Args:
-        value: Значение max_tokens для валидации.
+        value: max_tokens value to validate.
 
     Raises:
-        ValueError: Если значение меньше минимального.
+        ValueError: If value is less than minimum.
 
     """
     _validate_numeric_range(
@@ -130,13 +130,13 @@ def _validate_max_tokens(value: int) -> None:
 
 
 def _validate_request_timeout(value: int) -> None:
-    """Валидировать параметр request_timeout.
+    """Validate request_timeout parameter.
 
     Args:
-        value: Значение request_timeout для валидации.
+        value: request_timeout value to validate.
 
     Raises:
-        ValueError: Если значение меньше минимального.
+        ValueError: If value is less than minimum.
 
     """
     _validate_numeric_range(
@@ -148,13 +148,13 @@ def _validate_request_timeout(value: int) -> None:
 
 
 def _validate_sock_read_timeout(value: int) -> None:
-    """Валидировать параметр sock_read_timeout.
+    """Validate sock_read_timeout parameter.
 
     Args:
-        value: Значение sock_read_timeout для валидации.
+        value: sock_read_timeout value to validate.
 
     Raises:
-        ValueError: Если значение меньше минимального.
+        ValueError: If value is less than minimum.
 
     """
     _validate_numeric_range(
@@ -166,13 +166,13 @@ def _validate_sock_read_timeout(value: int) -> None:
 
 
 def _validate_pause_between_messages(value: float) -> None:
-    """Валидировать параметр pause_between_messages.
+    """Validate pause_between_messages parameter.
 
     Args:
-        value: Значение pause_between_messages для валидации.
+        value: pause_between_messages value to validate.
 
     Raises:
-        ValueError: Если значение меньше минимального.
+        ValueError: If value is less than minimum.
 
     """
     _validate_numeric_range(
@@ -185,53 +185,53 @@ def _validate_pause_between_messages(value: float) -> None:
 
 @dataclass(frozen=True, slots=True, eq=False)
 class Config:
-    """Параметры конфигурации для диалога ИИ-моделей.
+    """Configuration parameters for AI model dialogue.
 
     Attributes:
-        temperature: Температура генерации (0.0-1.0).
-        max_tokens: Максимальное количество токенов в ответе.
-        request_timeout: Таймаут запроса к Ollama в секундах.
-        sock_read_timeout: Таймаут чтения ответа от сервера в секундах.
-        pause_between_messages: Пауза между сообщениями в секундах.
-        default_system_prompt: Шаблон системного промпта.
-        ollama_host: URL хоста Ollama API.
+        temperature: Generation temperature (0.0-1.0).
+        max_tokens: Maximum number of tokens in response.
+        request_timeout: Request timeout to Ollama in seconds.
+        sock_read_timeout: Response reading timeout from server in seconds.
+        pause_between_messages: Pause between messages in seconds.
+        default_system_prompt: System prompt template.
+        ollama_host: Ollama API host URL.
 
     """
 
-    # Параметры генерации Ollama
+    # Ollama generation parameters
     temperature: float = DEFAULT_TEMPERATURE
     max_tokens: int = DEFAULT_MAX_TOKENS
 
-    # Таймауты и задержки
+    # Timeouts and delays
     request_timeout: int = DEFAULT_REQUEST_TIMEOUT
     sock_read_timeout: int = DEFAULT_SOCK_READ_TIMEOUT
     pause_between_messages: float = DEFAULT_PAUSE_BETWEEN_MESSAGES
 
-    # Системный промпт
+    # System prompt
     default_system_prompt: str = (
-        "Ты участвуешь в диалоге на тему '{topic}'. "
-        "Отвечай кратко и по существу. Не повторяйся. "
-        "Веди себя как живой собеседник."
+        "You are participating in a dialogue on the topic '{topic}'. "
+        "Respond briefly and to the point. Do not repeat yourself. "
+        "Behave like a live conversational partner."
     )
 
-    # URL Ollama API (по умолчанию локальный)
+    # Ollama API URL (default is local)
     ollama_host: str = "http://localhost:11434"
 
     def __post_init__(self) -> None:
-        """Валидация конфигурации после инициализации.
+        """Validate configuration after initialization.
 
         Raises:
-            ValueError: Если какой-либо параметр некорректный.
+            ValueError: If any parameter is incorrect.
 
         """
-        # Валидация числовых параметров через общую функцию
+        # Validate numeric parameters via common function
         _validate_temperature(self.temperature)
         _validate_max_tokens(self.max_tokens)
         _validate_request_timeout(self.request_timeout)
         _validate_sock_read_timeout(self.sock_read_timeout)
         _validate_pause_between_messages(self.pause_between_messages)
 
-        # Валидация URL через urllib.parse
+        # Validate URL via urllib.parse
         if not validate_ollama_url(self.ollama_host):
-            msg = f"Некорректный URL Ollama: {self.ollama_host}"
+            msg = f"Invalid Ollama URL: {self.ollama_host}"
             raise ValueError(msg)

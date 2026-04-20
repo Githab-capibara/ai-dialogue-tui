@@ -1,6 +1,6 @@
-"""Генерация CSS для TUI приложения.
+"""CSS generation for TUI application.
 
-Этот модуль содержит функции для генерации CSS из констант.
+This module contains functions for generating CSS from constants.
 """
 
 from __future__ import annotations
@@ -9,10 +9,10 @@ from tui.constants import CSS_CLASSES, UI_IDS
 
 
 def generate_main_css() -> str:
-    """Сгенерировать основной CSS из централизованных констант.
+    """Generate main CSS from centralized constants.
 
     Returns:
-        CSS строка для приложения.
+        CSS string for application.
 
     """
     return f"""

@@ -1,6 +1,6 @@
-"""Сервис для управления циклом диалога.
+"""Service for managing dialogue loop cycle.
 
-Этот модуль содержит бизнес-логику выполнения циклов диалога.
+This module contains the business logic for executing dialogue loops.
 """
 
 from __future__ import annotations
@@ -21,10 +21,10 @@ log = logging.getLogger(__name__)
 
 
 class DialogueRunner:
-    """Сервис для запуска и управления циклом диалога.
+    """Service for running and managing dialogue loop.
 
-    Инкапсулирует логику выполнения основного цикла диалога,
-    обработки ошибок и управления задачами.
+    Encapsulates the logic of executing the main dialogue loop,
+    error handling, and task management.
     """
 
     def __init__(
@@ -32,11 +32,11 @@ class DialogueRunner:
         service: DialogueService,
         config: Config | None = None,
     ) -> None:
-        """Инициализация раннера диалога.
+        """Initialize dialogue runner.
 
         Args:
-            service: Сервис диалога для управления.
-            config: Конфигурация для параметров цикла.
+            service: Dialogue service to manage.
+            config: Configuration for loop parameters.
 
         """
         self._service = service
@@ -45,12 +45,12 @@ class DialogueRunner:
 
     @property
     def service(self) -> DialogueService:
-        """Получить сервис диалога."""
+        """Get dialogue service."""
         return self._service
 
     @property
     def dialogue_task(self) -> asyncio.Task[None] | None:
-        """Получить задачу диалога."""
+        """Get dialogue task."""
         return self._dialogue_task
 
     async def start(
@@ -58,20 +58,20 @@ class DialogueRunner:
         on_turn: Callable[[DialogueTurnResult], None] | None = None,
         on_error: Callable[[str], None] | None = None,
     ) -> None:
-        """Запустить цикл диалога в фоновой задаче.
+        """Start dialogue loop in background task.
 
         Args:
-            on_turn: Callback для обработки каждого хода.
-            on_error: Callback для обработки ошибок генерации.
+            on_turn: Callback for processing each turn.
+            on_error: Callback for handling generation errors.
 
         """
         loop = asyncio.get_running_loop()
         self._dialogue_task = loop.create_task(self._run_loop(on_turn, on_error))
 
     async def stop(self) -> None:
-        """Остановить цикл диалога.
+        """Stop dialogue loop.
 
-        Отменяет задачу диалога если она активна.
+        Cancels dialogue task if active.
         """
         if self._dialogue_task and not self._dialogue_task.done():
             self._dialogue_task.cancel()
@@ -87,11 +87,11 @@ class DialogueRunner:
         on_turn: Callable[[DialogueTurnResult], None] | None = None,
         on_error: Callable[[str], None] | None = None,
     ) -> None:
-        """Основной цикл диалога.
+        """Run main dialogue loop.
 
         Args:
-            on_turn: Callback для обработки каждого хода.
-            on_error: Callback для обработки ошибок генерации.
+            on_turn: Callback for processing each turn.
+            on_error: Callback for handling generation errors.
 
         """
         try:
@@ -104,7 +104,7 @@ class DialogueRunner:
                     if result and on_turn:
                         on_turn(result)
                 except ProviderError as exc:
-                    log.warning("Ошибка провайдера в цикле диалога: %s", exc)
+                    log.warning("Provider error in dialogue loop: %s", exc)
                     if on_error:
                         model_name = self._service.conversation.get_current_model_name()
                         on_error(model_name)
@@ -112,29 +112,29 @@ class DialogueRunner:
                     await asyncio.sleep(self._config.pause_between_messages)
 
         except asyncio.CancelledError:
-            log.debug("Диалог отменён")
+            log.debug("Dialogue cancelled")
             raise
         except ProviderError:
-            log.debug("ProviderError обработан в цикле диалога")
+            log.debug("ProviderError handled in dialogue loop")
         except (RuntimeError, SystemError, OSError) as exc:
             log.exception("Critical error in dialogue loop: %s", exc)
         finally:
             self._service.stop()
 
     async def _process_turn(self) -> DialogueTurnResult | None:
-        """Обработать один ход диалога.
+        """Process one dialogue turn.
 
         Returns:
-            DialogueTurnResult с результатом хода.
+            DialogueTurnResult with turn result.
 
         """
         return await self._service.run_dialogue_cycle()
 
     def _is_task_cancelled(self) -> bool:
-        """Проверить отменена ли текущая задача."""
+        """Check if current task is cancelled."""
         task = asyncio.current_task()
         return task is not None and task.cancelled()
 
     async def cleanup(self) -> None:
-        """Очистить ресурсы раннера."""
+        """Clean up runner resources."""
         await self.stop()

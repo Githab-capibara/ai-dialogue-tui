@@ -1,6 +1,6 @@
-"""Модуль для работы с моделями и диалогами.
+"""Module for working with models and conversations.
 
-Этот модуль экспортирует абстракции и реализации для работы с LLM-провайдерами.
+This module exports abstractions and implementations for working with LLM providers.
 """
 
 from models.config import Config
@@ -18,19 +18,19 @@ from models.provider import (
 
 __all__ = [
     "MAX_CONTEXT_LENGTH",
-    # Конфигурация
+    # Configuration
     "Config",
-    # Домен
+    # Domain
     "Conversation",
     "MessageDict",
     "ModelId",
-    # Абстракции
+    # Abstractions
     "ModelProvider",
-    # Реализации
+    # Implementations
     "OllamaClient",
     "ProviderConfigurationError",
     "ProviderConnectionError",
-    # Исключения провайдера
+    # Provider exceptions
     "ProviderError",
     "ProviderGenerationError",
 ]

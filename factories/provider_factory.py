@@ -1,6 +1,6 @@
-"""Фабрика для создания провайдеров моделей.
+"""Factory for creating model providers.
 
-Этот модуль содержит фабричные функции для внедрения зависимостей.
+This module contains factory functions for dependency injection.
 """
 
 from __future__ import annotations
@@ -15,38 +15,37 @@ if TYPE_CHECKING:
 
 
 class ProviderFactory(Protocol):
-    """Протокол фабрики провайдеров моделей.
+    """Protocol for model providers factory.
 
-    Используется для dependency injection в приложении.
+    Used for dependency injection in the application.
     """
 
     def __call__(self) -> ModelProvider:
-        """Создать экземпляр провайдера моделей."""
-        ...
-        ...
+        """Create model provider instance."""
+        ...  # pragma: no cover
 
 
 def create_ollama_provider(config: Config) -> ModelProvider:
-    """Создать провайдер Ollama.
+    """Create Ollama provider.
 
     Args:
-        config: Конфигурация для подключения.
+        config: Configuration for connection.
 
     Returns:
-        Настроенный провайдер ModelProvider.
+        Configured ModelProvider.
 
     """
     return OllamaClient(host=config.ollama_host)
 
 
 def create_provider_factory(config: Config) -> ProviderFactory:
-    """Создать фабрику провайдеров.
+    """Create providers factory.
 
     Args:
-        config: Конфигурация для создания провайдеров.
+        config: Configuration for creating providers.
 
     Returns:
-        Фабричная функция для создания ModelProvider.
+        Factory function for creating ModelProvider.
 
     """
 

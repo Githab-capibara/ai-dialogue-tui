@@ -1,4 +1,4 @@
-"""Модуль TUI интерфейса."""
+"""TUI interface module."""
 
 from tui.app import DialogueApp
 

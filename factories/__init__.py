@@ -1,4 +1,4 @@
-"""Фабрики для создания объектов приложения."""
+"""Factories for creating application objects."""
 
 from factories.provider_factory import (
     ProviderFactory,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Точка входа для TUI приложения диалога ИИ-моделей."""
+"""Entry point for AI Dialogue TUI application."""
 
 from __future__ import annotations
 
@@ -23,22 +23,17 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-
 
 def main() -> int:
-    """Запустить TUI приложение с обработкой исключений.
+    """Run the TUI application with exception handling.
 
     Returns:
-        Код выхода приложения.
+        Application exit code.
 
     """
     config = Config()
 
-    # Создаём factory для внедрения зависимости (DIP)
+    # Create factory for dependency injection (DIP)
     provider_factory = create_provider_factory(config)
 
     app = DialogueApp(config=config, provider_factory=provider_factory)

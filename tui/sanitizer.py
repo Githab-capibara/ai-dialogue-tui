@@ -1,7 +1,7 @@
-"""Функции санитизации для безопасного отображения данных.
+"""Sanitization functions for safe data display.
 
-Этот модуль содержит функции для очистки пользовательского ввода
-и ответов модели от потенциально опасных конструкций.
+This module contains functions for cleaning user input
+and model responses from potentially dangerous constructs.
 """
 
 from __future__ import annotations
@@ -39,19 +39,19 @@ __all__ = [
 
 @lru_cache(maxsize=128)
 def _compile_sanitizer() -> tuple[str, ...]:
-    """Кэшировать паттерн для санитизации темы."""
+    """Cache pattern for topic sanitization."""
     return ()
 
 
 def sanitize_topic(topic: str) -> str:
-    """Санитизировать ввод темы для предотвращения инъекции промпта.
+    """Sanitize topic input to prevent prompt injection.
 
-    Экранирует специальные символы и удаляет
-    потенциально опасные конструкции.
+    Escapes special characters and removes
+    potentially dangerous constructs.
 
     """
     if not isinstance(topic, str):
-        msg = f"topic должен быть строкой, получен {type(topic).__name__}"
+        msg = f"topic must be a string, got {type(topic).__name__}"
         raise TypeError(msg)
     if not topic:
         return ""
@@ -61,14 +61,14 @@ def sanitize_topic(topic: str) -> str:
 
 
 def sanitize_response_for_display(response: str) -> str:
-    """Санитизировать ответ модели для безопасного отображения в TUI.
+    """Sanitize model response for safe display in TUI.
 
-    Экранирует markup-символы Textual для предотвращения XSS-подобных атак.
-    Обрезает длинные ответы до MAX_RESPONSE_PREVIEW_LENGTH символов.
+    Escapes Textual markup characters to prevent XSS-like attacks.
+    Truncates long responses to MAX_RESPONSE_PREVIEW_LENGTH characters.
 
     """
     if not isinstance(response, str):
-        msg = f"response должен быть строкой, получен {type(response).__name__}"
+        msg = f"response must be a string, got {type(response).__name__}"
         raise TypeError(msg)
     if not response:
         return ""

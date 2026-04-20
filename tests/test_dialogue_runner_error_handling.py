@@ -1,7 +1,7 @@
-"""Тесты для проверки устойчивости цикла диалога к ошибкам провайдера.
+"""Tests for verifying dialogue loop resilience to provider errors.
 
-Проверяет что диалог продолжается после ProviderError,
-а не останавливается из-за проброса исключения.
+Verifies that dialogue continues after ProviderError,
+rather than stopping due to exception propagation.
 """
 
 # pylint: disable=protected-access,redefined-outer-name
@@ -26,19 +26,19 @@ from services.dialogue_service import DialogueService
 
 
 class TestDialogueRunnerProviderErrorHandling:
-    """Тесты что DialogueRunner корректно обрабатывает ProviderError.
+    """Tests that DialogueRunner correctly handles ProviderError.
 
-    Проверяет что:
-    1. ProviderError не пробрасывается из _run_loop
-    2. Диалог продолжает работу после ошибки
-    3. Callback on_error вызывается с правильным именем модели
-    4. Разные типы ProviderError обрабатываются одинаково
+    Verifies that:
+    1. ProviderError is not propagated from _run_loop
+    2. Dialogue continues after error
+    3. on_error callback is called with correct model name
+    4. Different ProviderError types are handled uniformly
     """
 
     def _create_service_and_runner(
         self,
     ) -> tuple[DialogueService, DialogueRunner, AsyncMock]:
-        """Создать сервис, раннер и мок провайдера."""
+        """Create service, runner and provider mock."""
         conversation = Conversation(
             model_a="model-a",
             model_b="model-b",
@@ -58,7 +58,7 @@ class TestDialogueRunnerProviderErrorHandling:
 
     @pytest.mark.asyncio
     async def test_dialogue_continues_after_provider_connection_error(self) -> None:
-        """Диалог продолжается после ProviderConnectionError."""
+        """Dialogue continues after ProviderConnectionError."""
         service, runner, mock_provider = self._create_service_and_runner()
 
         error_model_names: list[str] = []
@@ -71,7 +71,7 @@ class TestDialogueRunnerProviderErrorHandling:
         def on_turn(result: object) -> None:
             turn_results.append(result)
 
-        # Ошибка один раз, потом бесконечные успехи
+        # Error once, then infinite successes
         mock_provider.generate.side_effect = chain(
             [ProviderConnectionError("Connection failed")],
             repeat("Success response"),
@@ -100,7 +100,7 @@ class TestDialogueRunnerProviderErrorHandling:
 
     @pytest.mark.asyncio
     async def test_dialogue_continues_after_provider_generation_error(self) -> None:
-        """Диалог продолжается после ProviderGenerationError."""
+        """Dialogue continues after ProviderGenerationError."""
         service, runner, mock_provider = self._create_service_and_runner()
 
         error_raised = False
@@ -141,7 +141,7 @@ class TestDialogueRunnerProviderErrorHandling:
 
     @pytest.mark.asyncio
     async def test_provider_error_does_not_propagate_from_run_loop(self) -> None:
-        """ProviderError не должен пробрасываться из _run_loop."""
+        """ProviderError should not propagate from _run_loop."""
         service, runner, mock_provider = self._create_service_and_runner()
 
         mock_provider.generate.side_effect = ProviderError("Test error")
@@ -158,7 +158,7 @@ class TestDialogueRunnerProviderErrorHandling:
             await runner.start(on_turn=None, on_error=None)
             await runner._dialogue_task  # type: ignore[union-attr]
         except ProviderError:
-            pytest.fail("ProviderError пробросился из _run_loop!")
+            pytest.fail("ProviderError propagated from _run_loop!")
         finally:
             stop_task.cancel()
             try:
@@ -168,7 +168,7 @@ class TestDialogueRunnerProviderErrorHandling:
 
     @pytest.mark.asyncio
     async def test_multiple_consecutive_errors_handled(self) -> None:
-        """Множественные ошибки подряд обрабатываются корректно."""
+        """Multiple consecutive errors are handled correctly."""
         service, runner, mock_provider = self._create_service_and_runner()
 
         error_count = 0
@@ -192,7 +192,7 @@ class TestDialogueRunnerProviderErrorHandling:
             await runner.start(on_turn=None, on_error=on_error)
             await runner._dialogue_task  # type: ignore[union-attr]
         except ProviderError:
-            pytest.fail("ProviderError пробросился из _run_loop!")
+            pytest.fail("ProviderError propagated from _run_loop!")
         finally:
             stop_task.cancel()
             try:

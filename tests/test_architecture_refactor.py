@@ -1,14 +1,14 @@
-"""Тесты для проверки архитектурного рефакторинга.
+"""Tests for verifying architectural refactoring.
 
-Каждый тест проверяет одно конкретное архитектурное исправление:
-1. Удаление create_ollama_client из tui/styles.py (Clean Architecture)
-2. Удаление StatusStyle из tui/styles.py (YAGNI)
-3. Удаление get_status_style_string из tui/styles.py (YAGNI)
-4. Удаление Sanitizer Protocol из tui/sanitizer.py (YAGNI)
-5. Удаление _RequestConfig из models/ollama_client.py (YAGNI)
-6. Упрощение _add_message_to_context (KISS)
-7. Использование ModelProvider для типизации в tui/app.py (DIP)
-8. Отсутствие coupling между tui/styles.py и models/ollama_client.py
+Each test verifies one specific architectural fix:
+1. Removal of create_ollama_client from tui/styles.py (Clean Architecture)
+2. Removal of StatusStyle from tui/styles.py (YAGNI)
+3. Removal of get_status_style_string from tui/styles.py (YAGNI)
+4. Removal of Sanitizer Protocol from tui/sanitizer.py (YAGNI)
+5. Removal of _RequestConfig from models/ollama_client.py (YAGNI)
+6. Simplification of _add_message_to_context (KISS)
+7. Using ModelProvider for typing in tui/app.py (DIP)
+8. No coupling between tui/styles.py and models/ollama_client.py
 """
 
 # pylint: disable=protected-access,import-outside-toplevel,consider-using-with
@@ -22,11 +22,11 @@ import pytest
 
 from models.conversation import Conversation
 
-# --- Тест 1: create_ollama_client удалён из tui/styles.py ---
+# --- Test 1: create_ollama_client removed from tui/styles.py ---
 
 
 def test_create_ollama_client_removed_from_styles() -> None:
-    """create_ollama_client не должен быть в tui/styles.py."""
+    """create_ollama_client should not be in tui/styles.py."""
     with open("tui/styles.py", encoding="utf-8") as f:
         source = f.read()
 
@@ -35,7 +35,7 @@ def test_create_ollama_client_removed_from_styles() -> None:
 
 
 def test_styles_no_ollama_import() -> None:
-    """tui/styles.py не должен импортировать models.ollama_client."""
+    """tui/styles.py should not import models.ollama_client."""
     with open("tui/styles.py", encoding="utf-8") as f:
         source = f.read()
 
@@ -43,11 +43,11 @@ def test_styles_no_ollama_import() -> None:
     assert "import models.ollama_client" not in source
 
 
-# --- Тест 2: StatusStyle удалён из tui/styles.py ---
+# --- Test 2: StatusStyle removed from tui/styles.py ---
 
 
 def test_status_style_removed_from_styles() -> None:
-    """StatusStyle Enum не должен быть в tui/styles.py."""
+    """StatusStyle Enum should not be in tui/styles.py."""
     with open("tui/styles.py", encoding="utf-8") as f:
         source = f.read()
 
@@ -55,22 +55,22 @@ def test_status_style_removed_from_styles() -> None:
     assert "from enum import Enum" not in source
 
 
-# --- Тест 3: get_status_style_string удалён из tui/styles.py ---
+# --- Test 3: get_status_style_string removed from tui/styles.py ---
 
 
 def test_get_status_style_string_removed_from_styles() -> None:
-    """get_status_style_string не должен быть в tui/styles.py."""
+    """get_status_style_string should not be in tui/styles.py."""
     with open("tui/styles.py", encoding="utf-8") as f:
         source = f.read()
 
     assert "def get_status_style_string" not in source
 
 
-# --- Тест 4: Sanitizer Protocol удалён из tui/sanitizer.py ---
+# --- Test 4: Sanitizer Protocol removed from tui/sanitizer.py ---
 
 
 def test_sanitizer_protocol_removed() -> None:
-    """Sanitizer Protocol не должен быть в tui/sanitizer.py."""
+    """Sanitizer Protocol should not be in tui/sanitizer.py."""
     with open("tui/sanitizer.py", encoding="utf-8") as f:
         source = f.read()
 
@@ -80,19 +80,19 @@ def test_sanitizer_protocol_removed() -> None:
 
 
 def test_sanitizer_module_has_only_functions() -> None:
-    """tui/sanitizer.py должен содержать только функции, не классы."""
+    """tui/sanitizer.py should contain only functions, not classes."""
     tree = ast.parse(open("tui/sanitizer.py", encoding="utf-8").read())
 
     classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
 
-    assert len(classes) == 0, f"Найдены классы в sanitizer.py: {[c.name for c in classes]}"
+    assert len(classes) == 0, f"Found classes in sanitizer.py: {[c.name for c in classes]}"
 
 
-# --- Тест 5: _RequestConfig удалён из models/ollama_client.py ---
+# --- Test 5: _RequestConfig removed from models/ollama_client.py ---
 
 
 def test_request_config_removed() -> None:
-    """_RequestConfig не должен быть в models/ollama_client.py."""
+    """_RequestConfig should not be in models/ollama_client.py."""
     with open("models/ollama_client.py", encoding="utf-8") as f:
         source = f.read()
 
@@ -100,17 +100,17 @@ def test_request_config_removed() -> None:
 
 
 def test_request_config_not_in_module() -> None:
-    """_RequestConfig не должен быть доступен в модуле."""
+    """_RequestConfig should not be accessible in module."""
     import models.ollama_client as module
 
     assert not hasattr(module, "_RequestConfig")
 
 
-# --- Тест 6: _add_message_to_context упрощён ---
+# --- Test 6: _add_message_to_context simplified ---
 
 
 def test_add_message_to_context_no_callable_param() -> None:
-    """_add_message_to_context не должен принимать Callable параметр."""
+    """_add_message_to_context should not accept Callable parameter."""
     sig = inspect.signature(Conversation._add_message_to_context)
     params = list(sig.parameters.keys())
 
@@ -119,30 +119,30 @@ def test_add_message_to_context_no_callable_param() -> None:
 
 
 def test_add_message_to_context_simple_signature() -> None:
-    """Сигнатура _add_message_to_context должна быть упрощена."""
+    """_add_message_to_context signature should be simplified."""
     sig = inspect.signature(Conversation._add_message_to_context)
     params = sig.parameters
 
-    # Должно быть: self, context, model_id (или role, content)
-    assert len(params) <= 4, f"Слишком много параметров: {list(params.keys())}"
+    # Should be: self, context, model_id (or role, content)
+    assert len(params) <= 4, f"Too many parameters: {list(params.keys())}"
 
 
-# --- Тест 7: tui/app.py использует ModelProvider для типизации ---
+# --- Test 7: tui/app.py uses ModelProvider for typing ---
 
 
 def test_app_uses_model_provider_type() -> None:
-    """tui/app.py должен использовать ModelProvider для типа _client."""
+    """tui/app.py should use ModelProvider for _client type."""
     with open("tui/app.py", encoding="utf-8") as f:
         source = f.read()
 
     assert "ModelProvider" in source
 
 
-# --- Тест 8: Отсутствие coupling между tui/styles.py и models/ollama_client ---
+# --- Test 8: No coupling between tui/styles.py and models/ollama_client ---
 
 
 def test_no_coupling_styles_to_ollama() -> None:
-    """tui/styles.py не должен зависеть от models.ollama_client."""
+    """tui/styles.py should not depend on models.ollama_client."""
     with open("tui/styles.py", encoding="utf-8") as f:
         styles_source = f.read()
 
@@ -151,21 +151,21 @@ def test_no_coupling_styles_to_ollama() -> None:
 
 
 def test_styles_only_contains_style_definitions() -> None:
-    """tui/styles.py должен содержать только стили и UI-идентификаторы."""
+    """tui/styles.py should contain only styles and UI identifiers."""
     with open("tui/styles.py", encoding="utf-8") as f:
         source = f.read()
 
     tree = ast.parse(source)
 
-    # На верхнем уровне должны быть только:
-    # - dataclass определения (MessageStyles, UIElementIDs, CSSClasses)
-    # - Константы (MESSAGE_STYLES, UI_IDS, CSS_CLASSES)
-    # - Функция generate_main_css
+    # At top level should be only:
+    # - dataclass definitions (MessageStyles, UIElementIDs, CSSClasses)
+    # - Constants (MESSAGE_STYLES, UI_IDS, CSS_CLASSES)
+    # - generate_main_css function
     allowed_functions = {"generate_main_css"}
 
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, ast.FunctionDef):
-            assert node.name in allowed_functions, f"Неожиданная функция: {node.name}"
+            assert node.name in allowed_functions, f"Unexpected function: {node.name}"
 
 
 if __name__ == "__main__":
