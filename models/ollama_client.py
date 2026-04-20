@@ -10,8 +10,7 @@ import contextlib
 import json
 import logging
 import time
-from collections.abc import Mapping, Sequence
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urljoin
 
 import aiohttp
@@ -28,6 +27,9 @@ from models.provider import (
     ProviderError,
     ProviderGenerationError,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
 
 _logger = logging.getLogger(__name__)
 

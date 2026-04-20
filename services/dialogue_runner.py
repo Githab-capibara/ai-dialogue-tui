@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from models.config import Config
 from models.provider import ProviderError
@@ -30,7 +30,7 @@ class DialogueRunner:
     def __init__(
         self,
         service: DialogueService,
-        config: Optional[Config] = None,
+        config: Config | None = None,
     ) -> None:
         """Инициализация раннера диалога.
 

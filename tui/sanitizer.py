@@ -40,7 +40,7 @@ __all__ = [
 @lru_cache(maxsize=128)
 def _compile_sanitizer() -> tuple[str, ...]:
     """Кэшировать паттерн для санитизации темы."""
-    return tuple()
+    return ()
 
 
 def sanitize_topic(topic: str) -> str:
