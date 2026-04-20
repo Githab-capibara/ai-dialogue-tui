@@ -78,8 +78,14 @@ class Conversation:
 
         self._validate_params()
         formatted_prompt = self._create_system_prompt()
-        self._context_a.append(MessageDict(role="system", content=formatted_prompt))
-        self._context_b.append(MessageDict(role="system", content=formatted_prompt))
+        self._context_a.append(
+            MessageDict(
+                role="system",
+                content=formatted_prompt))
+        self._context_b.append(
+            MessageDict(
+                role="system",
+                content=formatted_prompt))
 
     def _validate_params(self) -> None:
         """Validate constructor parameters."""
@@ -98,7 +104,7 @@ class Conversation:
 
     def _create_system_prompt(self) -> str:
         """Create formatted system prompt."""
-        _default_prompt = self._config.default_system_prompt
+        _default_prompt = self._config.default_system_prompt  # type: ignore[union-attr]
         effective_prompt = self.system_prompt or _default_prompt
 
         try:
@@ -157,7 +163,8 @@ class Conversation:
         context = self._context_a if model_id == "A" else self._context_b
 
         if len(context) >= MAX_CONTEXT_LENGTH:
-            context = self._trim_context_if_needed(context, MAX_CONTEXT_LENGTH - 2)
+            context = self._trim_context_if_needed(
+                context, MAX_CONTEXT_LENGTH - 2)
             # Update reference to trimmed context
             if model_id == "A":
                 self._context_a = context
@@ -311,8 +318,14 @@ class Conversation:
 
         """
         formatted_prompt = self._create_system_prompt()
-        self._context_a = [MessageDict(role="system", content=formatted_prompt)]
-        self._context_b = [MessageDict(role="system", content=formatted_prompt)]
+        self._context_a = [
+            MessageDict(
+                role="system",
+                content=formatted_prompt)]
+        self._context_b = [
+            MessageDict(
+                role="system",
+                content=formatted_prompt)]
         self._current_turn = "A"
 
     def get_context_stats(self) -> dict[str, int]:

@@ -313,7 +313,8 @@ class OllamaClient:
     Implements the ModelProvider protocol for dependency injection.
     """
 
-    def __init__(self, host: str | None = None, config: Config | None = None) -> None:
+    def __init__(self, host: str | None = None,
+                 config: Config | None = None) -> None:
         """Initialize client.
 
         Args:
@@ -371,7 +372,8 @@ class OllamaClient:
         try:
             async with session.get(url) as response:
                 # Status validation
-                _ResponseHandler.validate_status_code(response.status, "list_models")
+                _ResponseHandler.validate_status_code(
+                    response.status, "list_models")
 
                 # JSON processing with validation
                 try:
@@ -455,7 +457,8 @@ class OllamaClient:
         try:
             async with session.post(url, json=payload) as response:
                 # Status validation
-                _ResponseHandler.validate_status_code(response.status, "generate")
+                _ResponseHandler.validate_status_code(
+                    response.status, "generate")
 
                 # JSON processing with validation
                 try:
@@ -472,7 +475,8 @@ class OllamaClient:
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             timeout_info = f"Timeout: {self._config.sock_read_timeout}s"
-            msg = f"Failed to connect to Ollama ({self.host}). {timeout_info}. Try increasing the timeout in settings."
+            msg = f"Failed to connect to Ollama ({
+                self.host}). {timeout_info}. Try increasing the timeout in settings."
             raise ProviderConnectionError(
                 msg,
                 err,
