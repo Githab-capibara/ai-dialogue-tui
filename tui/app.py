@@ -319,91 +319,84 @@ class DialogueApp(App[None]):
     async def on_mount(self) -> None:
         """Инициализация при запуске приложения."""
         try:
-            # Используем factory для создания провайдера (DIP)
             self._client = self._provider_factory()
-
-            # Получаем список моделей
             self._models = await self._client.list_models()
 
             if not self._models:
-                self.notify(
-                    "Не найдено установленных моделей Ollama!\nУстановите модель командой: ollama pull llama3",
-                    title="Ошибка",
-                    severity="error",
-                    timeout=DEFAULT_NOTIFY_TIMEOUT,
-                )
+                self._notify_error("Не найдено установленных моделей Ollama!")
                 self._safe_update_status("[red]Нет моделей[/red]")
                 return
 
-            # Показываем окно выбора моделей
-            def on_models_selected(result: tuple[str, str] | None) -> None:
-                if result is None:
-                    self.exit()
-                    return
-
-                model_a, model_b = result
-                self._setup_conversation(model_a, model_b)
-
-            # Показываем модальное окно выбора моделей
             self.push_screen(
                 ModelSelectionScreen(self._models),
-                callback=on_models_selected,
+                callback=self._on_models_selected,
             )
 
         except ProviderConnectionError:
-            log.exception("Connection error to Ollama")
-            self.notify(
-                "Не удалось подключиться к Ollama. Проверьте что сервис запущен.",
-                title="Ошибка подключения",
-                severity="error",
-                timeout=DEFAULT_NOTIFY_TIMEOUT,
-            )
-            self._safe_update_status("[red]Ошибка подключения[/red]")
+            self._handle_connection_error()
         except ProviderGenerationError:
-            log.exception("Generation error while getting models")
-            self.notify(
-                "Ошибка генерации ответа. Проверьте модель...",
-                title="Ошибка",
-                severity="error",
-                timeout=DEFAULT_NOTIFY_TIMEOUT,
-            )
-            self._safe_update_status("[red]Ошибка подключения[/red]")
+            self._handle_generation_error()
         except ValueError as exc:
-            log.exception("Configuration validation error")
-            self.notify(
-                f"Configuration error: {exc}",
-                title="Error",
-                severity="error",
-                timeout=DEFAULT_NOTIFY_TIMEOUT,
-            )
-            self._safe_update_status("[red]Config error[/red]")
+            self._handle_config_error(exc)
         except aiohttp.ClientError:
-            log.exception("HTTP client error at startup")
-            self.notify(
-                "Ошибка сетевого подключения",
-                title="Ошибка",
-                severity="error",
-                timeout=DEFAULT_NOTIFY_TIMEOUT,
-            )
-            self._safe_update_status("[red]Ошибка подключения[/red]")
+            self._handle_network_error()
         except asyncio.TimeoutError:
-            log.exception("Таймаут при запуске")
-            self.notify(
-                "Превышено время ожидания подключения",
-                title="Ошибка",
-                severity="error",
-                timeout=DEFAULT_NOTIFY_TIMEOUT,
-            )
-            self._safe_update_status("[red]Таймаут[/red]")
+            self._handle_timeout_error()
         except (RuntimeError, SystemError):
-            log.exception("Internal error at startup")
-            self.notify(
-                "Произошла непредвиденная ошибка при запуске",
-                title="Ошибка",
-                severity="error",
-                timeout=DEFAULT_NOTIFY_TIMEOUT,
-            )
-            self._safe_update_status("[red]Неизвестная ошибка[/red]")
+            self._handle_internal_error()
+
+    def _on_models_selected(self, result: tuple[str, str] | None) -> None:
+        """Обработать выбор моделей."""
+        if result is None:
+            self.exit()
+            return
+        model_a, model_b = result
+        self._setup_conversation(model_a, model_b)
+
+    def _notify_error(self, message: str) -> None:
+        """Уведомить об ошибке."""
+        self.notify(
+            message,
+            title="Ошибка",
+            severity="error",
+            timeout=DEFAULT_NOTIFY_TIMEOUT,
+        )
+
+    def _handle_connection_error(self) -> None:
+        """Обработать ошибку подключения."""
+        log.exception("Connection error to Ollama")
+        self._notify_error("Не удалось подключиться к Ollama. Проверьте что сервис запущен.")
+        self._safe_update_status("[red]Ошибка подключения[/red]")
+
+    def _handle_generation_error(self) -> None:
+        """Обработать ошибку генерации."""
+        log.exception("Generation error while getting models")
+        self._notify_error("Ошибка генерации ответа. Проверьте модель...")
+        self._safe_update_status("[red]Ошибка подключения[/red]")
+
+    def _handle_config_error(self, exc: ValueError) -> None:
+        """Обработать ошибку конфигурации."""
+        log.exception("Configuration validation error")
+        self._notify_error(f"Configuration error: {exc}")
+        self._safe_update_status("[red]Config error[/red]")
+
+    def _handle_network_error(self) -> None:
+        """Обработать сетевую ошибку."""
+        log.exception("HTTP client error at startup")
+        self._notify_error("Ошибка сетевого подключения")
+        self._safe_update_status("[red]Ошибка подключения[/red]")
+
+    def _handle_timeout_error(self) -> None:
+        """Обработать таймаут."""
+        log.exception("Таймаут при запуске")
+        self._notify_error("Превышено время ожидания подключения")
+        self._safe_update_status("[red]Таймаут[/red]")
+
+    def _handle_internal_error(self) -> None:
+        """Обработать внутреннюю ошибку."""
+        log.exception("Internal error at startup")
+        self._notify_error("Произошла непредвиденная ошибка при запуске")
+        self._safe_update_status("[red]Неизвестная ошибка[/red]")
 
     def _safe_update_status(self, status: str) -> None:
         """Безопасно обновить статус с обработкой ошибок."""
