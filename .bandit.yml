@@ -1,5 +1,4 @@
 # Bandit configuration file
-# Exclude directories that are not part of the source code we want to scan
 exclude_dirs:
   - tests
   - docs
@@ -8,10 +7,8 @@ exclude_dirs:
   - .git
   - __pycache__
   - .mypy_cache
+  - .ruff_cache
 
-# Skips: Legitimate defensive assertions for type safety / initialization checks.
-# B101 assert_used: These assertions validate initialization state and type safety.
-# They are removed in optimized mode but this is intentional - they are development
-# checks that help catch programming errors early. Not a security vulnerability.
 skips:
+  # B101: assert_used - defensive assertions for type safety / initialization checks
   - B101
