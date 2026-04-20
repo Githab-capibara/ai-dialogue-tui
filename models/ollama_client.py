@@ -12,6 +12,7 @@ import logging
 import time
 from collections.abc import Mapping, Sequence
 from typing import Any, Final
+from urllib.parse import urljoin
 
 import aiohttp
 
@@ -368,7 +369,7 @@ class OllamaClient:
             return cached_models
 
         session = await self._get_session()
-        url = f"{self.host}/api/tags"
+        url = urljoin(self.host, "/api/tags")
 
         try:
             async with session.get(url) as response:
@@ -435,7 +436,7 @@ class OllamaClient:
         _RequestValidator.validate_messages(messages)
 
         session = await self._get_session()
-        url = f"{self.host}/api/chat"
+        url = urljoin(self.host, "/api/chat")
 
         # Кэшированные дефолтные опции для производительности
         # Note: num_predict = max_tokens в терминах Ollama API
