@@ -16,7 +16,7 @@ from models.provider import MessageDict, ModelProvider
 log = logging.getLogger(__name__)
 
 # Импортируем для обратной совместимости
-__all__ = ["MAX_CONTEXT_LENGTH", "Conversation", "MessageDict", "ModelId"]
+__all__ = ["Conversation", "ModelId"]
 
 # Константа для ограничения длины контекста
 MAX_CONTEXT_LENGTH: int = 50
@@ -41,19 +41,8 @@ class Conversation:
     Ответ одной модели добавляется в контекст другой
     как сообщение от пользователя.
 
-    Attributes:
-        model_a: Название модели A.
-        model_b: Название модели B.
-        topic: Тема диалога.
-        system_prompt: Системный промпт для диалога.
-
-    Note:
-        Имеет 8 атрибутов что превышает стандартный лимит (7),
-        но это оправдано сложностью предметной области.
-
     """
 
-    # pylint: disable=too-many-instance-attributes
     model_a: str  # Название модели A
     model_b: str  # Название второй модели
     topic: str  # Тема диалога

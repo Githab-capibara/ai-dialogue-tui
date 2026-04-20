@@ -53,7 +53,6 @@ def create_provider_factory(config: Config) -> ProviderFactory:
         Фабричная функция для создания ModelProvider.
 
     """
-
     def factory() -> ModelProvider:
         return create_ollama_provider(config)
 

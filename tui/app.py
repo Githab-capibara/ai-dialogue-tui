@@ -575,11 +575,10 @@ class DialogueApp(App[None]):
     async def _process_dialogue_turn(
         self,
         service: DialogueService,
-        model_name: str,
+        _model_name: str,
         style: str,
     ) -> DialogueTurnResult | None:
         """Обработать один ход диалога и вывести результат."""
-        _ = model_name, style  # reserved for future use
         result = await service.run_dialogue_cycle()
 
         if result:

@@ -30,42 +30,7 @@ class MessageStyles:
 
 @dataclass(frozen=True)
 class UIElementIDs:
-    """Идентификаторы UI элементов для предотвращения magic strings.
-
-    Attributes:
-        model_selection_container: Контейнер выбора моделей.
-        selection_title: Заголовок выбора моделей.
-        models_row: Строка с моделями.
-        model_a_container: Контейнер модели A.
-        model_b_container: Контейнер модели B.
-        model_a_label: Метка модели A.
-        model_b_label: Метка модели B.
-        model_a_select: Селектор модели A.
-        model_b_select: Селектор модели B.
-        selection_buttons: Кнопки выбора моделей.
-        start_btn: Кнопка старта.
-        cancel_btn: Кнопка отмены.
-        topic_input_container: Контейнер ввода темы.
-        topic_label: Метка темы.
-        topic_input: Поле ввода темы.
-        topic_buttons: Кнопки темы.
-        topic_start_btn: Кнопка старта темы.
-        topic_cancel_btn: Кнопка отмены темы.
-        main_container: Главный контейнер.
-        status_bar: Статус бар.
-        status_row: Строка статуса.
-        status_label: Метка статуса.
-        status_value: Значение статуса.
-        dialogue_log: Лог диалога.
-        controls_bar: Панель управления.
-        controls_row: Строка управления.
-        pause_btn: Кнопка паузы.
-        clear_btn: Кнопка очистки.
-        exit_btn: Кнопка выхода.
-
-    """
-
-    # pylint: disable=too-many-instance-attributes
+    """Идентификаторы UI элементов для предотвращения magic strings."""
 
     # Model Selection Screen
     model_selection_container: str = "model-selection-container"
