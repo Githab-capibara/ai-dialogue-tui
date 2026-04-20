@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Final
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MessageStyles:
     """Стили для сообщений в логе диалога.
 
@@ -28,7 +28,7 @@ class MessageStyles:
     error: str = "bold red"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class UIElementIDs:
     """Идентификаторы UI элементов для предотвращения magic strings."""
 
@@ -69,7 +69,7 @@ class UIElementIDs:
     exit_btn: str = "exit-btn"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CSSClasses:
     """CSS классы для стилизации элементов.
 
