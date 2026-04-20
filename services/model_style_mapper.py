@@ -19,16 +19,7 @@ class StyleInfo(NamedTuple):
 
 
 class ModelStyleMapper:
-    """Сервис для маппинга состояния модели на стиль отображения.
-
-    Инкапсулирует логику преобразования ModelId в CSS стиль.
-
-    Example:
-        >>> mapper = ModelStyleMapper()
-        >>> model_name, style_id = mapper.get_style_info("A", "llama3")
-        >>> style_id  # "model_a"
-
-    """
+    """Сервис для маппинга состояния модели на стиль отображения."""
 
     def __init__(self) -> None:
         """Инициализация маппера стилей."""
