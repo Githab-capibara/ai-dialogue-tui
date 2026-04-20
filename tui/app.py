@@ -48,8 +48,6 @@ from tui.styles import generate_main_css
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from models.provider import ModelProvider
-
 # Константа таймаута для уведомлений
 DEFAULT_NOTIFY_TIMEOUT: int = 10
 
@@ -314,7 +312,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             log.exception("LookupError при обновлении UI состояния")
         except RuntimeError:
             log.exception("RuntimeError при обновлении UI состояния")
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             log.exception("Ошибка при обновлении UI состояния")
 
     async def on_mount(self) -> None:

@@ -1,12 +1,12 @@
 [MAIN]
-ignore=venv,.git,__pycache__
+ignore=venv,.git,__pycache__,.mypy_cache,.ruff_cache
 extension-pkg-whitelist=
 
 [MESSAGES CONTROL]
 disable=design,refactoring,similarities
 
 [REPORTS]
-reports=yes
+reports=no
 score=yes
 
 [FORMAT]
@@ -23,3 +23,6 @@ max-branches=15
 max-statements=60
 max-attributes=15
 max-public-methods=25
+
+[EXCEPTIONS]
+overgeneral-exceptions=builtins.Exception

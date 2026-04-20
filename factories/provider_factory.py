@@ -27,6 +27,7 @@ class ProviderFactory(Protocol):
             Настроенный провайдер для генерации ответов.
 
         """
+        ...
 
 
 def create_ollama_provider(config: Config) -> ModelProvider:

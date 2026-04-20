@@ -12,20 +12,18 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Final
 
+import aiohttp  # nosec: B044 - third-party HTTP library for API requests
+
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    import aiohttp
-
-import aiohttp
-
-from models.config import (
+from models.config import (  # pylint: disable=wrong-import-position
     DEFAULT_MAX_TOKENS,
     DEFAULT_TEMPERATURE,
     Config,
     validate_ollama_url,
 )
-from models.provider import (
+from models.provider import (  # pylint: disable=wrong-import-position
     MessageDict,
     ProviderConnectionError,
     ProviderError,
