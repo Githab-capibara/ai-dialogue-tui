@@ -97,32 +97,10 @@ class ModelProvider(Protocol):
 
     Определяет интерфейс для взаимодействия с различными LLM-провайдерами.
     Позволяет использовать dependency injection для тестируемости и заменяемости.
-
-    Example:
-        >>> class MyProvider:
-        ...     async def list_models(self) -> list[str]:
-        ...         return ["model1", "model2"]
-        ...     async def generate(
-        ...         self, model: str, messages: list[MessageDict]
-        ...     ) -> str:
-        ...         return "response"
-        ...     async def close(self) -> None:
-        ...         pass
-        >>> provider: ModelProvider = MyProvider()
-
     """
 
     async def list_models(self) -> list[str]:
-        """Получить список доступных моделей.
-
-        Returns:
-            Список названий доступных моделей.
-
-        Raises:
-            Exception: Если не удалось получить список моделей.
-
-        """
-        raise NotImplementedError
+        """Получить список доступных моделей."""
 
     async def generate(
         self,
@@ -130,29 +108,7 @@ class ModelProvider(Protocol):
         messages: list[MessageDict],
         **kwargs: Any,
     ) -> str:
-        """Сгенерировать ответ от модели.
-
-        Args:
-            model: Название модели для генерации.
-            messages: Список сообщений в формате MessageDict.
-            **kwargs: Дополнительные параметры генерации.
-
-        Returns:
-            Сгенерированный текст ответа.
-
-        Raises:
-            Exception: Если не удалось сгенерировать ответ.
-
-        """
-        raise NotImplementedError
+        """Сгенерировать ответ от модели."""
 
     async def close(self) -> None:
-        """Освободить ресурсы провайдера.
-
-        Закрывает соединения, очищает кэши и т.д.
-        Вызывается при завершении работы приложения.
-
-        Note:
-            Метод должен быть идемпотентным (безопасным для повторного вызова).
-
-        """
+        """Освободить ресурсы провайдера."""
