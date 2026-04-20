@@ -161,8 +161,10 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
             )
             return
 
-        model_a: str = model_a_value  # type: ignore[assignment]
-        model_b: str = model_b_value  # type: ignore[assignment]
+        assert isinstance(model_a_value, str) and model_a_value
+        assert isinstance(model_b_value, str) and model_b_value
+        model_a = model_a_value
+        model_b = model_b_value
 
         if model_a == model_b:
             self.notify(
@@ -247,7 +249,6 @@ class DialogueApp(App[None]):
     ]
 
     TITLE = "AI Dialogue TUI"
-    sub_title = reactive("Dialogue between two AI models via Ollama")
 
     def __init__(
         self,
@@ -263,16 +264,16 @@ class DialogueApp(App[None]):
 
         """
         super().__init__()
+        self.sub_title = reactive("Dialogue between two AI models via Ollama")
         self._config = config or Config()
         self._provider_factory = provider_factory or (lambda: OllamaClient(host=self._config.ollama_host))
         self._client: ModelProvider | None = None
         self._controller: DialogueController | None = None
         self._dialogue_task: asyncio.Task[None] | None = None
         self._models: list[str] = []
-        # Cache style_mapper for performance
         self._style_mapper = ModelStyleMapper()
-        # Flag for on_unmount idempotency
         self._cleanup_done = False
+        self._cleanup_lock = asyncio.Lock()
 
     def compose(self) -> ComposeResult:
         """Compose the main application UI."""
@@ -313,8 +314,6 @@ class DialogueApp(App[None]):
             log.exception("LookupError when updating UI state")
         except RuntimeError:
             log.exception("RuntimeError when updating UI state")
-        except Exception as e:
-            log.exception("Error updating UI state: %s", e)
 
     async def on_mount(self) -> None:
         """Initialize on application start."""
@@ -333,17 +332,36 @@ class DialogueApp(App[None]):
             )
 
         except ProviderConnectionError:
-            self._handle_connection_error()
+            self._handle_startup_error(
+                "Connection error",
+                "Failed to connect to Ollama. Check that the service is running.",
+            )
         except ProviderGenerationError:
-            self._handle_generation_error()
+            self._handle_startup_error(
+                "Generation error",
+                "Generation response error. Check the model...",
+            )
         except ValueError as exc:
-            self._handle_config_error(exc)
+            self._handle_startup_error(
+                "Config error",
+                f"Configuration error: {exc}",
+                exc,
+            )
         except aiohttp.ClientError:
-            self._handle_network_error()
+            self._handle_startup_error(
+                "Network error",
+                "Network connection error",
+            )
         except asyncio.TimeoutError:
-            self._handle_timeout_error()
+            self._handle_startup_error(
+                "Timeout",
+                "Connection timeout exceeded",
+            )
         except (RuntimeError, SystemError):
-            self._handle_internal_error()
+            self._handle_startup_error(
+                "Internal error",
+                "An unexpected error occurred at startup",
+            )
 
     def _on_models_selected(self, result: tuple[str, str] | None) -> None:
         """Handle model selection."""
@@ -362,41 +380,26 @@ class DialogueApp(App[None]):
             timeout=DEFAULT_NOTIFY_TIMEOUT,
         )
 
-    def _handle_connection_error(self) -> None:
-        """Handle connection error."""
-        log.exception("Connection error to Ollama")
-        self._notify_error("Failed to connect to Ollama. Check that the service is running.")
-        self._safe_update_status("[red]Connection error[/red]")
+    def _handle_startup_error(
+        self,
+        error_type: str,
+        message: str,
+        exc: BaseException | None = None,
+    ) -> None:
+        """Handle startup error with consistent logging and UI updates.
 
-    def _handle_generation_error(self) -> None:
-        """Handle generation error."""
-        log.exception("Generation error while getting models")
-        self._notify_error("Generation response error. Check the model...")
-        self._safe_update_status("[red]Connection error[/red]")
+        Args:
+            error_type: Type of error for logging.
+            message: User-facing error message.
+            exc: Optional exception for logging details.
 
-    def _handle_config_error(self, exc: ValueError) -> None:
-        """Handle configuration error."""
-        log.exception("Configuration validation error")
-        self._notify_error(f"Configuration error: {exc}")
-        self._safe_update_status("[red]Config error[/red]")
-
-    def _handle_network_error(self) -> None:
-        """Handle network error."""
-        log.exception("HTTP client error at startup")
-        self._notify_error("Network connection error")
-        self._safe_update_status("[red]Connection error[/red]")
-
-    def _handle_timeout_error(self) -> None:
-        """Handle timeout."""
-        log.exception("Timeout at startup")
-        self._notify_error("Connection timeout exceeded")
-        self._safe_update_status("[red]Timeout[/red]")
-
-    def _handle_internal_error(self) -> None:
-        """Handle internal error."""
-        log.exception("Internal error at startup")
-        self._notify_error("An unexpected error occurred at startup")
-        self._safe_update_status("[red]Unknown error[/red]")
+        """
+        if exc is not None:
+            log.exception("%s: %s", error_type, exc)
+        else:
+            log.exception(error_type)
+        self._notify_error(message)
+        self._safe_update_status(f"[red]{error_type}[/red]")
 
     def _safe_update_status(self, status: str) -> None:
         """Safely update status with error handling."""
@@ -619,13 +622,12 @@ class DialogueApp(App[None]):
 
     async def on_unmount(self) -> None:
         """Clean up on application close."""
-        # Check flag for idempotency
-        if self._cleanup_done:
-            return
-
-        try:
+        async with self._cleanup_lock:
+            if self._cleanup_done:
+                return
             self._cleanup_done = True
 
+        try:
             # Cancel dialogue task
             if self._dialogue_task and not self._dialogue_task.done():
                 self._dialogue_task.cancel()
@@ -642,11 +644,18 @@ class DialogueApp(App[None]):
                     await self._controller.cleanup()
                 elif self._client:
                     await self._client.close()
+            except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as e:
+                log.warning("Error during resource cleanup: %s", e)
             finally:
                 self._controller = None
                 self._client = None
 
-        except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as e:
-            log.warning("Error during resource cleanup: %s", e)
         except RuntimeError:
             log.exception("Unexpected error during cleanup")
+
+
+__all__ = [
+    "DialogueApp",
+    "ModelSelectionScreen",
+    "TopicInputScreen",
+]

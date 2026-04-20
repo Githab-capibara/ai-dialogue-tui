@@ -26,8 +26,17 @@ SANITIZE_CHARS: tuple[tuple[str, str], ...] = (
     ("`", "\\`"),
     ("~", "\\~"),
     ("|", "\\|"),
+    ('"', '\\"'),
     ("\n", " "),
 )
+
+_BRACKET_TRANSLATION_TABLE = str.maketrans(
+    {
+        "{": "{{",
+        "}": "}}",
+    }
+)
+
 
 __all__ = [
     "MAX_RESPONSE_PREVIEW_LENGTH",
@@ -48,8 +57,9 @@ def sanitize_topic(topic: str) -> str:
         raise TypeError(msg)
     if not topic:
         return ""
+    topic = html.escape(topic, quote=True)
     topic = topic.strip()
-    topic = topic.replace("{", "{{").replace("}", "}}")
+    topic = topic.translate(_BRACKET_TRANSLATION_TABLE)
     return _BRACKET_PATTERN.sub(r"[[\1]]", topic)
 
 
@@ -66,10 +76,11 @@ def sanitize_response_for_display(response: str) -> str:
     if not response:
         return ""
 
-    response = html.escape(response, quote=False)
+    response = html.escape(response, quote=True)
 
-    for old, new in SANITIZE_CHARS:
-        response = response.replace(old, new)
+    trans_table = str.maketrans({char: replacement for char, replacement in SANITIZE_CHARS if char != "\n"})
+    response = response.translate(trans_table)
+    response = response.replace("\n", " ")
 
     if len(response) > MAX_RESPONSE_PREVIEW_LENGTH:
         response = response[:MAX_RESPONSE_PREVIEW_LENGTH] + "..."

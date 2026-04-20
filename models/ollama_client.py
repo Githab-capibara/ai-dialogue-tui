@@ -271,6 +271,9 @@ class _ModelsCache:
             True if cache is valid.
 
         """
+        if self._ttl <= 0:
+            return False
+
         if self._models is None or self._cache_timestamp is None:
             return False
 
@@ -389,20 +392,19 @@ class OllamaClient:
                 return models
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
-            msg = f"Failed to connect to Ollama ({self.host})"
+            msg = f"Could not connect to Ollama ({self.host})"
             raise ProviderConnectionError(
                 msg,
                 err,
             ) from err
         except ProviderError:
-            _logger.debug("ProviderError when getting models list")
+            _logger.debug(
+                "ProviderError when getting models list",
+                exc_info=True,
+            )
             raise
         except (json.JSONDecodeError, KeyError, TypeError) as err:
             msg = f"API response validation error: {err}"
-            raise ProviderGenerationError(msg) from err
-        except OSError as err:
-            msg = f"IO error: {err}"
-            _logger.debug("OSError: %s", err)
             raise ProviderGenerationError(msg) from err
 
     async def generate(
@@ -485,3 +487,6 @@ class OllamaClient:
             msg = f"IO error: {err}"
             _logger.debug("OSError: %s", err)
             raise ProviderGenerationError(msg) from err
+
+
+__all__ = ["OllamaClient"]

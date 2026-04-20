@@ -114,8 +114,6 @@ class DialogueRunner:
         except asyncio.CancelledError:
             log.debug("Dialogue cancelled")
             raise
-        except ProviderError:
-            log.debug("ProviderError handled in dialogue loop")
         except (RuntimeError, SystemError, OSError) as exc:
             log.exception("Critical error in dialogue loop: %s", exc)
         finally:
@@ -138,3 +136,6 @@ class DialogueRunner:
     async def cleanup(self) -> None:
         """Clean up runner resources."""
         await self.stop()
+
+
+__all__ = ["DialogueRunner"]

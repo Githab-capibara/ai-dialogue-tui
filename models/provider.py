@@ -101,7 +101,7 @@ class ModelProvider(Protocol):
 
     async def list_models(self) -> list[str]:
         """Get list of available models."""
-        ...  # pragma: no cover
+        ...
 
     async def generate(
         self,
@@ -110,8 +110,19 @@ class ModelProvider(Protocol):
         **kwargs: Any,
     ) -> str:
         """Generate response from model."""
-        ...  # pragma: no cover
+        ...
 
     async def close(self) -> None:
         """Release provider resources."""
-        ...  # pragma: no cover
+        ...
+
+
+__all__ = [
+    "MessageDict",
+    "ModelId",
+    "ModelProvider",
+    "ProviderConfigurationError",
+    "ProviderConnectionError",
+    "ProviderError",
+    "ProviderGenerationError",
+]

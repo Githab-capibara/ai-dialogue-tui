@@ -5,6 +5,7 @@ This module contains the service for managing dialogue between models.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -156,8 +157,12 @@ class DialogueService:
                 response=response,
             )
 
+        except asyncio.CancelledError:
+            log.info("Dialogue cycle cancelled")
+            raise
+
         except ProviderError:
-            log.exception("Provider error during dialogue cycle execution")
+            log.warning("Provider error during dialogue cycle execution")
             raise
 
     async def cleanup(self) -> None:
@@ -166,3 +171,9 @@ class DialogueService:
         Closes connection to model provider.
         """
         await self._provider.close()
+
+
+__all__ = [
+    "DialogueService",
+    "DialogueTurnResult",
+]

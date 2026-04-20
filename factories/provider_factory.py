@@ -5,7 +5,7 @@ This module contains factory functions for dependency injection.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Callable
 
 from models.ollama_client import OllamaClient
 
@@ -13,16 +13,7 @@ if TYPE_CHECKING:
     from models.config import Config
     from models.provider import ModelProvider
 
-
-class ProviderFactory(Protocol):
-    """Protocol for model providers factory.
-
-    Used for dependency injection in the application.
-    """
-
-    def __call__(self) -> ModelProvider:
-        """Create model provider instance."""
-        ...  # pragma: no cover
+__all__ = ["create_ollama_provider", "create_provider_factory"]
 
 
 def create_ollama_provider(config: Config) -> ModelProvider:
@@ -38,7 +29,7 @@ def create_ollama_provider(config: Config) -> ModelProvider:
     return OllamaClient(host=config.ollama_host)
 
 
-def create_provider_factory(config: Config) -> ProviderFactory:
+def create_provider_factory(config: Config) -> Callable[[], ModelProvider]:
     """Create providers factory.
 
     Args:

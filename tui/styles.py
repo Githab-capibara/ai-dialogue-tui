@@ -24,15 +24,15 @@ def generate_main_css() -> str:
 
 #{UI_IDS.selection_title} {{
     text-align: center;
-    text-style: bold;
+    font-weight: bold;
     padding: 1 2;
     margin-bottom: 2;
 }}
 
 #{UI_IDS.selection_buttons} {{
-    height: 3;
+    height: auto;
     align: center middle;
-    margin-top: 3;
+    margin-top: 2;
 }}
 
 #{UI_IDS.models_row} {{
@@ -57,12 +57,6 @@ def generate_main_css() -> str:
     width: 1fr;
 }}
 
-#{UI_IDS.selection_buttons} {{
-    height: auto;
-    align: center middle;
-    margin-top: 2;
-}}
-
 #{UI_IDS.selection_buttons} Button {{
     margin: 0 1;
 }}
@@ -83,7 +77,7 @@ def generate_main_css() -> str:
 
 #{UI_IDS.topic_label} {{
     text-align: center;
-    text-style: bold;
+    font-weight: bold;
     padding: 1 2;
     margin-bottom: 1;
 }}
@@ -150,22 +144,22 @@ def generate_main_css() -> str:
 
 .{CSS_CLASSES.model_a_message} {{
     color: $success;
-    text-style: bold;
+    font-weight: bold;
 }}
 
 .{CSS_CLASSES.model_b_message} {{
     color: $accent;
-    text-style: bold;
+    font-weight: bold;
 }}
 
 .{CSS_CLASSES.system_message} {{
     color: $warning;
-    text-style: italic;
+    font-style: italic;
 }}
 
 .{CSS_CLASSES.error_message} {{
     color: $error;
-    text-style: bold;
+    font-weight: bold;
 }}
 """
 
