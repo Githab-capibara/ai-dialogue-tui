@@ -46,28 +46,29 @@ def main() -> int:
 
     app = DialogueApp(config=config, provider_factory=provider_factory)
 
+    exit_code = 0
     try:
         app.run()
-        return 0
     except asyncio.CancelledError:
-        return 0
+        pass
     except KeyboardInterrupt:
-        return 0
-    except ProviderConfigurationError as e:
-        log.exception("Configuration error: %s", e)
-        return 1
-    except ProviderConnectionError as e:
-        log.exception("Connection error: %s", e)
-        return 1
-    except ProviderGenerationError as e:
-        log.exception("Generation error: %s", e)
-        return 1
-    except ProviderError as e:
-        log.exception("Provider error: %s", e)
-        return 1
-    except (RuntimeError, SystemError) as e:
-        log.exception("Critical application error: %s", e)
-        return 1
+        pass
+    except ProviderConfigurationError:
+        log.exception("Configuration error")
+        exit_code = 1
+    except ProviderConnectionError:
+        log.exception("Connection error")
+        exit_code = 1
+    except ProviderGenerationError:
+        log.exception("Generation error")
+        exit_code = 1
+    except ProviderError:
+        log.exception("Provider error")
+        exit_code = 1
+    except (RuntimeError, SystemError):
+        log.exception("Critical application error")
+        exit_code = 1
+    return exit_code
 
 
 if __name__ == "__main__":

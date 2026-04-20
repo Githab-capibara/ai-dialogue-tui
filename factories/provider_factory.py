@@ -20,7 +20,13 @@ class ProviderFactory(Protocol):
     Используется для dependency injection в приложении.
     """
 
-    def __call__(self) -> ModelProvider: ...
+    def __call__(self) -> ModelProvider:
+        """Создать экземпляр провайдера моделей.
+
+        Returns:
+            Настроенный провайдер для генерации ответов.
+
+        """
 
 
 def create_ollama_provider(config: Config) -> ModelProvider:
