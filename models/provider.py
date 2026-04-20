@@ -101,6 +101,7 @@ class ModelProvider(Protocol):
 
     async def list_models(self) -> list[str]:
         """Получить список доступных моделей."""
+        ...  # pragma: no cover
 
     async def generate(
         self,
@@ -109,6 +110,9 @@ class ModelProvider(Protocol):
         **kwargs: Any,
     ) -> str:
         """Сгенерировать ответ от модели."""
+        ...  # pragma: no cover
 
     async def close(self) -> None:
         """Освободить ресурсы провайдера."""
+        ...  # pragma: no cover
+        ...  # pragma: no cover
