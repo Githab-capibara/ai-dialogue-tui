@@ -21,14 +21,6 @@ MAX_CONTEXT_LENGTH: int = 50
 
 
 @dataclass(slots=True)
-class _ConversationContext:
-    """Context for each model - separated to reduce Conversation attributes."""
-
-    messages: list[MessageDict] = field(default_factory=list)
-    model_id: ModelId = field(default_factory=lambda: "A")
-
-
-@dataclass(slots=True)
 class Conversation:
     """Manage dialogue between two models.
 
