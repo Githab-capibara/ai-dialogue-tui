@@ -78,7 +78,8 @@ def sanitize_response_for_display(response: str) -> str:
 
     response = html.escape(response, quote=True)
 
-    trans_table = str.maketrans({char: replacement for char, replacement in SANITIZE_CHARS if char != "\n"})
+    trans_table = str.maketrans(
+        {char: replacement for char, replacement in SANITIZE_CHARS if char != "\n"})
     response = response.translate(trans_table)
     response = response.replace("\n", " ")
 
