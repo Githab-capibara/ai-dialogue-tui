@@ -15,6 +15,7 @@
 Note:
     Тесты используют доступ к внутренним атрибутам и импорты внутри функций,
     что оправдано для тестирования.
+
 """
 
 # pylint: disable=protected-access,import-outside-toplevel,no-member

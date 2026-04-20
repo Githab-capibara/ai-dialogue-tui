@@ -59,6 +59,7 @@ class TestUIStateChangedNoMatches:
 
         Args:
             caplog: Фикстура pytest для перехвата логов.
+
         """
         # Создаем конфигурацию и фабрику провайдеров
         config = Config()
@@ -157,6 +158,7 @@ class TestUIStateChangedNoMatches:
 
         Args:
             caplog: Фикстура pytest для перехвата логов.
+
         """
         # Создаем конфигурацию и фабрику провайдеров
         config = Config()

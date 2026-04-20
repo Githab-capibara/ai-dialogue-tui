@@ -111,7 +111,6 @@ class TestYAGNIFix:
 
     def test_dialogue_service_init_no_callback(self) -> None:
         """Тест что DialogueService не принимает ui_callback."""
-
         source_file = Path("services/dialogue_service.py")
         content = source_file.read_text(encoding="utf-8")
 
@@ -164,7 +163,6 @@ class TestArchitectureIntegrity:
 
     def test_conversation_uses_protocol(self) -> None:
         """Тест что Conversation использует Protocol для DI."""
-
         conversation = Conversation(
             model_a="llama3",
             model_b="mistral",

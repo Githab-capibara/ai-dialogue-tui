@@ -7,6 +7,7 @@
 
 Note:
     Тесты используют доступ к внутренним атрибутам для тестирования.
+
 """
 
 # pylint: disable=protected-access,import-outside-toplevel

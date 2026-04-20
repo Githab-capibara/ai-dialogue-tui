@@ -312,7 +312,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             log.exception("LookupError при обновлении UI состояния")
         except RuntimeError:
             log.exception("RuntimeError при обновлении UI состояния")
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             log.exception("Ошибка при обновлении UI состояния")
 
     async def on_mount(self) -> None:
@@ -405,18 +405,12 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             self._safe_update_status("[red]Неизвестная ошибка[/red]")
 
     def _safe_update_status(self, status: str) -> None:
-        """Безопасно обновить статус с обработкой ошибок.
-
-        Args:
-            status: Строка статуса для отображения.
-
-        """
+        """Безопасно обновить статус с обработкой ошибок."""
         try:
-            # pylint: disable=assignment-from-no-return
             status_label = self.query_one("#status-value", Label)
             status_label.update(status)
-        except (NoMatches, LookupError, RuntimeError) as e:
-            log.warning("Не удалось обновить статус: %s", e)
+        except (NoMatches, LookupError, RuntimeError):
+            log.warning("Не удалось обновить статус")
 
     def _setup_conversation(self, model_a: str, model_b: str) -> None:
         """Настроить диалог после выбора моделей.
@@ -475,13 +469,12 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
                         f"[bold]Тема:[/bold] {sanitized_topic}\n"
                         f"[dim]Нажмите 'Старт' для начала диалога[/dim]",
                     )
-                except (NoMatches, LookupError, RuntimeError) as e:
-                    log.warning("Не удалось записать в лог при инициализации: %s", e)
+                except (NoMatches, LookupError, RuntimeError):
+                    log.warning("Не удалось записать в лог при инициализации")
 
-            # Используем call_after_refresh для безопасного обновления UI
             self.call_after_refresh(_finalize_setup)
 
-        # Показываем окно ввода темы
+        self.push_screen(TopicInputScreen(), callback=on_topic_entered)
         self.push_screen(TopicInputScreen(), callback=on_topic_entered)
 
     @on(Button.Pressed, f"#{UI_IDS.start_btn}")
@@ -584,12 +577,8 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         model_name: str,
         style: str,
     ) -> DialogueTurnResult | None:
-        """Обработать один ход диалога и вывести результат.
-
-        Важно: Этот метод работает в асинхронном контексте (asyncio.create_task),
-        поэтому для записи в UI используем call_after_refresh вместо call_from_thread.
-        """
-        _ = model_name, style  # Note: reserved for future use
+        """Обработать один ход диалога и вывести результат."""
+        _ = model_name, style  # reserved for future use
         result = await service.run_dialogue_cycle()
 
         if result:
@@ -600,17 +589,12 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
         return result
 
     def _write_to_log(self, message: str) -> None:
-        """Безопасно записать сообщение в лог UI.
-
-        Args:
-            message: Сообщение для записи.
-
-        """
+        """Безопасно записать сообщение в лог UI."""
         try:
             dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
             dialog_log.write(message)
-        except (NoMatches, LookupError, RuntimeError) as e:
-            log.warning("Не удалось записать в лог: %s", e)
+        except (NoMatches, LookupError, RuntimeError):
+            log.warning("Не удалось записать в лог")
 
     def _handle_dialogue_error(self, model_name: str) -> None:
         """Обработать ошибку генерации ответа.
@@ -635,14 +619,8 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             timeout=DEFAULT_NOTIFY_TIMEOUT,
         )
 
-    def _handle_critical_error(self, e: Exception) -> None:
-        """Обработать критическую ошибку в цикле диалога.
-
-        Args:
-            e: Exception (reserved for future logging).
-
-        """
-        _ = e  # Suppress unused warning
+    def _handle_critical_error(self, _e: BaseException) -> None:
+        """Обработать критическую ошибку в цикле диалога."""
         log.exception("Critical error in dialogue loop")
         self.call_after_refresh(
             self._write_to_log,
