@@ -65,7 +65,13 @@ class Conversation:
             return
         self._initialized = True
 
-        # Валидация обязательных параметров
+        self._validate_params()
+        formatted_prompt = self._create_system_prompt()
+        self._context_a.append(MessageDict(role="system", content=formatted_prompt))
+        self._context_b.append(MessageDict(role="system", content=formatted_prompt))
+
+    def _validate_params(self) -> None:
+        """Валидировать параметры конструктора."""
         if not self.model_a or not isinstance(self.model_a, str):
             msg = "model_a должен быть непустой строкой"
             raise ValueError(msg)
@@ -79,15 +85,15 @@ class Conversation:
             msg = "model_a и model_b должны быть разными"
             raise ValueError(msg)
 
+    def _create_system_prompt(self) -> str:
+        """Создать форматированный системный промпт."""
         _default_prompt = Config().default_system_prompt
         effective_prompt = self.system_prompt or _default_prompt
 
         try:
-            formatted_prompt = effective_prompt.format(topic=self.topic)
+            return effective_prompt.format(topic=self.topic)
         except (KeyError, ValueError):
-            formatted_prompt = f"You are a helpful assistant. The topic of discussion is: {self.topic}"
-        self._context_a.append(MessageDict(role="system", content=formatted_prompt))
-        self._context_b.append(MessageDict(role="system", content=formatted_prompt))
+            return f"You are a helpful assistant. The topic of discussion is: {self.topic}"
 
     def _trim_context_if_needed(
         self,
@@ -287,20 +293,10 @@ class Conversation:
             raise
 
     def clear_contexts(self) -> None:
-        """Очистить оба контекста, сохранив только системный промпт и тему.
-
-        Использует присваивание новых списков для простоты и читаемости.
-        """
-        # Форматируем системный промпт с темой
-        try:
-            formatted_prompt = self.system_prompt.format(topic=self.topic)
-        except (KeyError, ValueError):
-            formatted_prompt = f"You are a helpful assistant. The topic of discussion is: {self.topic}"
-        # Присваиваем новые списки с отдельными копиями system_message
+        """Очистить оба контекста, сохранив только системный промпт и тему."""
+        formatted_prompt = self._create_system_prompt()
         self._context_a = [MessageDict(role="system", content=formatted_prompt)]
         self._context_b = [MessageDict(role="system", content=formatted_prompt)]
-
-        # Сбрасываем ход на A
         self._current_turn = "A"
 
     def get_context_stats(self) -> dict[str, int]:
