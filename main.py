@@ -34,10 +34,6 @@ def main() -> int:
     Returns:
         Код выхода приложения.
 
-    Note:
-        Оборачивает app.run() в try/except
-        для перехвата необработанных исключений.
-
     """
     config = Config()
 

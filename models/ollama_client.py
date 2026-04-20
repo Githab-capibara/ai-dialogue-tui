@@ -13,7 +13,7 @@ import time
 from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
-import aiohttp  # nosec: B044 - third-party HTTP library for API requests
+import aiohttp
 
 from models.config import (
     DEFAULT_MAX_TOKENS,
