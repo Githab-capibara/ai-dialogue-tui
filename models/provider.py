@@ -14,16 +14,15 @@ class ProviderError(Exception):
 
     Используется как базовый класс для специфичных исключений провайдера.
     Содержит информацию об оригинальном исключении для отладки.
-
-    Attributes:
-        message: Сообщение об ошибке.
-        original_exception: Оригинальное исключение для цепочки.
-
     """
 
     __slots__ = ("_original_exception",)
 
-    def __init__(self, message: str, original_exception: Exception | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        original_exception: Exception | None = None,
+    ) -> None:
         """Инициализация исключения.
 
         Args:

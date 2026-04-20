@@ -46,6 +46,8 @@ class _RequestValidator:
     Инкапсулирует логику валидации входных параметров для API запросов.
     """
 
+    __slots__ = ()
+
     @staticmethod
     def validate_host(host: str) -> None:
         """Валидировать URL хоста.
@@ -90,6 +92,8 @@ class _ResponseHandler:
 
     Инкапсулирует логику обработки и валидации ответов API.
     """
+
+    __slots__ = ()
 
     @staticmethod
     def validate_status_code(status: int, operation: str) -> None:
