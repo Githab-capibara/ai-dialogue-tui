@@ -7,6 +7,7 @@ AttributeError: 'DialogueApp' object has no attribute '_reactive_sub_title'
 
 Note:
     Тесты используют доступ к внутренним атрибутам Textual для проверки.
+
 """
 
 # pylint: disable=protected-access,import-outside-toplevel

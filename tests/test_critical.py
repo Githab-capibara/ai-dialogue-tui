@@ -13,6 +13,7 @@ Note:
     Некоторые тесты содержат дублирующийся код что оправдано для тестирования
     изолированных сценариев.
     Тесты используют доступ к внутренним атрибутам, что оправдано для тестирования.
+
 """
 
 # pylint: disable=duplicate-code,protected-access,import-outside-toplevel
@@ -57,6 +58,7 @@ def create_async_mock_response(
 
     Returns:
         AsyncMock настроенный для эмуляции ответа.
+
     """
     mock_response = AsyncMock()
     mock_response.status = status
@@ -90,6 +92,7 @@ def create_session_mock(
 
     Returns:
         AsyncMock настроенный для эмуляции сессии.
+
     """
     mock_context_manager = AsyncContextManagerMock(response=response, raise_on_enter=raise_on_enter)
     mock_session = AsyncMock()
@@ -108,9 +111,10 @@ def create_mock_get_session(mock_session: AsyncMock):
 
     Returns:
         Асинхронная функция для использования в patch.
+
     """
 
-    async def mock_get_session(_self: OllamaClient) -> Any:  # noqa: ANN401
+    async def mock_get_session(_self: OllamaClient) -> Any:
         return mock_session
 
     return mock_get_session

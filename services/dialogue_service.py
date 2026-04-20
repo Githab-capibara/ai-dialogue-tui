@@ -7,13 +7,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from models.config import Config
-from models.provider import ModelProvider, ProviderError
+from models.provider import ModelId, ModelProvider, ProviderError
 
 if TYPE_CHECKING:
-    from models.conversation import Conversation, ModelId
+    from models.conversation import Conversation
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class DialogueService:
         self,
         conversation: Conversation,
         provider: ModelProvider,
-        config: Config | None = None,
+        config: Optional[Config] = None,
     ) -> None:
         """Инициализация сервиса диалога.
 

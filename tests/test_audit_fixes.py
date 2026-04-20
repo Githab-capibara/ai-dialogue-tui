@@ -16,6 +16,7 @@
 Note:
     Тесты используют доступ к внутренним атрибутам и импорты внутри функций,
     что оправдано для тестирования.
+
 """
 
 # pylint: disable=protected-access,import-outside-toplevel,no-member
@@ -152,7 +153,7 @@ class TestDependencyInjection:
         custom_provider.close = AsyncMock()
 
         def provider_factory():
-            return custom_provider  # noqa: E731
+            return custom_provider
 
         # Act - проверяем что фабрика возвращает наш моковый провайдер
         result = provider_factory()
@@ -271,7 +272,7 @@ class TestAssertChecks:
 
         # Act & Assert
         assert hasattr(conversation, "_initialized")
-        assert conversation._initialized is True  # noqa: W0212
+        assert conversation._initialized is True
 
 
 # =============================================================================
@@ -513,7 +514,7 @@ class TestContextDictionary:
         # Act & Assert
         assert hasattr(conversation, "_context_a")
         assert hasattr(conversation, "_context_b")
-        assert conversation._context_a is not conversation._context_b  # noqa: W0212
+        assert conversation._context_a is not conversation._context_b
 
     def test_contexts_are_independent_lists(self):
         """
@@ -525,15 +526,15 @@ class TestContextDictionary:
         conversation = Conversation("model_a", "model_b", "test")
 
         # Сохраняем исходную длину (там может быть system сообщение)
-        initial_len_b = len(conversation._context_b)  # noqa: W0212
+        initial_len_b = len(conversation._context_b)
 
         # Act - добавляем сообщение только в контекст A (model_id первый
         # параметр!)
         conversation.add_message("A", "user", "message for A")
 
         # Assert - контекст A увеличился, B остался тем же
-        assert len(conversation._context_a) > 0  # noqa: W0212
-        assert len(conversation._context_b) == initial_len_b  # noqa: W0212
+        assert len(conversation._context_a) > 0
+        assert len(conversation._context_b) == initial_len_b
 
     def test_get_context_returns_correct_model_context(self):
         """

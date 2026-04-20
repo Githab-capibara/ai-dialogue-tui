@@ -2,6 +2,7 @@
 
 Note:
     Тесты используют импорты внутри функций для проверки модульной структуры.
+
 """
 
 # pylint: disable=import-outside-toplevel
@@ -78,7 +79,6 @@ class TestConversationLogging:
 
     def test_conversation_add_message_logs(self, caplog):
         """Тест, что add_message логирует добавление сообщения."""
-
         with caplog.at_level(logging.DEBUG):
             conv = Conversation("model_a", "model_b", "test_topic")
             conv.add_message("A", "user", "test message")

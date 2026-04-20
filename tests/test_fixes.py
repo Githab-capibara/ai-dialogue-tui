@@ -2,6 +2,7 @@
 
 Note:
     Тесты используют доступ к внутренним атрибутам, что оправдано для тестирования.
+
 """
 
 # pylint: disable=protected-access,import-outside-toplevel
@@ -51,7 +52,7 @@ class TestFixes:
         mock_session.get = MagicMock(return_value=mock_get_context_manager)
         mock_session.closed = False
 
-        async def mock_get_session(_self: OllamaClient) -> AsyncMock:  # noqa: ANN401
+        async def mock_get_session(_self: OllamaClient) -> AsyncMock:
             return mock_session
 
         # Act
@@ -80,7 +81,7 @@ class TestFixes:
         mock_session.post = MagicMock(return_value=mock_post_context_manager)
         mock_session.closed = False
 
-        async def mock_get_session(_self: OllamaClient) -> AsyncMock:  # noqa: ANN401
+        async def mock_get_session(_self: OllamaClient) -> AsyncMock:
             return mock_session
 
         # Act
@@ -140,7 +141,8 @@ class TestFixes:
 
     def test_tui_app_uses_ui_constants_not_hardcoded_strings(self):
         """Тест, что TUI приложение использует константы UI
-        вместо жестко закодированных строк."""
+        вместо жестко закодированных строк.
+        """
         # This test verifies the fix by checking that the code no longer contains
         # hardcoded "#dialogue-log" strings
         # Since we can't easily test the UI without running it, we'll verify
@@ -213,6 +215,7 @@ class TestAsyncioAPICorrectness:
     def test_task_cancelled_method_exists(self):
         """Тест, что asyncio.Task имеет атрибут .cancelled (Python 3.11+)."""
         import asyncio
+
         from tui.app import DialogueApp
 
         DialogueApp.__new__(DialogueApp)

@@ -10,20 +10,18 @@ import contextlib
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Final
+from collections.abc import Mapping, Sequence
+from typing import Any, Final
 
 import aiohttp  # nosec: B044 - third-party HTTP library for API requests
 
-if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
-
-from models.config import (  # pylint: disable=wrong-import-position
+from models.config import (
     DEFAULT_MAX_TOKENS,
     DEFAULT_TEMPERATURE,
     Config,
     validate_ollama_url,
 )
-from models.provider import (  # pylint: disable=wrong-import-position
+from models.provider import (
     MessageDict,
     ProviderConnectionError,
     ProviderError,
@@ -391,23 +389,22 @@ class OllamaClient:
 
                 return models
 
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             msg = f"Не удалось подключиться к Ollama ({self.host})"
             raise ProviderConnectionError(
                 msg,
-                e,
-            ) from e
-        except ProviderError as e:
-            # Логируем и пробрасываем наши ошибки дальше
-            _logger.debug("ProviderError при получении списка моделей: %s", e)
+                err,
+            ) from err
+        except ProviderError:
+            _logger.debug("ProviderError при получении списка моделей")
             raise
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             msg = f"Ошибка валидации ответа API: {e}"
             raise ProviderGenerationError(msg) from e
-        except OSError as e:
-            _logger.warning("Игнорируемое OSError при получении списка моделей: %s", e)
-            msg = f"Ошибка ввода-вывода при получении списка моделей: {e}"
-            raise ProviderGenerationError(msg) from e
+        except OSError as err:
+            msg = f"IO error: {err}"
+            _logger.debug("OSError: %s", err)
+            raise ProviderGenerationError(msg) from err
 
     async def generate(
         self,
@@ -472,7 +469,7 @@ class OllamaClient:
                 # Извлечение ответа
                 return _ResponseHandler.extract_generation_response(data)
 
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             timeout_info = f"Таймаут: {self._config.sock_read_timeout}с"
             msg = (
                 f"Не удалось подключиться к Ollama ({self.host}). "
@@ -480,16 +477,15 @@ class OllamaClient:
             )
             raise ProviderConnectionError(
                 msg,
-                e,
-            ) from e
-        except ProviderError as e:
-            # Логируем и пробрасываем наши ошибки дальше
-            _logger.debug("ProviderError при генерации ответа: %s", e)
+                err,
+            ) from err
+        except ProviderError:
+            _logger.debug("ProviderError при генерации ответа")
             raise
-        except (json.JSONDecodeError, KeyError, TypeError) as e:
-            msg = f"Ошибка валидации ответа API: {e}"
-            raise ProviderGenerationError(msg) from e
-        except OSError as e:
-            _logger.warning("Игнорируемое OSError при генерации ответа: %s", e)
-            msg = f"Ошибка ввода-вывода при генерации ответа: {e}"
-            raise ProviderGenerationError(msg) from e
+        except (json.JSONDecodeError, KeyError, TypeError) as err:
+            msg = f"Ошибка валидации ответа API: {err}"
+            raise ProviderGenerationError(msg) from err
+        except OSError as err:
+            msg = f"IO error: {err}"
+            _logger.debug("OSError: %s", err)
+            raise ProviderGenerationError(msg) from err
