@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from models.config import Config
 from models.provider import MessageDict, ModelId, ModelProvider
+
+if TYPE_CHECKING:
+    from models.config import Config as ConfigType
 
 log = logging.getLogger(__name__)
 
@@ -30,21 +33,42 @@ class Conversation:
 
     """
 
-    model_a: str  # Name of model A
-    model_b: str  # Name of second model
-    topic: str  # Dialogue topic
+    model_a: str = ""
+    model_b: str = ""
+    topic: str = ""
+    system_prompt: str = ""
+    _config: ConfigType | None = field(default=None, init=False, repr=False)
 
-    # Contexts for each model (message lists in Ollama format)
     _context_a: list[MessageDict] = field(default_factory=list, repr=False)
     _context_b: list[MessageDict] = field(default_factory=list, repr=False)
-
-    system_prompt: str = ""
-
-    # Whose turn it is
-    _current_turn: ModelId = field(default="A", init=False)
+    _current_turn: Literal["A", "B"] = field(default="A", init=False)
 
     # Flag to prevent re-initialization
     _initialized: bool = field(default=False, init=False)
+
+    def __init__(
+        self, model_a: str, model_b: str, topic: str, system_prompt: str = "", config: ConfigType | None = None
+    ) -> None:
+        """Initialize conversation.
+
+        Args:
+            model_a: First model name.
+            model_b: Second model name.
+            topic: Discussion topic.
+            system_prompt: Custom system prompt (optional).
+            config: Configuration object (optional, uses default if not provided).
+
+        """
+        self.model_a = model_a
+        self.model_b = model_b
+        self.topic = topic
+        self.system_prompt = system_prompt
+        self._config = config or Config()
+        self._context_a: list[MessageDict] = []
+        self._context_b: list[MessageDict] = []
+        self._current_turn: Literal["A", "B"] = "A"
+        self._initialized = False
+        self.__post_init__()
 
     def __post_init__(self) -> None:
         """Initialize system prompt after object creation."""
@@ -74,12 +98,12 @@ class Conversation:
 
     def _create_system_prompt(self) -> str:
         """Create formatted system prompt."""
-        _default_prompt = Config().default_system_prompt
+        _default_prompt = self._config.default_system_prompt
         effective_prompt = self.system_prompt or _default_prompt
 
         try:
             return effective_prompt.format(topic=self.topic)
-        except (KeyError, ValueError):
+        except KeyError:
             return f"You are a helpful assistant. The topic of discussion is: {self.topic}"
 
     def _trim_context_if_needed(
@@ -103,11 +127,16 @@ class Conversation:
         if len(context) <= max_len:
             return context
 
-        system_message = context[0] if context else None
+        if not context:
+            return context
 
-        remaining_messages = context[-max_len:]
+        last_messages = context[-max_len:]
+        system_message = context[0]
 
-        trimmed = [system_message, *remaining_messages] if system_message else remaining_messages
+        if system_message in last_messages:
+            trimmed = list(last_messages)
+        else:
+            trimmed = [system_message, *last_messages]
 
         log.warning(
             "Context exceeded (%d messages), trimmed to %d",
@@ -252,35 +281,35 @@ class Conversation:
         model_name = self.get_current_model_name()
         other_id: ModelId = "B" if model_id == "A" else "A"
 
-        # Save context state for rollback on error
         context_a_snapshot = list(self._context_a)
         context_b_snapshot = list(self._context_b)
         turn_snapshot = self._current_turn
 
         try:
-            # Generate response BEFORE any context changes
             _, response = await self.generate_response(provider)
 
-            # Add response to current model's context as assistant
             self.add_message(model_id, "assistant", response)
-
-            # Add response to other model's context as user
             self.add_message(other_id, "user", response)
-
-            # Switch turn
             self.switch_turn()
 
             return model_name, "assistant", response
 
-        except Exception:
-            # Rollback context state on error
+        except BaseException:
             self._context_a = context_a_snapshot
             self._context_b = context_b_snapshot
             self._current_turn = turn_snapshot
             raise
 
     def clear_contexts(self) -> None:
-        """Clear both contexts, preserving only system prompt and topic."""
+        """Clear both contexts, preserving only system prompt and topic.
+
+        Note:
+            The _initialized flag is intentionally NOT reset by this method.
+            This preserves any initialization performed in __post_init__.
+            Subsequent re-initialization attempts via __post_init__ will be
+            blocked by the _initialized flag (which is the intended behavior).
+
+        """
         formatted_prompt = self._create_system_prompt()
         self._context_a = [MessageDict(role="system", content=formatted_prompt)]
         self._context_b = [MessageDict(role="system", content=formatted_prompt)]

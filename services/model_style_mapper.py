@@ -5,10 +5,12 @@ This module contains logic for converting model state to UI styles.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 if TYPE_CHECKING:
     from models.conversation import ModelId
+
+__all__ = ["ModelStyleMapper", "StyleInfo"]
 
 
 class StyleInfo(NamedTuple):
@@ -21,7 +23,7 @@ class StyleInfo(NamedTuple):
 class ModelStyleMapper:
     """Service for mapping model state to display style."""
 
-    _STYLE_MAP: dict[str, str] = {
+    _STYLE_MAP: ClassVar[dict[str, str]] = {
         "A": "model_a",
         "B": "model_b",
     }
@@ -39,15 +41,3 @@ class ModelStyleMapper:
         """
         style_id = self._STYLE_MAP[model_id]
         return StyleInfo(model_name=model_name, style_id=style_id)
-
-    def _get_style_id(self, model_id: ModelId) -> str:
-        """Get style identifier for model.
-
-        Args:
-            model_id: Model identifier (A or B).
-
-        Returns:
-            Style identifier (model_a or model_b).
-
-        """
-        return self._STYLE_MAP[model_id]

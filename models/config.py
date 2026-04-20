@@ -6,9 +6,26 @@ with full parameter validation.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Final
 from urllib.parse import urlparse
+
+__all__ = [
+    "DEFAULT_MAX_TOKENS",
+    "DEFAULT_PAUSE_BETWEEN_MESSAGES",
+    "DEFAULT_REQUEST_TIMEOUT",
+    "DEFAULT_SOCK_READ_TIMEOUT",
+    "DEFAULT_TEMPERATURE",
+    "MAX_TEMPERATURE",
+    "MIN_MAX_TOKENS",
+    "MIN_PAUSE_BETWEEN_MESSAGES",
+    "MIN_REQUEST_TIMEOUT",
+    "MIN_SOCK_READ_TIMEOUT",
+    "MIN_TEMPERATURE",
+    "Config",
+    "validate_ollama_url",
+]
 
 # Default constants for generation parameters
 DEFAULT_TEMPERATURE: Final = 0.7
@@ -52,15 +69,10 @@ def validate_ollama_url(url: str) -> bool:
     if not url or not isinstance(url, str):
         return False
 
-    try:
-        parsed = urlparse(url)
-        # Check scheme (only http or https)
-        if parsed.scheme not in ("http", "https"):
-            return False
-        # Check for presence of host
-        return bool(parsed.netloc)
-    except ValueError:
+    parsed = urlparse(url)
+    if not parsed.scheme or parsed.scheme not in ("http", "https"):
         return False
+    return bool(parsed.netloc)
 
 
 def _validate_numeric_range(
@@ -224,6 +236,7 @@ class Config:
             ValueError: If any parameter is incorrect.
 
         """
+        self._apply_env_overrides()
         # Validate numeric parameters via common function
         _validate_temperature(self.temperature)
         _validate_max_tokens(self.max_tokens)
@@ -235,3 +248,33 @@ class Config:
         if not validate_ollama_url(self.ollama_host):
             msg = f"Invalid Ollama URL: {self.ollama_host}"
             raise ValueError(msg)
+
+    def _apply_env_overrides(self) -> None:
+        """Apply environment variable overrides to configuration.
+
+        Environment variables:
+            OLLAMA_TEMPERATURE: Override temperature (float)
+            OLLAMA_MAX_TOKENS: Override max_tokens (int)
+            OLLAMA_HOST: Override ollama_host (str)
+            OLLAMA_REQUEST_TIMEOUT: Override request_timeout (int)
+            OLLAMA_SOCK_READ_TIMEOUT: Override sock_read_timeout (int)
+            OLLAMA_PAUSE_BETWEEN: Override pause_between_messages (float)
+
+        """
+        env_mappings = {
+            "OLLAMA_TEMPERATURE": ("temperature", float),
+            "OLLAMA_MAX_TOKENS": ("max_tokens", int),
+            "OLLAMA_HOST": ("ollama_host", str),
+            "OLLAMA_REQUEST_TIMEOUT": ("request_timeout", int),
+            "OLLAMA_SOCK_READ_TIMEOUT": ("sock_read_timeout", int),
+            "OLLAMA_PAUSE_BETWEEN": ("pause_between_messages", float),
+        }
+
+        for env_var, (attr_name, type_func) in env_mappings.items():
+            env_value = os.environ.get(env_var)
+            if env_value is not None:
+                try:
+                    value = type_func(env_value)
+                    object.__setattr__(self, attr_name, value)
+                except (ValueError, TypeError):
+                    pass

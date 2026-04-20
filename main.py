@@ -42,9 +42,9 @@ def main() -> int:
     try:
         app.run()
     except asyncio.CancelledError:
-        pass
+        log.warning("Application cancelled")
     except KeyboardInterrupt:
-        pass
+        log.info("Application interrupted by user")
     except ProviderConfigurationError:
         log.exception("Configuration error")
         exit_code = 1

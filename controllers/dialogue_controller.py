@@ -130,7 +130,7 @@ class DialogueController:
         """Handle pause/resume command.
 
         Returns:
-            True if command executed, False if dialogue not configured.
+            True if pause/resume toggled successfully, False if dialogue not running.
 
         """
         if not self._service.is_running:
