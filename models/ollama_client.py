@@ -10,9 +10,11 @@ import contextlib
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Final, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Final
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
     import aiohttp
 
 import aiohttp

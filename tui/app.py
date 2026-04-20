@@ -69,10 +69,10 @@ CSS = generate_main_css()
 log = logging.getLogger(__name__)
 
 
-class ModelSelectionScreen(ModalScreen[None]):
+class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
     """Модальное окно для выбора двух моделей."""
 
-    BINDINGS: ClassVar[list[Binding]] = [
+    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
         Binding("escape", "cancel", "Отмена"),
     ]
 
@@ -149,8 +149,22 @@ class ModelSelectionScreen(ModalScreen[None]):
 
     def _on_start_pressed(self) -> None:
         """Обработать нажатие кнопки начала диалога."""
-        model_a = self.query_one(f"#{UI_IDS.model_a_select}", Select).value
-        model_b = self.query_one(f"#{UI_IDS.model_b_select}", Select).value
+        model_a_select = self.query_one(f"#{UI_IDS.model_a_select}", Select)
+        model_b_select = self.query_one(f"#{UI_IDS.model_b_select}", Select)
+        model_a_value = model_a_select.value
+        model_b_value = model_b_select.value
+
+        if model_a_value is Select.BLANK or model_b_value is Select.BLANK:
+            self.notify(
+                "Выберите обе модели!",
+                title="Ошибка",
+                severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
+            )
+            return
+
+        model_a: str = model_a_value  # type: ignore[assignment]
+        model_b: str = model_b_value  # type: ignore[assignment]
 
         if model_a == model_b:
             self.notify(
@@ -161,22 +175,13 @@ class ModelSelectionScreen(ModalScreen[None]):
             )
             return
 
-        if model_a is Select.BLANK or model_b is Select.BLANK:
-            self.notify(
-                "Выберите обе модели!",
-                title="Ошибка",
-                severity="error",
-                timeout=DEFAULT_NOTIFY_TIMEOUT,
-            )
-            return
-
         self.dismiss((model_a, model_b))
 
 
-class TopicInputScreen(ModalScreen[None]):
+class TopicInputScreen(ModalScreen[str | None]):
     """Модальное окно для ввода темы диалога."""
 
-    BINDINGS: ClassVar[list[Binding]] = [
+    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
         Binding("escape", "cancel", "Отмена"),
         Binding("enter", "submit", "OK"),
     ]
@@ -237,7 +242,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
 
     CSS = CSS
 
-    BINDINGS: ClassVar[list[Binding]] = [
+    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
         Binding("ctrl+q", "quit", "Выход", priority=True),
         Binding("ctrl+p", "toggle_pause", "Пауза/Старт"),
         Binding("ctrl+r", "clear_log", "Очистить"),
@@ -334,7 +339,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
             # Показываем окно выбора моделей
             def on_models_selected(result: tuple[str, str] | None) -> None:
                 if result is None:
-                    self.exit(1)
+                    self.exit()
                     return
 
                 model_a, model_b = result
@@ -426,7 +431,7 @@ class DialogueApp(App[None]):  # pylint: disable=too-many-instance-attributes
 
         def on_topic_entered(topic: str | None) -> None:
             if topic is None:
-                self.exit(1)
+                self.exit()
                 return
 
             # Санитизация темы перед использованием
