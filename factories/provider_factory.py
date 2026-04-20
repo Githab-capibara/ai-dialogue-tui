@@ -21,13 +21,7 @@ class ProviderFactory(Protocol):
     """
 
     def __call__(self) -> ModelProvider:
-        """Создать экземпляр провайдера моделей.
-
-        Returns:
-            Настроенный провайдер для генерации ответов.
-
-        """
-        raise NotImplementedError
+        """Создать экземпляр провайдера моделей."""
 
 
 def create_ollama_provider(config: Config) -> ModelProvider:

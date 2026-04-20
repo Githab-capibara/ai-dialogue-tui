@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Точка входа для TUI приложения диалога ИИ-моделей.
-
-Этот модуль содержит точку входа приложения с обработкой исключений.
-"""
+"""Точка входа для TUI приложения диалога ИИ-моделей."""
 
 from __future__ import annotations
 
@@ -20,6 +17,10 @@ from models.provider import (
 )
 from tui.app import DialogueApp
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 log = logging.getLogger(__name__)
 
 logging.basicConfig(

@@ -306,9 +306,6 @@ class OllamaClient:
     """Асинхронный клиент для работы с локальным Ollama API.
 
     Реализует протокол ModelProvider для dependency injection.
-
-    Implements:
-        ModelProvider: Протокол провайдера языковых моделей.
     """
 
     def __init__(self, host: str | None = None, config: Config | None = None) -> None:
@@ -336,12 +333,7 @@ class OllamaClient:
         self._models_cache = _ModelsCache(ttl=_MODELS_CACHE_TTL)
 
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Получить HTTP сессию через менеджер.
-
-        Returns:
-            HTTP сессия для запросов.
-
-        """
+        """Получить HTTP сессию через менеджер."""
         return await self._http_manager.get_session()
 
     async def close(self) -> None:
