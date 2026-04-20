@@ -21,6 +21,8 @@ class ProviderError(Exception):
 
     """
 
+    __slots__ = ("_original_exception",)
+
     def __init__(self, message: str, original_exception: Exception | None = None) -> None:
         """Инициализация исключения.
 
@@ -47,6 +49,8 @@ class ProviderConfigurationError(ProviderError):
     - Отсутствующие обязательные настройки
     """
 
+    __slots__ = ()
+
 
 class ProviderConnectionError(ProviderError):
     """Исключение для ошибок подключения к провайдеру.
@@ -57,6 +61,8 @@ class ProviderConnectionError(ProviderError):
     - Ошибки сети
     """
 
+    __slots__ = ()
+
 
 class ProviderGenerationError(ProviderError):
     """Исключение для ошибок генерации ответа.
@@ -66,6 +72,8 @@ class ProviderGenerationError(ProviderError):
     - Некорректный формат ответа
     - Ошибки валидации ответа
     """
+
+    __slots__ = ()
 
 
 class MessageDict(TypedDict, total=True):
