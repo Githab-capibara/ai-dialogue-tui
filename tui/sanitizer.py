@@ -8,9 +8,27 @@ from __future__ import annotations
 
 import html
 import re
+from functools import lru_cache
 
-# Константа для ограничения длины превью ответа
 MAX_RESPONSE_PREVIEW_LENGTH: int = 100
+
+_BRACKET_PATTERN = re.compile(r"\[([^\]]*)\]")
+
+SANITIZE_CHARS: tuple[tuple[str, str], ...] = (
+    ("\\", "\\\\"),
+    ("[", "[["),
+    ("]", "]]"),
+    ("{", "{{"),
+    ("}", "}}"),
+    ("@", "@@"),
+    ("#", "##"),
+    ("*", "\\*"),
+    ("_", "\\_"),
+    ("`", "\\`"),
+    ("~", "\\~"),
+    ("|", "\\|"),
+    ("\n", " "),
+)
 
 __all__ = [
     "MAX_RESPONSE_PREVIEW_LENGTH",
@@ -19,20 +37,17 @@ __all__ = [
 ]
 
 
+@lru_cache(maxsize=128)
+def _compile_sanitizer() -> tuple[str, ...]:
+    """Кэшировать паттерн для санитизации темы."""
+    return tuple()
+
+
 def sanitize_topic(topic: str) -> str:
     """Санитизировать ввод темы для предотвращения инъекции промпта.
 
     Экранирует специальные символы и удаляет
     потенциально опасные конструкции.
-
-    Args:
-        topic: Исходная тема от пользователя.
-
-    Returns:
-        Очищенная тема.
-
-    Raises:
-        TypeError: Если topic не является строкой.
 
     """
     if not isinstance(topic, str):
@@ -42,7 +57,7 @@ def sanitize_topic(topic: str) -> str:
         return ""
     topic = topic.strip()
     topic = topic.replace("{", "{{").replace("}", "}}")
-    return re.sub(r"\[([^\]]*)\]", r"[[\1]]", topic)
+    return _BRACKET_PATTERN.sub(r"[[\1]]", topic)
 
 
 def sanitize_response_for_display(response: str) -> str:
@@ -51,15 +66,6 @@ def sanitize_response_for_display(response: str) -> str:
     Экранирует markup-символы Textual для предотвращения XSS-подобных атак.
     Обрезает длинные ответы до MAX_RESPONSE_PREVIEW_LENGTH символов.
 
-    Args:
-        response: Исходный ответ от модели.
-
-    Returns:
-        Безопасный для отображения текст.
-
-    Raises:
-        TypeError: Если response не является строкой.
-
     """
     if not isinstance(response, str):
         msg = f"response должен быть строкой, получен {type(response).__name__}"
@@ -67,24 +73,10 @@ def sanitize_response_for_display(response: str) -> str:
     if not response:
         return ""
 
-    # HTML экранирование базовых символов
     response = html.escape(response, quote=False)
 
-    # Экранирование Textual markup символов
-    # Порядок важен: сначала экранируем специальные символы
-    response = response.replace("\\", "\\\\")  # Экранируем backslash
-    response = response.replace("[", "[[")  # Square brackets
-    response = response.replace("]", "]]")  # Square brackets
-    response = response.replace("{", "{{")  # Curly braces
-    response = response.replace("}", "}}")  # Curly braces
-    response = response.replace("@", "@@")  # CSS class prefix
-    response = response.replace("#", "##")  # ID prefix
-    response = response.replace("*", "\\*")  # Bold/italic marker
-    response = response.replace("_", "\\_")  # Italic marker
-    response = response.replace("`", "\\`")  # Code marker
-    response = response.replace("~", "\\~")  # Strikethrough marker
-    response = response.replace("|", "\\|")  # Table separator
-    response = response.replace("\n", " ")  # Newlines
+    for old, new in SANITIZE_CHARS:
+        response = response.replace(old, new)
 
     if len(response) > MAX_RESPONSE_PREVIEW_LENGTH:
         response = response[:MAX_RESPONSE_PREVIEW_LENGTH] + "..."
