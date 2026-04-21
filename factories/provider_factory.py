@@ -7,12 +7,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from models.config import Config
 from models.ollama_client import OllamaClient
-from models.provider import ModelProvider
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from models.config import Config
+    from models.provider import ModelProvider
 
 __all__ = ["create_ollama_provider", "create_provider_factory"]
 

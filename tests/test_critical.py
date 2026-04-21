@@ -269,7 +269,7 @@ class TestOllamaClientValidation:
         with pytest.raises(TypeError, match="list"):
             await client.generate("llama3", "not a list")  # type: ignore
 
-        with pytest.raises(TypeError, match="dictionary"):
+        with pytest.raises(TypeError, match="mapping"):
             await client.generate("llama3", ["not a dict"])  # type: ignore
 
         with pytest.raises(TypeError, match="'role'"):

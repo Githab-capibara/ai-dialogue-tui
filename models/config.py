@@ -75,13 +75,13 @@ def validate_ollama_url(url: str) -> bool:
     return bool(parsed.netloc)
 
 
-_T = TypeVar("_T", int, float)
+T = TypeVar("T", int, float)
 
 
-def _validate_range(
-    value: _T,
-    min_value: _T,
-    max_value: _T | None = None,
+def _validate_range[T: (int, float)](
+    value: T,
+    min_value: T,
+    max_value: T | None = None,
     param_name: str = "parameter",
 ) -> None:
     """Validate a numeric parameter in range.
