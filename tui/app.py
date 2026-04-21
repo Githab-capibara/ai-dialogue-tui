@@ -70,9 +70,7 @@ log = logging.getLogger(__name__)
 class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
     """Modal window for selecting two models."""
 
-    BINDINGS: ClassVar[
-        list[Binding | tuple[str, str] | tuple[str, str, str]]
-    ] = [
+    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
         Binding("escape", "cancel", "Cancel"),
     ]
 
@@ -190,16 +188,17 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
 class TopicInputScreen(ModalScreen[str | None]):
     """Modal window for entering dialogue topic."""
 
-    BINDINGS: ClassVar[
-        list[Binding | tuple[str, str] | tuple[str, str, str]]
-    ] = [
+    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
         Binding("escape", "cancel", "Cancel"),
         Binding("enter", "submit", "OK"),
     ]
 
     def compose(self) -> ComposeResult:
-        with Container(id=UI_IDS.topic_input_container), Vertical(
-            id=UI_IDS.topic_input_content,
+        with (
+            Container(id=UI_IDS.topic_input_container),
+            Vertical(
+                id=UI_IDS.topic_input_content,
+            ),
         ):
             yield Static("Enter dialogue topic:", id=UI_IDS.topic_label)
             yield Input(
@@ -263,9 +262,7 @@ class DialogueApp(App[None]):
 
     CSS = CSS
 
-    BINDINGS: ClassVar[
-        list[Binding | tuple[str, str] | tuple[str, str, str]]
-    ] = [
+    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
         Binding("ctrl+q", "quit", "Exit", priority=True),
         Binding("ctrl+p", "toggle_pause", "Pause/Start"),
         Binding("ctrl+r", "clear_log", "Clear"),
@@ -287,13 +284,9 @@ class DialogueApp(App[None]):
 
         """
         super().__init__()
-        self.sub_title = reactive(  # type: ignore[assignment]  # pyright: ignore[reportAttributeAccessIssue]
-            "Dialogue between two AI models via Ollama",
-        )
+        self.sub_title = reactive("Dialogue between two AI models via Ollama")  # type: ignore[assignment]
         self._config = config or Config()
-        self._provider_factory = provider_factory or (
-            lambda: OllamaClient(host=self._config.ollama_host)
-        )
+        self._provider_factory = provider_factory or self._create_default_provider
         self._client: ModelProvider | None = None
         self._controller: DialogueController | None = None
         self._dialogue_task: asyncio.Task[None] | None = None
@@ -302,14 +295,21 @@ class DialogueApp(App[None]):
         self._cleanup_done = False
         self._cleanup_lock = asyncio.Lock()
 
+    def _create_default_provider(self) -> OllamaClient:
+        """Create default Ollama provider."""
+        return OllamaClient(host=self._config.ollama_host)
+
     def compose(self) -> ComposeResult:
         """Compose the main application UI."""
         yield Header()
 
         with Container(id=UI_IDS.main_container):
             # Status bar
-            with Container(id=UI_IDS.status_bar), Horizontal(
-                id=UI_IDS.status_row,
+            with (
+                Container(id=UI_IDS.status_bar),
+                Horizontal(
+                    id=UI_IDS.status_row,
+                ),
             ):
                 yield Label("Status: ", id=UI_IDS.status_label)
                 yield Label("Waiting...", id=UI_IDS.status_value)
@@ -318,8 +318,11 @@ class DialogueApp(App[None]):
             yield RichLog(id=UI_IDS.dialogue_log, highlight=True, markup=True)
 
             # Control panel
-            with Container(id=UI_IDS.controls_bar), Horizontal(
-                id=UI_IDS.controls_row,
+            with (
+                Container(id=UI_IDS.controls_bar),
+                Horizontal(
+                    id=UI_IDS.controls_row,
+                ),
             ):
                 yield Button("Start", id=UI_IDS.start_btn, variant="success")
                 yield Button("Pause", id=UI_IDS.pause_btn, variant="warning")
@@ -337,8 +340,7 @@ class DialogueApp(App[None]):
         """
         try:
             status_label: Label = self.query_one("#status-value", Label)
-            style_tag = f"[{state.status_style}]{state.status_text}"
-            f"[/{state.status_style}]"
+            style_tag = f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
             status_label.update(style_tag)
         except (NoMatches, ScreenStackError):
             log.debug("Element #status-value not available for update")
@@ -485,9 +487,7 @@ class DialogueApp(App[None]):
             # Update title and status via call_after_refresh
             # so UI has time to update after modal closes
             def _finalize_setup() -> None:
-                self.sub_title = (
-                    f"{model_a} <-> {model_b} | Topic: {sanitized_topic}"
-                )
+                self.sub_title = f"{model_a} <-> {model_b} | Topic: {sanitized_topic}"
                 ready_state = UIState(
                     status_text="Ready to start",
                     status_style="green",
@@ -617,8 +617,12 @@ class DialogueApp(App[None]):
 
     def _is_task_cancelled(self) -> bool:
         """Check if current task is cancelled."""
-        current_task = asyncio.current_task()
-        return current_task is not None and current_task.cancelled()
+        try:
+            loop = asyncio.get_running_loop()
+            current_task = asyncio.current_task(loop=loop)
+            return current_task is not None and current_task.cancelled()
+        except RuntimeError:
+            return False
 
     async def _process_dialogue_turn(
         self,
@@ -631,11 +635,7 @@ class DialogueApp(App[None]):
 
         if result:
             formatted_response = sanitize_response_for_display(result.response)
-            turn_msg = (
-                f"\n[{style}]Turn {service.turn_count}: "
-                f"{result.model_name}[/]\n  {formatted_response}"
-            )
-            message = turn_msg
+            message = f"\n[{style}]Turn {service.turn_count}: {result.model_name}[/]\n  {formatted_response}"
             self.call_after_refresh(self._write_to_log, message)
 
         return result

@@ -37,17 +37,19 @@ class Conversation:
     model_b: str = ""
     topic: str = ""
     system_prompt: str = ""
-    _config: ConfigType | None = field(default=None, init=False, repr=False)
 
-    _context_a: list[MessageDict] = field(default_factory=list, repr=False)
-    _context_b: list[MessageDict] = field(default_factory=list, repr=False)
+    _config: ConfigType | None = field(default=None, init=False, repr=False)
+    _context_a: list[MessageDict] = field(default_factory=list, init=False, repr=False)
+    _context_b: list[MessageDict] = field(default_factory=list, init=False, repr=False)
     _current_turn: Literal["A", "B"] = field(default="A", init=False)
 
-    # Flag to prevent re-initialization
-    _initialized: bool = field(default=False, init=False)
-
     def __init__(
-        self, model_a: str, model_b: str, topic: str, system_prompt: str = "", config: ConfigType | None = None
+        self,
+        model_a: str,
+        model_b: str,
+        topic: str,
+        system_prompt: str = "",
+        config: ConfigType | None = None,
     ) -> None:
         """Initialize conversation.
 
@@ -64,28 +66,12 @@ class Conversation:
         self.topic = topic
         self.system_prompt = system_prompt
         self._config = config or Config()
-        self._context_a: list[MessageDict] = []
-        self._context_b: list[MessageDict] = []
-        self._current_turn: Literal["A", "B"] = "A"
-        self._initialized = False
-        self.__post_init__()
-
-    def __post_init__(self) -> None:
-        """Initialize system prompt after object creation."""
-        if self._initialized:
-            return
-        self._initialized = True
 
         self._validate_params()
         formatted_prompt = self._create_system_prompt()
-        self._context_a.append(
-            MessageDict(
-                role="system",
-                content=formatted_prompt))
-        self._context_b.append(
-            MessageDict(
-                role="system",
-                content=formatted_prompt))
+        self._context_a = [MessageDict(role="system", content=formatted_prompt)]
+        self._context_b = [MessageDict(role="system", content=formatted_prompt)]
+        self._current_turn = "A"
 
     def _validate_params(self) -> None:
         """Validate constructor parameters."""
@@ -104,7 +90,10 @@ class Conversation:
 
     def _create_system_prompt(self) -> str:
         """Create formatted system prompt."""
-        _default_prompt = self._config.default_system_prompt  # type: ignore[union-attr]
+        config = self._config
+        if config is None:
+            return f"You are a helpful assistant. The topic of discussion is: {self.topic}"
+        _default_prompt = config.default_system_prompt
         effective_prompt = self.system_prompt or _default_prompt
 
         try:
@@ -159,17 +148,19 @@ class Conversation:
         content: str,
     ) -> None:
         """Add message to model context."""
-        # Direct context access without redundant dictionary creation
-        context = self._context_a if model_id == "A" else self._context_b
+        if model_id == "A":
+            context = self._context_a
+        else:
+            context = self._context_b
 
         if len(context) >= MAX_CONTEXT_LENGTH:
-            context = self._trim_context_if_needed(
-                context, MAX_CONTEXT_LENGTH - 2)
-            # Update reference to trimmed context
+            trimmed = self._trim_context_if_needed(context, MAX_CONTEXT_LENGTH - 2)
             if model_id == "A":
-                self._context_a = context
+                self._context_a = trimmed
+                context = trimmed
             else:
-                self._context_b = context
+                self._context_b = trimmed
+                context = trimmed
 
         context.append(MessageDict(role=role, content=content))
 
@@ -260,10 +251,7 @@ class Conversation:
         model_name = self.get_current_model_name()
         context = list(self.get_context(model_id))
 
-        response = await provider.generate(
-            model=model_name,
-            messages=context,
-        )
+        response = await provider.generate(model=model_name, messages=context)
 
         return model_id, response
 
@@ -301,31 +289,17 @@ class Conversation:
 
             return model_name, "assistant", response
 
-        except BaseException:
+        except Exception:
             self._context_a = context_a_snapshot
             self._context_b = context_b_snapshot
             self._current_turn = turn_snapshot
             raise
 
     def clear_contexts(self) -> None:
-        """Clear both contexts, preserving only system prompt and topic.
-
-        Note:
-            The _initialized flag is intentionally NOT reset by this method.
-            This preserves any initialization performed in __post_init__.
-            Subsequent re-initialization attempts via __post_init__ will be
-            blocked by the _initialized flag (which is the intended behavior).
-
-        """
+        """Clear both contexts, preserving only system prompt and topic."""
         formatted_prompt = self._create_system_prompt()
-        self._context_a = [
-            MessageDict(
-                role="system",
-                content=formatted_prompt)]
-        self._context_b = [
-            MessageDict(
-                role="system",
-                content=formatted_prompt)]
+        self._context_a = [MessageDict(role="system", content=formatted_prompt)]
+        self._context_b = [MessageDict(role="system", content=formatted_prompt)]
         self._current_turn = "A"
 
     def get_context_stats(self) -> dict[str, int]:

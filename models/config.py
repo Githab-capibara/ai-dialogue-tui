@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, TypeVar
 from urllib.parse import urlparse
 
 __all__ = [
@@ -75,13 +75,16 @@ def validate_ollama_url(url: str) -> bool:
     return bool(parsed.netloc)
 
 
-def _validate_numeric_range(
-    value: float,
-    min_value: float,
-    max_value: float | None = None,
+_T = TypeVar("_T", int, float)
+
+
+def _validate_range(
+    value: _T,
+    min_value: _T,
+    max_value: _T | None = None,
     param_name: str = "parameter",
 ) -> None:
-    """Universal validation of a numeric parameter in range.
+    """Validate a numeric parameter in range.
 
     Args:
         value: Value to validate.
@@ -91,10 +94,6 @@ def _validate_numeric_range(
 
     Raises:
         ValueError: If value is out of range.
-
-    Examples:
-        >>> _validate_numeric_range(5, 0, 10, "test")  # OK
-        >>> _validate_numeric_range(-1, 0, 10, "test")  # ValueError
 
     """
     if value < min_value:
@@ -106,96 +105,31 @@ def _validate_numeric_range(
 
 
 def _validate_temperature(value: float) -> None:
-    """Validate temperature parameter.
-
-    Args:
-        value: Temperature value to validate.
-
-    Raises:
-        ValueError: If value is out of range [0.0, 1.0].
-
-    """
-    _validate_numeric_range(
-        value,
-        MIN_TEMPERATURE,
-        MAX_TEMPERATURE,
-        "temperature",
-    )
+    """Validate temperature parameter."""
+    _validate_range(value, MIN_TEMPERATURE, MAX_TEMPERATURE, "temperature")
 
 
 def _validate_max_tokens(value: int) -> None:
-    """Validate max_tokens parameter.
-
-    Args:
-        value: max_tokens value to validate.
-
-    Raises:
-        ValueError: If value is less than minimum.
-
-    """
-    _validate_numeric_range(
-        value,
-        MIN_MAX_TOKENS,
-        None,
-        "max_tokens",
-    )
+    """Validate max_tokens parameter."""
+    _validate_range(value, MIN_MAX_TOKENS, None, "max_tokens")
 
 
 def _validate_request_timeout(value: int) -> None:
-    """Validate request_timeout parameter.
-
-    Args:
-        value: request_timeout value to validate.
-
-    Raises:
-        ValueError: If value is less than minimum.
-
-    """
-    _validate_numeric_range(
-        value,
-        MIN_REQUEST_TIMEOUT,
-        None,
-        "request_timeout",
-    )
+    """Validate request_timeout parameter."""
+    _validate_range(value, MIN_REQUEST_TIMEOUT, None, "request_timeout")
 
 
 def _validate_sock_read_timeout(value: int) -> None:
-    """Validate sock_read_timeout parameter.
-
-    Args:
-        value: sock_read_timeout value to validate.
-
-    Raises:
-        ValueError: If value is less than minimum.
-
-    """
-    _validate_numeric_range(
-        value,
-        MIN_SOCK_READ_TIMEOUT,
-        None,
-        "sock_read_timeout",
-    )
+    """Validate sock_read_timeout parameter."""
+    _validate_range(value, MIN_SOCK_READ_TIMEOUT, None, "sock_read_timeout")
 
 
 def _validate_pause_between_messages(value: float) -> None:
-    """Validate pause_between_messages parameter.
-
-    Args:
-        value: pause_between_messages value to validate.
-
-    Raises:
-        ValueError: If value is less than minimum.
-
-    """
-    _validate_numeric_range(
-        value,
-        MIN_PAUSE_BETWEEN_MESSAGES,
-        None,
-        "pause_between_messages",
-    )
+    """Validate pause_between_messages parameter."""
+    _validate_range(value, MIN_PAUSE_BETWEEN_MESSAGES, None, "pause_between_messages")
 
 
-@dataclass(frozen=True, slots=True, eq=False)
+@dataclass(slots=True, eq=False)
 class Config:
     """Configuration parameters for AI model dialogue.
 
@@ -275,6 +209,6 @@ class Config:
             if env_value is not None:
                 try:
                     value = type_func(env_value)
-                    object.__setattr__(self, attr_name, value)
+                    setattr(self, attr_name, value)
                 except (ValueError, TypeError):
                     pass

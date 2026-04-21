@@ -49,8 +49,6 @@ class _RequestValidator:
     Encapsulates input parameter validation logic for API requests.
     """
 
-    __slots__ = ()
-
     @staticmethod
     def validate_host(host: str) -> None:
         """Validate host URL.
@@ -95,8 +93,6 @@ class _ResponseHandler:
 
     Encapsulates response processing and validation logic.
     """
-
-    __slots__ = ()
 
     @staticmethod
     def validate_status_code(status: int, operation: str) -> None:
@@ -155,11 +151,7 @@ class _ResponseHandler:
         return [
             str(model.get("name"))
             for model in models
-            if (
-                isinstance(model, dict)
-                and isinstance(model.get("name"), str)
-                and model.get("name")
-            )
+            if (isinstance(model, dict) and isinstance(model.get("name"), str) and model.get("name"))
         ]
 
     @staticmethod
@@ -320,8 +312,11 @@ class OllamaClient:
     Implements the ModelProvider protocol for dependency injection.
     """
 
-    def __init__(self, host: str | None = None,
-                 config: Config | None = None) -> None:
+    def __init__(
+        self,
+        host: str | None = None,
+        config: Config | None = None,
+    ) -> None:
         """Initialize client.
 
         Args:
@@ -333,10 +328,9 @@ class OllamaClient:
 
         """
         self._config = config or Config()
-        self.host = host or self._config.ollama_host
-
-        # Validate host parameter via extracted class
-        _RequestValidator.validate_host(self.host)
+        resolved_host = host if host is not None else self._config.ollama_host
+        _RequestValidator.validate_host(resolved_host)
+        self.host = resolved_host
 
         self._http_manager = _HTTPSessionManager(
             timeout=self._config.request_timeout,
@@ -368,7 +362,6 @@ class OllamaClient:
             ProviderGenerationError: If unable to get data.
 
         """
-        # Check cache
         cached_models = self._models_cache.get()
         if cached_models is not None:
             return cached_models
@@ -378,43 +371,31 @@ class OllamaClient:
 
         try:
             async with session.get(url) as response:
-                # Status validation
-                _ResponseHandler.validate_status_code(
-                    response.status, "list_models")
-
-                # JSON processing with validation
-                try:
-                    data = await response.json()
-                except json.JSONDecodeError as e:
-                    msg = "Invalid JSON in API response"
-                    raise ProviderGenerationError(msg) from e
-
-                # Response structure validation
+                _ResponseHandler.validate_status_code(response.status, "list_models")
+                data = await self._parse_json_response(response)
                 _ResponseHandler.parse_json_response(data, "list_models")
-
-                # Extract models list
                 models = _ResponseHandler.extract_models_list(data)
-
-                # Cache the result
                 self._models_cache.set(models)
-
                 return models
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             msg = f"Could not connect to Ollama ({self.host})"
-            raise ProviderConnectionError(
-                msg,
-                err,
-            ) from err
+            raise ProviderConnectionError(msg, err) from err
         except ProviderError:
-            _logger.debug(
-                "ProviderError when getting models list",
-                exc_info=True,
-            )
+            _logger.debug("ProviderError when getting models list", exc_info=True)
             raise
         except (json.JSONDecodeError, KeyError, TypeError) as err:
             msg = f"API response validation error: {err}"
             raise ProviderGenerationError(msg) from err
+
+    async def _parse_json_response(self, response: aiohttp.ClientResponse) -> dict[str, Any]:
+        """Parse JSON response with error handling."""
+        try:
+            json_data: dict[str, Any] = await response.json()
+            return json_data
+        except json.JSONDecodeError as e:
+            msg = "Invalid JSON in API response"
+            raise ProviderGenerationError(msg) from e
 
     async def generate(
         self,
@@ -437,55 +418,21 @@ class OllamaClient:
             ValueError: If messages is invalid.
 
         """
-        # Validate messages parameter
         _RequestValidator.validate_messages(messages)
-
         session = await self._get_session()
         url = urljoin(self.host, "/api/chat")
-
-        # Cached default options for performance
-        # Note: num_predict = max_tokens in Ollama API terms
-        options = {
-            "temperature": kwargs.get("temperature", self._config.temperature),
-        }
-        max_tokens: int = self._config.max_tokens
-        if "max_tokens" in kwargs:
-            max_tokens = int(kwargs["max_tokens"])
-        if max_tokens > 0:
-            options["num_predict"] = max_tokens
-
-        payload = {
-            "model": model,
-            "messages": messages,
-            "options": options,
-            "stream": False,
-        }
+        payload = self._build_request_payload(model, messages, kwargs)
 
         try:
             async with session.post(url, json=payload) as response:
-                # Status validation
-                _ResponseHandler.validate_status_code(
-                    response.status, "generate")
-
-                # JSON processing with validation
-                try:
-                    data = await response.json()
-                except json.JSONDecodeError as e:
-                    msg = "Invalid JSON in API response"
-                    raise ProviderGenerationError(msg) from e
-
-                # Response structure validation
+                _ResponseHandler.validate_status_code(response.status, "generate")
+                data = await self._parse_json_response(response)
                 _ResponseHandler.parse_json_response(data, "generate")
-
-                # Extract response
                 return _ResponseHandler.extract_generation_response(data)
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             timeout_info = f"Timeout: {self._config.sock_read_timeout}s"
-            msg = (
-                f"Failed to connect to Ollama ({self.host}). "
-                f"{timeout_info}. Check timeout settings."
-            )
+            msg = f"Failed to connect to Ollama ({self.host}). {timeout_info}. Check timeout settings."
             raise ProviderConnectionError(msg, err) from err
         except ProviderError:
             _logger.debug("ProviderError during response generation")
@@ -497,6 +444,29 @@ class OllamaClient:
             msg = f"IO error: {err}"
             _logger.debug("OSError: %s", err)
             raise ProviderGenerationError(msg) from err
+
+    def _build_request_payload(
+        self,
+        model: str,
+        messages: list[MessageDict],
+        kwargs: Any,
+    ) -> dict[str, Any]:
+        """Build request payload for generate method."""
+        options: dict[str, Any] = {
+            "temperature": kwargs.get("temperature", self._config.temperature),
+        }
+        max_tokens: int = self._config.max_tokens
+        if "max_tokens" in kwargs:
+            max_tokens = int(kwargs["max_tokens"])
+        if max_tokens > 0:
+            options["num_predict"] = max_tokens
+
+        return {
+            "model": model,
+            "messages": messages,
+            "options": options,
+            "stream": False,
+        }
 
 
 __all__ = ["OllamaClient"]
