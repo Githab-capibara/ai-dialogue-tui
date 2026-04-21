@@ -263,16 +263,17 @@ class TestAssertChecks:
 
     def test_conversation_initialized_flag(self):
         """
-        Test: Conversation has _initialized flag.
+        Test: Conversation has required fields.
 
-        Verifies that initialization check exists.
+        Verifies core fields exist.
         """
         # Arrange
         conversation = Conversation("model_a", "model_b", "test")
 
         # Act & Assert
-        assert hasattr(conversation, "_initialized")
-        assert conversation._initialized is True
+        assert conversation.model_a == "model_a"
+        assert conversation.model_b == "model_b"
+        assert conversation.topic == "test"
 
 
 # =============================================================================

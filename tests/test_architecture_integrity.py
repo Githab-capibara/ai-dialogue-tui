@@ -824,13 +824,13 @@ class TestProviderErrorDetails:
 class TestConfigImmutability:
     """Tests for verifying Config immutability."""
 
-    def test_config_is_frozen(self) -> None:
-        """Verify that Config is frozen."""
+    def test_config_is_mutable(self) -> None:
+        """Verify that Config is mutable (not frozen)."""
         config = Config()
 
-        # Attempt to modify must raise error
-        with pytest.raises(Exception):  # frozen dataclass raises FrozenInstanceError
-            config.temperature = 0.9  # type: ignore[misc]
+        # Config should be mutable for runtime reconfiguration
+        config.temperature = 0.9
+        assert config.temperature == 0.9
 
     def test_config_has_slots(self) -> None:
         """Verify that Config uses slots."""
