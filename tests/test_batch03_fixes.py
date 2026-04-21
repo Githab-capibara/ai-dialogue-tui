@@ -15,19 +15,17 @@ This file contains tests for verifying:
 # pylint: disable=protected-access,import-outside-toplevel,no-member
 # pylint: disable=too-few-public-methods,line-too-long
 
-import asyncio
 import inspect
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from models.config import Config, validate_ollama_url
-from models.conversation import Conversation, MAX_CONTEXT_LENGTH
-from models.ollama_client import _ModelsCache, OllamaClient
+from models.conversation import MAX_CONTEXT_LENGTH, Conversation
+from models.ollama_client import OllamaClient, _ModelsCache
 from services.dialogue_service import DialogueService
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
-
 
 # =============================================================================
 # ISSUE-0041: Error handling with exc_info=True in ollama_client.py
@@ -232,7 +230,7 @@ class TestDialogueServiceCancellation:
     def test_cancelled_error_re_raised(self):
         """Verify CancelledError is re-raised after logging."""
         source = inspect.getsource(DialogueService.run_dialogue_cycle)
-        cancelled_block = source[source.find("CancelledError"):source.find("CancelledError") + 200]
+        cancelled_block = source[source.find("CancelledError") : source.find("CancelledError") + 200]
         assert "raise" in cancelled_block, "CancelledError should be re-raised"
 
     def test_service_has_is_running_property(self):

@@ -135,10 +135,11 @@ class TestConfigWrapperRemoval:  # pylint: disable=too-few-public-methods
     def test_config_wrapper_removed(self) -> None:
         """Test that config.py is removed."""
         config_file = Path("config.py")
+        max_legacy_config_size = 50
 
         if config_file.exists():
             content = config_file.read_text(encoding="utf-8")
-            assert "from models.config import Config" not in content or len(content) < 50
+            assert "from models.config import Config" not in content or len(content) < max_legacy_config_size
 
 
 class TestArchitectureIntegrity:
