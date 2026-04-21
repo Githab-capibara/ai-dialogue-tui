@@ -57,9 +57,11 @@ class DialogueService:
 
         """
         if conversation is None:
-            raise ValueError("conversation cannot be None")
+            err_msg = "conversation cannot be None"
+            raise ValueError(err_msg)
         if provider is None:
-            raise ValueError("provider cannot be None")
+            err_msg = "provider cannot be None"
+            raise ValueError(err_msg)
         self._conversation = conversation
         self._provider = provider
         self._config = config or Config()
