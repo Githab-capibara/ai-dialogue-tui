@@ -150,18 +150,18 @@ class TestConfigValidation:
         assert config.ollama_host == "https://ollama.example.com"
 
     def test_invalid_url_no_scheme(self) -> None:
-        """Тест невалидного URL без схемы."""
-        with pytest.raises(ValueError, match="Некорректный URL"):
+        """Test invalid URL without scheme."""
+        with pytest.raises(ValueError, match="Invalid Ollama URL"):
             Config(ollama_host="localhost:11434")
 
     def test_invalid_url_wrong_scheme(self) -> None:
-        """Тест невалидного URL с неправильной схемой."""
-        with pytest.raises(ValueError, match="Некорректный URL"):
+        """Test invalid URL with wrong scheme."""
+        with pytest.raises(ValueError, match="Invalid Ollama URL"):
             Config(ollama_host="ftp://localhost:11434")
 
     def test_invalid_url_empty(self) -> None:
-        """Тест пустого URL."""
-        with pytest.raises(ValueError, match="Некорректный URL"):
+        """Test empty URL."""
+        with pytest.raises(ValueError, match="Invalid Ollama URL"):
             Config(ollama_host="")
 
     def test_validate_ollama_url_function(self) -> None:
@@ -207,8 +207,8 @@ class TestOllamaClientValidation:
     """Тесты для проблемы #2: Валидация ключей API в OllamaClient."""
 
     def test_invalid_host_raises_value_error(self) -> None:
-        """Тест что невалидный хост вызывает ValueError."""
-        with pytest.raises(ValueError, match="Некорректный URL"):
+        """Test that invalid host raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid host URL"):
             OllamaClient(host="invalid-url")
 
     def test_valid_host_accepted(self) -> None:
@@ -258,7 +258,7 @@ class TestOllamaClientValidation:
 
         with patch.object(OllamaClient, "_get_session", create_mock_get_session(mock_session)):
             client = OllamaClient(host="http://localhost:11434")
-            with pytest.raises(ProviderError, match="Некорректный JSON"):
+            with pytest.raises(ProviderError, match="Invalid JSON"):
                 await client.list_models()
 
     @pytest.mark.asyncio
