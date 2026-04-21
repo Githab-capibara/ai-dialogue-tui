@@ -20,7 +20,7 @@ class StateChangeCallback(Protocol):
         ...
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True)
 class UIState:
     """UI state for display.
 
