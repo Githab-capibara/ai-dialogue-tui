@@ -70,7 +70,9 @@ log = logging.getLogger(__name__)
 class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
     """Modal window for selecting two models."""
 
-    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
+    BINDINGS: ClassVar[
+        list[Binding | tuple[str, str] | tuple[str, str, str]]
+    ] = [
         Binding("escape", "cancel", "Cancel"),
     ]
 
@@ -89,7 +91,10 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
     def compose(self) -> ComposeResult:
         """Compose the model selection UI."""
         with Container(id=UI_IDS.model_selection_container):
-            yield Static("Select two models for dialogue", id=UI_IDS.selection_title)
+            yield Static(
+                "Select two models for dialogue",
+                id=UI_IDS.selection_title,
+            )
 
             with Vertical(id=UI_IDS.models_row):
                 with Horizontal(id=UI_IDS.model_a_container):
@@ -109,7 +114,11 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
                     )
 
             with Horizontal(id=UI_IDS.selection_buttons):
-                yield Button("Start Dialogue", id=UI_IDS.start_btn, variant="primary")
+                yield Button(
+                    "Start Dialogue",
+                    id=UI_IDS.start_btn,
+                    variant="primary",
+                )
                 yield Button("Cancel", id=UI_IDS.cancel_btn, variant="error")
 
     def _get_model_value(self, index: int) -> str | None:
@@ -181,21 +190,33 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
 class TopicInputScreen(ModalScreen[str | None]):
     """Modal window for entering dialogue topic."""
 
-    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
+    BINDINGS: ClassVar[
+        list[Binding | tuple[str, str] | tuple[str, str, str]]
+    ] = [
         Binding("escape", "cancel", "Cancel"),
         Binding("enter", "submit", "OK"),
     ]
 
     def compose(self) -> ComposeResult:
-        with Container(id=UI_IDS.topic_input_container), Vertical(id=UI_IDS.topic_input_content):
+        with Container(id=UI_IDS.topic_input_container), Vertical(
+            id=UI_IDS.topic_input_content,
+        ):
             yield Static("Enter dialogue topic:", id=UI_IDS.topic_label)
             yield Input(
                 placeholder="For example: Debate on Python advantages over Go",
                 id=UI_IDS.topic_input,
             )
             with Horizontal(id=UI_IDS.topic_buttons):
-                yield Button("Start", id=UI_IDS.topic_start_btn, variant="primary")
-                yield Button("Cancel", id=UI_IDS.topic_cancel_btn, variant="error")
+                yield Button(
+                    "Start",
+                    id=UI_IDS.topic_start_btn,
+                    variant="primary",
+                )
+                yield Button(
+                    "Cancel",
+                    id=UI_IDS.topic_cancel_btn,
+                    variant="error",
+                )
 
     def action_submit(self) -> None:
         """Handle Enter key press to confirm topic."""
@@ -242,7 +263,9 @@ class DialogueApp(App[None]):
 
     CSS = CSS
 
-    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
+    BINDINGS: ClassVar[
+        list[Binding | tuple[str, str] | tuple[str, str, str]]
+    ] = [
         Binding("ctrl+q", "quit", "Exit", priority=True),
         Binding("ctrl+p", "toggle_pause", "Pause/Start"),
         Binding("ctrl+r", "clear_log", "Clear"),
@@ -264,9 +287,15 @@ class DialogueApp(App[None]):
 
         """
         super().__init__()
-        self.sub_title = reactive("Dialogue between two AI models via Ollama")  # type: ignore[assignment]  # pyright: ignore[reportAttributeAccessIssue]
+        self.sub_title = reactive(
+            "Dialogue between two AI models via Ollama",
+        )
+        # type: ignore[assignment]
+        # pyright: ignore[reportAttributeAccessIssue]
         self._config = config or Config()
-        self._provider_factory = provider_factory or (lambda: OllamaClient(host=self._config.ollama_host))
+        self._provider_factory = provider_factory or (
+            lambda: OllamaClient(host=self._config.ollama_host)
+        )
         self._client: ModelProvider | None = None
         self._controller: DialogueController | None = None
         self._dialogue_task: asyncio.Task[None] | None = None
@@ -281,7 +310,9 @@ class DialogueApp(App[None]):
 
         with Container(id=UI_IDS.main_container):
             # Status bar
-            with Container(id=UI_IDS.status_bar), Horizontal(id=UI_IDS.status_row):
+            with Container(id=UI_IDS.status_bar), Horizontal(
+                id=UI_IDS.status_row,
+            ):
                 yield Label("Status: ", id=UI_IDS.status_label)
                 yield Label("Waiting...", id=UI_IDS.status_value)
 
@@ -289,7 +320,9 @@ class DialogueApp(App[None]):
             yield RichLog(id=UI_IDS.dialogue_log, highlight=True, markup=True)
 
             # Control panel
-            with Container(id=UI_IDS.controls_bar), Horizontal(id=UI_IDS.controls_row):
+            with Container(id=UI_IDS.controls_bar), Horizontal(
+                id=UI_IDS.controls_row,
+            ):
                 yield Button("Start", id=UI_IDS.start_btn, variant="success")
                 yield Button("Pause", id=UI_IDS.pause_btn, variant="warning")
                 yield Button("Clear", id=UI_IDS.clear_btn, variant="default")
@@ -306,7 +339,8 @@ class DialogueApp(App[None]):
         """
         try:
             status_label: Label = self.query_one("#status-value", Label)
-            style_tag = f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
+            style_tag = f"[{state.status_style}]{state.status_text}"
+            f"[/{state.status_style}]"
             status_label.update(style_tag)
         except (NoMatches, ScreenStackError):
             log.debug("Element #status-value not available for update")
@@ -334,7 +368,7 @@ class DialogueApp(App[None]):
         except ProviderConnectionError:
             self._handle_startup_error(
                 "Connection error",
-                "Failed to connect to Ollama. Check that the service is running.",
+                "Failed to connect to Ollama. Check that service is running.",
             )
         except ProviderGenerationError:
             self._handle_startup_error(
@@ -427,7 +461,9 @@ class DialogueApp(App[None]):
             sanitized_topic = sanitize_topic(topic)
 
             # Format system prompt
-            system_prompt = self._config.default_system_prompt.format(topic=sanitized_topic)
+            system_prompt = self._config.default_system_prompt.format(
+                topic=sanitized_topic,
+            )
 
             if self._client is None:
                 log.error("Client not initialized")
@@ -451,13 +487,21 @@ class DialogueApp(App[None]):
             # Update title and status via call_after_refresh
             # so UI has time to update after modal closes
             def _finalize_setup() -> None:
-                self.sub_title = f"{model_a} <-> {model_b} | Topic: {sanitized_topic}"
-                ready_state = UIState(status_text="Ready to start", status_style="green")
+                self.sub_title = (
+                    f"{model_a} <-> {model_b} | Topic: {sanitized_topic}"
+                )
+                ready_state = UIState(
+                    status_text="Ready to start",
+                    status_style="green",
+                )
                 self._on_ui_state_changed(ready_state)
 
                 # Log initialization with error handling
                 try:
-                    dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
+                    dialog_log: RichLog = self.query_one(
+                        f"#{UI_IDS.dialogue_log}",
+                        RichLog,
+                    )
                     dialog_log.write(
                         f"[bold]=== Dialogue started ===[/bold]\n"
                         f"[bold]Model A:[/bold] [{MESSAGE_STYLES.model_a}]"
@@ -502,7 +546,10 @@ class DialogueApp(App[None]):
         if self._controller:
             self._controller.handle_clear()
 
-        dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
+        dialog_log: RichLog = self.query_one(
+            f"#{UI_IDS.dialogue_log}",
+            RichLog,
+        )
         dialog_log.clear()
         dialog_log.write("[dim]History cleared[/dim]")
 
@@ -540,10 +587,17 @@ class DialogueApp(App[None]):
                 model_id = service.conversation.current_turn
                 model_name = service.conversation.get_current_model_name()
                 style_info = style_mapper.get_style_info(model_id, model_name)
-                self._controller.update_for_turn(style_info.model_name, style_info.style_id)
+                self._controller.update_for_turn(
+                    style_info.model_name,
+                    style_info.style_id,
+                )
 
                 try:
-                    await self._process_dialogue_turn(service, style_info.model_name, style_info.style_id)
+                    await self._process_dialogue_turn(
+                        service,
+                        style_info.model_name,
+                        style_info.style_id,
+                    )
                 except ProviderError as e:
                     # Unified handling of all ProviderError
                     log.warning("Provider error in dialogue loop: %s", e)
@@ -579,7 +633,10 @@ class DialogueApp(App[None]):
 
         if result:
             formatted_response = sanitize_response_for_display(result.response)
-            turn_msg = f"\n[{style}]Turn {service.turn_count}: {result.model_name}[/]\n  {formatted_response}"
+            turn_msg = (
+                f"\n[{style}]Turn {service.turn_count}: "
+                f"{result.model_name}[/]\n  {formatted_response}"
+            )
             message = turn_msg
             self.call_after_refresh(self._write_to_log, message)
 
@@ -588,7 +645,10 @@ class DialogueApp(App[None]):
     def _write_to_log(self, message: str) -> None:
         """Safely write message to UI log."""
         try:
-            dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
+            dialog_log: RichLog = self.query_one(
+                f"#{UI_IDS.dialogue_log}",
+                RichLog,
+            )
             dialog_log.write(message)
         except (NoMatches, LookupError, RuntimeError):
             log.warning("Failed to write to log")
