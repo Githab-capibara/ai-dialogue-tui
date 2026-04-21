@@ -147,7 +147,9 @@ class DialogueService:
         model_name = self._conversation.get_current_model_name()
 
         try:
-            _, _, response = await self._conversation.process_turn(self._provider)
+            _, _, response = await self._conversation.process_turn(
+                self._provider,
+            )
             self._turn_count += 1
 
             return DialogueTurnResult(
