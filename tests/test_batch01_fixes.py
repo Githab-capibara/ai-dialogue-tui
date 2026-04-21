@@ -9,10 +9,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from models.conversation import Conversation, MAX_CONTEXT_LENGTH
-from models.provider import ModelId
+from models.conversation import MAX_CONTEXT_LENGTH, Conversation
 from tui.sanitizer import (
-    MAX_RESPONSE_PREVIEW_LENGTH,
     sanitize_response_for_display,
     sanitize_topic,
 )
@@ -65,7 +63,7 @@ class TestIssue0004HtmlEscaping:
     def test_double_quote_escaped(self) -> None:
         """Verify double quotes are escaped for Textual Rich."""
         result = sanitize_response_for_display('Hello "world"')
-        assert '&quot;' in result
+        assert "&quot;" in result
 
 
 class TestIssue0005EfficientStringReplacement:
@@ -101,6 +99,7 @@ class TestIssue0007DuplicateCSSSelector:
         """Verify #selection_buttons appears once in CSS."""
         css = generate_main_css()
         from tui.constants import UI_IDS
+
         base_selector = f"#{UI_IDS.selection_buttons} {{"
         count = css.count(base_selector)
         assert count == 1
@@ -109,6 +108,7 @@ class TestIssue0007DuplicateCSSSelector:
         """Verify #selection_buttons Button appears once."""
         css = generate_main_css()
         from tui.constants import UI_IDS
+
         button_selector = f"#{UI_IDS.selection_buttons} Button {{"
         count = css.count(button_selector)
         assert count == 1
