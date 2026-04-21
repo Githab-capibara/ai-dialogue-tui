@@ -10,7 +10,8 @@ import contextlib
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Final, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, Final
 from urllib.parse import urljoin
 
 import aiohttp
@@ -27,9 +28,6 @@ from models.provider import (
     ProviderError,
     ProviderGenerationError,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
 
 _logger = logging.getLogger(__name__)
 
@@ -381,7 +379,7 @@ class OllamaClient:
                 self._models_cache.set(models)
                 return models
 
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+        except (aiohttp.ClientError, TimeoutError) as err:
             msg = f"Could not connect to Ollama ({self.host})"
             raise ProviderConnectionError(msg, err) from err
         except ProviderError:
@@ -395,16 +393,17 @@ class OllamaClient:
         """Parse JSON response with error handling."""
         try:
             json_data: dict[str, Any] = await response.json()
-            return json_data
         except json.JSONDecodeError as e:
             msg = "Invalid JSON in API response"
             raise ProviderGenerationError(msg) from e
+        else:
+            return json_data
 
     async def generate(
         self,
         model: str,
         messages: list[MessageDict],
-        **kwargs: Any,
+        **kwargs: float,
     ) -> str:
         """Generate response from model.
 
@@ -433,7 +432,7 @@ class OllamaClient:
                 _ResponseHandler.parse_json_response(data, "generate")
                 return _ResponseHandler.extract_generation_response(data)
 
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+        except (aiohttp.ClientError, TimeoutError) as err:
             timeout_info = f"Timeout: {self._config.sock_read_timeout}s"
             msg = f"Failed to connect to Ollama ({self.host}). {timeout_info}. Check timeout settings."
             raise ProviderConnectionError(msg, err) from err
@@ -452,7 +451,7 @@ class OllamaClient:
         self,
         model: str,
         messages: list[MessageDict],
-        kwargs: Any,
+        kwargs: dict[str, float | int],
     ) -> dict[str, Any]:
         """Build request payload for generate method."""
         options: dict[str, Any] = {

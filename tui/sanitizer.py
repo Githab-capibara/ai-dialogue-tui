@@ -35,7 +35,7 @@ _BRACKET_TRANSLATION_TABLE = str.maketrans(
     {
         "{": "{{",
         "}": "}}",
-    }
+    },
 )
 
 

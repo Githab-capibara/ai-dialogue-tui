@@ -6,7 +6,7 @@ Allows replacing provider implementation without changing domain logic.
 
 from __future__ import annotations
 
-from typing import Any, Literal, Protocol, TypedDict, runtime_checkable
+from typing import Literal, Protocol, TypedDict, runtime_checkable
 
 
 class ProviderError(Exception):
@@ -99,7 +99,7 @@ class ModelProvider(Protocol):
         self,
         model: str,
         messages: list[MessageDict],
-        **kwargs: Any,
+        **kwargs: float,
     ) -> str:
         """Generate response from model."""
         ...

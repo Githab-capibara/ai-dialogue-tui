@@ -114,8 +114,8 @@ class DialogueRunner:
         except asyncio.CancelledError:
             log.debug("Dialogue cancelled")
             raise
-        except (RuntimeError, SystemError, OSError) as exc:
-            log.exception("Critical error in dialogue loop: %s", exc)
+        except (RuntimeError, SystemError, OSError):
+            log.exception("Critical error in dialogue loop")
         finally:
             self._service.stop()
 

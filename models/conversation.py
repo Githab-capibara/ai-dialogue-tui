@@ -128,10 +128,7 @@ class Conversation:
         last_messages = context[-max_len:]
         system_message = context[0]
 
-        if system_message in last_messages:
-            trimmed = list(last_messages)
-        else:
-            trimmed = [system_message, *last_messages]
+        trimmed = list(last_messages) if system_message in last_messages else [system_message, *last_messages]
 
         log.warning(
             "Context exceeded (%d messages), trimmed to %d",
@@ -148,10 +145,7 @@ class Conversation:
         content: str,
     ) -> None:
         """Add message to model context."""
-        if model_id == "A":
-            context = self._context_a
-        else:
-            context = self._context_b
+        context = self._context_a if model_id == "A" else self._context_b
 
         if len(context) >= MAX_CONTEXT_LENGTH:
             trimmed = self._trim_context_if_needed(context, MAX_CONTEXT_LENGTH - 2)
@@ -287,13 +281,13 @@ class Conversation:
             self.add_message(other_id, "user", response)
             self.switch_turn()
 
-            return model_name, "assistant", response
-
         except Exception:
             self._context_a = context_a_snapshot
             self._context_b = context_b_snapshot
             self._current_turn = turn_snapshot
             raise
+        else:
+            return model_name, "assistant", response
 
     def clear_contexts(self) -> None:
         """Clear both contexts, preserving only system prompt and topic."""

@@ -5,13 +5,14 @@ This module contains factory functions for dependency injection.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
+from models.config import Config
 from models.ollama_client import OllamaClient
+from models.provider import ModelProvider
 
 if TYPE_CHECKING:
-    from models.config import Config
-    from models.provider import ModelProvider
+    from collections.abc import Callable
 
 __all__ = ["create_ollama_provider", "create_provider_factory"]
 
