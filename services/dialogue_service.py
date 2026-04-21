@@ -8,10 +8,13 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from models.config import Config
-from models.conversation import Conversation
 from models.provider import ModelId, ModelProvider, ProviderError
+
+if TYPE_CHECKING:
+    from models.conversation import Conversation
 
 log = logging.getLogger(__name__)
 

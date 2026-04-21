@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 import aiohttp
 from textual import on
@@ -74,7 +74,7 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
         Binding("escape", "cancel", "Cancel"),
     ]
 
-    def __init__(self, models: list[str], *args: Any, **kwargs: Any) -> None:
+    def __init__(self, models: list[str], *args: str, **kwargs: str) -> None:
         """Initialize the model selection screen.
 
         Args:
@@ -168,8 +168,22 @@ class ModelSelectionScreen(ModalScreen[tuple[str, str] | None]):
             )
             return
 
-        assert isinstance(model_a_value, str) and model_a_value
-        assert isinstance(model_b_value, str) and model_b_value
+        if not model_a_value or not isinstance(model_a_value, str):
+            self.notify(
+                "Invalid model A selection!",
+                title="Error",
+                severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
+            )
+            return
+        if not model_b_value or not isinstance(model_b_value, str):
+            self.notify(
+                "Invalid model B selection!",
+                title="Error",
+                severity="error",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
+            )
+            return
         model_a = model_a_value
         model_b = model_b_value
 
@@ -194,6 +208,7 @@ class TopicInputScreen(ModalScreen[str | None]):
     ]
 
     def compose(self) -> ComposeResult:
+        """Compose the topic input UI."""
         with (
             Container(id=UI_IDS.topic_input_container),
             Vertical(
@@ -386,7 +401,7 @@ class DialogueApp(App[None]):
                 "Network error",
                 "Network connection error",
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._handle_startup_error(
                 "Timeout",
                 "Connection timeout exceeded",
@@ -702,7 +717,7 @@ class DialogueApp(App[None]):
                     await self._controller.cleanup()
                 elif self._client:
                     await self._client.close()
-            except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as e:
+            except (aiohttp.ClientError, TimeoutError, OSError) as e:
                 log.warning("Error during resource cleanup: %s", e)
             finally:
                 self._controller = None

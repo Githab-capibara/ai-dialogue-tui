@@ -5,9 +5,10 @@ This module contains logic for converting model state to UI styles.
 
 from __future__ import annotations
 
-from typing import ClassVar, NamedTuple
+from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
-from models.conversation import ModelId
+if TYPE_CHECKING:
+    from models.conversation import ModelId
 
 __all__ = ["ModelStyleMapper", "StyleInfo"]
 
