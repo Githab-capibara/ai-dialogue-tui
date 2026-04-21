@@ -10,7 +10,7 @@ import contextlib
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Sequence
 from urllib.parse import urljoin
 
 import aiohttp
@@ -29,7 +29,7 @@ from models.provider import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Mapping
 
 _logger = logging.getLogger(__name__)
 
@@ -79,13 +79,11 @@ class _RequestValidator:
             msg = "messages must be a list"
             raise TypeError(msg)
 
-        for msg in messages:
-            if not isinstance(msg, dict):
-                msg_0 = "Each message must be a dictionary"
-                raise TypeError(msg_0)
+        for idx, msg in enumerate(messages):
+            if not isinstance(msg, Mapping):
+                raise TypeError(f"Message at index {idx} must be a mapping")
             if "role" not in msg or "content" not in msg:
-                msg_0 = "Message must contain 'role' and 'content'"
-                raise TypeError(msg_0)
+                raise TypeError(f"Message at index {idx} must contain 'role' and 'content'")
 
 
 class _ResponseHandler:

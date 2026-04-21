@@ -6,12 +6,18 @@ This module contains controllers for connecting business logic with UI.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from services.dialogue_service import DialogueService
+
+
+class StateChangeCallback(Protocol):
+    """Protocol for UI state change callbacks."""
+
+    def __call__(self, state: UIState) -> None:
+        """Handle state change."""
+        ...
 
 
 @dataclass(slots=True, frozen=True)
@@ -49,7 +55,7 @@ class DialogueController:
     def __init__(
         self,
         service: DialogueService,
-        on_state_changed: Callable[[UIState], None] | None = None,
+        on_state_changed: StateChangeCallback | None = None,
     ) -> None:
         """Initialize controller.
 
@@ -84,8 +90,9 @@ class DialogueController:
 
     def _notify_state_changed(self) -> None:
         """Notify UI state change via callback."""
-        if self._on_state_changed:
-            self._on_state_changed(self._state)
+        if self._on_state_changed is not None:
+            callback: StateChangeCallback = self._on_state_changed
+            callback(self._state)
 
     def _update_status(
         self,

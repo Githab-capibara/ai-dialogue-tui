@@ -65,7 +65,7 @@ class DialogueRunner:
             on_error: Callback for handling generation errors.
 
         """
-        loop = asyncio.get_running_loop()
+        loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
         self._dialogue_task = loop.create_task(self._run_loop(on_turn, on_error))
 
     async def stop(self) -> None:
@@ -131,8 +131,8 @@ class DialogueRunner:
     def _is_task_cancelled(self) -> bool:
         """Check if current task is cancelled."""
         try:
-            loop = asyncio.get_running_loop()
-            task = asyncio.current_task(loop=loop)
+            loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
+            task: asyncio.Task[None] | None = asyncio.current_task(loop=loop)
             return task is not None and task.cancelled()
         except RuntimeError:
             return False

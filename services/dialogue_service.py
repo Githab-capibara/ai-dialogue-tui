@@ -8,13 +8,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from models.config import Config
+from models.conversation import Conversation
 from models.provider import ModelId, ModelProvider, ProviderError
-
-if TYPE_CHECKING:
-    from models.conversation import Conversation
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +56,10 @@ class DialogueService:
             config: Configuration for parameters (pauses, timeouts).
 
         """
+        if conversation is None:
+            raise ValueError("conversation cannot be None")
+        if provider is None:
+            raise ValueError("provider cannot be None")
         self._conversation = conversation
         self._provider = provider
         self._config = config or Config()
