@@ -287,11 +287,9 @@ class DialogueApp(App[None]):
 
         """
         super().__init__()
-        self.sub_title = reactive(
+        self.sub_title = reactive(  # type: ignore[assignment]  # pyright: ignore[reportAttributeAccessIssue]
             "Dialogue between two AI models via Ollama",
         )
-        # type: ignore[assignment]
-        # pyright: ignore[reportAttributeAccessIssue]
         self._config = config or Config()
         self._provider_factory = provider_factory or (
             lambda: OllamaClient(host=self._config.ollama_host)
