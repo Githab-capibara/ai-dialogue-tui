@@ -47,12 +47,7 @@ class Conversation:
     _initialized: bool = field(default=False, init=False)
 
     def __init__(
-        self,
-        model_a: str,
-        model_b: str,
-        topic: str,
-        system_prompt: str = "",
-        config: ConfigType | None = None,
+        self, model_a: str, model_b: str, topic: str, system_prompt: str = "", config: ConfigType | None = None
     ) -> None:
         """Initialize conversation.
 
@@ -61,7 +56,7 @@ class Conversation:
             model_b: Second model name.
             topic: Discussion topic.
             system_prompt: Custom system prompt (optional).
-            config: Configuration object (optional).
+            config: Configuration object (optional, uses default if not provided).
 
         """
         self.model_a = model_a
@@ -109,13 +104,13 @@ class Conversation:
 
     def _create_system_prompt(self) -> str:
         """Create formatted system prompt."""
-        _default_prompt = self._config.default_system_prompt
+        _default_prompt = self._config.default_system_prompt  # type: ignore[union-attr]
         effective_prompt = self.system_prompt or _default_prompt
 
         try:
             return effective_prompt.format(topic=self.topic)
         except KeyError:
-            return f"You are helpful. Topic: {self.topic}"
+            return f"You are a helpful assistant. The topic of discussion is: {self.topic}"
 
     def _trim_context_if_needed(
         self,
