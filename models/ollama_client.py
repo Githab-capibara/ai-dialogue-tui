@@ -148,11 +148,13 @@ class _ResponseHandler:
         if not isinstance(models, list):
             return []
 
-        return [
-            str(model.get("name"))
-            for model in models
-            if (isinstance(model, dict) and isinstance(model.get("name"), str) and model.get("name"))
-        ]
+        result: list[str] = []
+        for model in models:
+            if isinstance(model, dict):
+                name = model.get("name")
+                if isinstance(name, str) and name:
+                    result.append(name)
+        return result
 
     @staticmethod
     def extract_generation_response(data: dict[str, Any]) -> str:
@@ -168,9 +170,10 @@ class _ResponseHandler:
         message = data.get("message", {})
         if not isinstance(message, dict):
             return ""
-
         content = message.get("content", "")
-        return content if isinstance(content, str) else ""
+        if isinstance(content, str):
+            return content
+        return ""
 
 
 class _HTTPSessionManager:
