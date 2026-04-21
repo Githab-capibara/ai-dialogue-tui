@@ -12,15 +12,7 @@ from typing import Final
 
 @dataclass(frozen=True, slots=True)
 class MessageStyles:
-    """Styles for messages in dialogue log.
-
-    Attributes:
-        model_a: Style for model A messages.
-        model_b: Style for model B messages.
-        system: Style for system messages.
-        error: Style for error messages.
-
-    """
+    """Styles for messages in dialogue log."""
 
     model_a: str = "bold green"
     model_b: str = "bold blue"
@@ -71,15 +63,7 @@ class UIElementIDs:
 
 @dataclass(frozen=True, slots=True)
 class CSSClasses:
-    """CSS classes for element styling.
-
-    Attributes:
-        model_a_message: Class for model A messages.
-        model_b_message: Class for model B messages.
-        system_message: Class for system messages.
-        error_message: Class for error messages.
-
-    """
+    """CSS classes for element styling."""
 
     model_a_message: str = "model-a-message"
     model_b_message: str = "model-b-message"

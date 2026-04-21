@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from services.dialogue_service import DialogueService
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class UIState:
     """UI state for display.
 
@@ -70,14 +70,7 @@ class DialogueController:
             Current UI state.
 
         """
-        # Return copy for safety via constructor
-        return UIState(
-            status_text=self._state.status_text,
-            status_style=self._state.status_style,
-            turn_count=self._state.turn_count,
-            current_model=self._state.current_model,
-            is_dialogue_active=self._state.is_dialogue_active,
-        )
+        return self._state
 
     @property
     def service(self) -> DialogueService:

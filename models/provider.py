@@ -16,8 +16,6 @@ class ProviderError(Exception):
     Contains original exception information for debugging.
     """
 
-    __slots__ = ("_original_exception",)
-
     def __init__(
         self,
         message: str,
@@ -48,8 +46,6 @@ class ProviderConfigurationError(ProviderError):
     - Missing required settings
     """
 
-    __slots__ = ()
-
 
 class ProviderConnectionError(ProviderError):
     """Exception for provider connection errors.
@@ -60,8 +56,6 @@ class ProviderConnectionError(ProviderError):
     - Network errors
     """
 
-    __slots__ = ()
-
 
 class ProviderGenerationError(ProviderError):
     """Exception for response generation errors.
@@ -71,8 +65,6 @@ class ProviderGenerationError(ProviderError):
     - Invalid response format
     - Response validation errors
     """
-
-    __slots__ = ()
 
 
 class MessageDict(TypedDict, total=True):

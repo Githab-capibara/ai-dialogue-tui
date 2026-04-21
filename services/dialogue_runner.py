@@ -66,8 +66,7 @@ class DialogueRunner:
 
         """
         loop = asyncio.get_running_loop()
-        self._dialogue_task = loop.create_task(
-            self._run_loop(on_turn, on_error))
+        self._dialogue_task = loop.create_task(self._run_loop(on_turn, on_error))
 
     async def stop(self) -> None:
         """Stop dialogue loop.
@@ -107,9 +106,7 @@ class DialogueRunner:
                 except ProviderError as exc:
                     log.warning("Provider error in dialogue loop: %s", exc)
                     if on_error:
-                        model_name = (
-                            self._service.conversation.get_current_model_name()
-                        )
+                        model_name = self._service.conversation.get_current_model_name()
                         on_error(model_name)
 
                     await asyncio.sleep(self._config.pause_between_messages)
@@ -133,8 +130,12 @@ class DialogueRunner:
 
     def _is_task_cancelled(self) -> bool:
         """Check if current task is cancelled."""
-        task = asyncio.current_task()
-        return task is not None and task.cancelled()
+        try:
+            loop = asyncio.get_running_loop()
+            task = asyncio.current_task(loop=loop)
+            return task is not None and task.cancelled()
+        except RuntimeError:
+            return False
 
     async def cleanup(self) -> None:
         """Clean up runner resources."""

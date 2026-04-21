@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import html
 import re
+from typing import Final
 
-MAX_RESPONSE_PREVIEW_LENGTH: int = 100
+MAX_RESPONSE_PREVIEW_LENGTH: Final[int] = 100
 
 _BRACKET_PATTERN = re.compile(r"\[([^\]]*)\]")
 
@@ -79,11 +80,7 @@ def sanitize_response_for_display(response: str) -> str:
     response = html.escape(response, quote=True)
 
     trans_table = str.maketrans(
-        {
-            char: replacement
-            for char, replacement in SANITIZE_CHARS
-            if char != "\n"
-        },
+        {char: replacement for char, replacement in SANITIZE_CHARS if char != "\n"},
     )
     response = response.translate(trans_table)
     response = response.replace("\n", " ")
