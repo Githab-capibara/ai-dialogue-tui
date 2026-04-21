@@ -1,6 +1,6 @@
 """Module for working with models and conversations.
 
-This module exports abstractions and implementations for working with LLM providers.
+This module exports abstractions and implementations for LLM providers.
 """
 
 from models.config import Config

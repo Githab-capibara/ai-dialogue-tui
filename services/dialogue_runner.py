@@ -107,7 +107,9 @@ class DialogueRunner:
                 except ProviderError as exc:
                     log.warning("Provider error in dialogue loop: %s", exc)
                     if on_error:
-                        model_name = self._service.conversation.get_current_model_name()
+                        model_name = (
+                            self._service.conversation.get_current_model_name()
+                        )
                         on_error(model_name)
 
                     await asyncio.sleep(self._config.pause_between_messages)

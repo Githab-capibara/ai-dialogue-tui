@@ -155,7 +155,11 @@ class _ResponseHandler:
         return [
             str(model.get("name"))
             for model in models
-            if isinstance(model, dict) and isinstance(model.get("name"), str) and model.get("name")
+            if (
+                isinstance(model, dict)
+                and isinstance(model.get("name"), str)
+                and model.get("name")
+            )
         ]
 
     @staticmethod
@@ -243,7 +247,10 @@ class _HTTPSessionManager:
     async def close(self) -> None:
         """Close HTTP session."""
         if self._session and not self._session.closed:
-            with contextlib.suppress(aiohttp.ClientError, asyncio.TimeoutError):
+            with contextlib.suppress(
+                aiohttp.ClientError,
+                asyncio.TimeoutError,
+            ):
                 await self._session.close()
 
 
@@ -475,12 +482,11 @@ class OllamaClient:
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             timeout_info = f"Timeout: {self._config.sock_read_timeout}s"
-            msg = f"Failed to connect to Ollama ({
-                self.host}). {timeout_info}. Try increasing the timeout in settings."
-            raise ProviderConnectionError(
-                msg,
-                err,
-            ) from err
+            msg = (
+                f"Failed to connect to Ollama ({self.host}). "
+                f"{timeout_info}. Check timeout settings."
+            )
+            raise ProviderConnectionError(msg, err) from err
         except ProviderError:
             _logger.debug("ProviderError during response generation")
             raise
