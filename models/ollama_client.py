@@ -81,9 +81,11 @@ class _RequestValidator:
 
         for idx, msg in enumerate(messages):
             if not isinstance(msg, Mapping):
-                raise TypeError(f"Message at index {idx} must be a mapping")
+                err_msg = f"Message at index {idx} must be a mapping"
+                raise TypeError(err_msg)
             if "role" not in msg or "content" not in msg:
-                raise TypeError(f"Message at index {idx} must contain 'role' and 'content'")
+                err_msg = f"Message at index {idx} must contain 'role' and 'content'"
+                raise TypeError(err_msg)
 
 
 class _ResponseHandler:
