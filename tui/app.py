@@ -339,7 +339,7 @@ class DialogueApp(App[None]):
 
         """
         try:
-            status_label: Label = self.query_one("#status-value", Label)
+            status_label = self.query_one("#status-value", Label)
             style_tag = f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
             status_label.update(style_tag)
         except (NoMatches, ScreenStackError):
@@ -618,8 +618,8 @@ class DialogueApp(App[None]):
     def _is_task_cancelled(self) -> bool:
         """Check if current task is cancelled."""
         try:
-            loop = asyncio.get_running_loop()
-            current_task = asyncio.current_task(loop=loop)
+            loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
+            current_task: asyncio.Task[None] | None = asyncio.current_task(loop=loop)
             return current_task is not None and current_task.cancelled()
         except RuntimeError:
             return False
