@@ -177,7 +177,7 @@ class TestTimeoutErrorHandling:
                 await client.generate("llama3", [{"role": "user", "content": "test"}])
 
             error_message = str(exc_info.value)
-            assert "increase" in error_message.lower()
+            assert "check timeout" in error_message.lower()
 
 
 if __name__ == "__main__":
