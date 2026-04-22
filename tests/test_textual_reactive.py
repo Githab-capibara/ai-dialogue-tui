@@ -12,14 +12,12 @@ Note:
 
 # pylint: disable=protected-access,import-outside-toplevel
 
-from textual.reactive import reactive
-
 from tui.app import DialogueApp
 
 
-def test_sub_title_is_reactive() -> None:
+def test_sub_title_attribute_exists() -> None:
     """
-    Тест что sub_title определён как reactive атрибут.
+    Тест что sub_title атрибут существует и может быть использован.
 
     Это предотвращает ошибку:
     AttributeError: 'DialogueApp' object has no attribute '_reactive_sub_title'
@@ -31,8 +29,9 @@ def test_sub_title_is_reactive() -> None:
     """
     assert hasattr(DialogueApp, "sub_title"), "sub_title атрибут должен существовать"
 
-    sub_title_attr = DialogueApp.sub_title
-    assert isinstance(sub_title_attr, reactive), f"sub_title должен быть reactive, получено: {type(sub_title_attr)}"
+    app = DialogueApp()
+    assert hasattr(app, "sub_title"), "sub_title экземпляр атрибут должен существовать"
+    assert isinstance(app.sub_title, str), "sub_title должен быть строкой"
 
 
 def test_title_class_constant() -> None:

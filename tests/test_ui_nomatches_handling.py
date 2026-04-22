@@ -35,7 +35,7 @@ class TestUINoMatchesHandling:
             app._on_ui_state_changed(test_state)
 
         # Verify DEBUG message was recorded
-        assert "Element #status-value unavailable for update" in caplog.text
+        assert "Element #status-value not available for update" in caplog.text
         # Verify ERROR was not logged
         assert "Error updating UI state" not in caplog.text
 
@@ -65,7 +65,7 @@ class TestUINoMatchesHandling:
             app._on_ui_state_changed(test_state)
 
         # Verify ERROR was recorded
-        assert "RuntimeError updating UI state" in caplog.text
+        assert "RuntimeError when updating UI state" in caplog.text
 
     def test_on_ui_state_changed_lookup_error_logged_as_error(
         self,
@@ -90,7 +90,7 @@ class TestUINoMatchesHandling:
             app._on_ui_state_changed(test_state)
 
         # Verify ERROR was recorded
-        assert "LookupError updating UI state" in caplog.text
+        assert "LookupError when updating UI state" in caplog.text
 
     def test_on_ui_state_changed_screen_stack_error_logged_as_debug(
         self,
@@ -117,7 +117,7 @@ class TestUINoMatchesHandling:
             app._on_ui_state_changed(test_state)
 
         # Verify DEBUG was recorded
-        assert "Element #status-value unavailable for update" in caplog.text
+        assert "Element #status-value not available for update" in caplog.text
 
     def test_on_ui_state_changed_no_matches_does_not_reraise(self) -> None:
         """
