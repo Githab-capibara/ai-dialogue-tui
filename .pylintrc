@@ -3,7 +3,7 @@ ignore=venv,.git,__pycache__,.mypy_cache,.ruff_cache
 extension-pkg-whitelist=
 
 [MESSAGES CONTROL]
-disable=design,refactoring,similarities
+disable=design,refactoring,similarities,W2301
 
 [REPORTS]
 reports=no

@@ -59,3 +59,8 @@ warn_unused_ignores = true
 explicit_package_bases = true
 exclude = ["tests/", "audit_reports/"]
 disable_error_code = ["misc", "untyped-decorator"]
+
+[tool.pylint.messages_control]
+disable = [
+    "W2301",  # unnecessary-ellipsis - false positive for Protocol methods
+]
