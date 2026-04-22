@@ -8,13 +8,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from models.config import Config
 from models.provider import MessageDict, ModelId, ModelProvider
-
-if TYPE_CHECKING:
-    from models.config import Config as ConfigType
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +35,7 @@ class Conversation:
     topic: str = ""
     system_prompt: str = ""
 
-    _config: ConfigType | None = field(default=None, init=False, repr=False)
+    _config: Config | None = field(default=None, init=False, repr=False)
     _context_a: list[MessageDict] = field(default_factory=list, init=False, repr=False)
     _context_b: list[MessageDict] = field(default_factory=list, init=False, repr=False)
     _current_turn: Literal["A", "B"] = field(default="A", init=False)
@@ -49,7 +46,7 @@ class Conversation:
         model_b: str,
         topic: str,
         system_prompt: str = "",
-        config: ConfigType | None = None,
+        config: Config | None = None,
     ) -> None:
         """Initialize conversation.
 
