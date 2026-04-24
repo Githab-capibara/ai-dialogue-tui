@@ -79,12 +79,12 @@ class TestUIStateChangedNoMatches:
                 app._on_ui_state_changed(test_state)
 
         # Проверяем что логирование произошло на уровне DEBUG
-        assert "Элемент #status-value недоступен для обновления" in caplog.text
+        assert "Element #status-value not available for update" in caplog.text
 
-        # Проверяем что логирование было именно на уровне DEBUG (не ERROR)
+        # Check that logging was at DEBUG level (not ERROR)
         debug_records = [record for record in caplog.records if record.levelname == "DEBUG"]
         assert len(debug_records) > 0
-        assert any("Элемент #status-value недоступен для обновления" in record.message for record in debug_records)
+        assert any("Element #status-value not available for update" in record.message for record in debug_records)
 
     def test_on_ui_state_changed_no_error_when_element_missing(self) -> None:
         """
@@ -180,7 +180,7 @@ class TestUIStateChangedNoMatches:
         # Проверяем что логирование произошло на уровне ERROR
         error_records = [record for record in caplog.records if record.levelname == "ERROR"]
         assert len(error_records) > 0
-        assert any("при обновлении UI состояния" in record.message for record in error_records)
+        assert any("LookupError when updating UI state" in record.message for record in error_records)
 
 
 if __name__ == "__main__":
