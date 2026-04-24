@@ -118,9 +118,7 @@ def sample_provider() -> ModelProvider:
     """Fixture providing a mock ModelProvider implementation."""
     mock_provider = AsyncMock(spec=ModelProvider)
     mock_provider.list_models = AsyncMock(return_value=["llama3", "mistral"])
-    mock_provider.generate = AsyncMock(
-        return_value={"response": "test response", "done": True}
-    )
+    mock_provider.generate = AsyncMock(return_value={"response": "test response", "done": True})
     mock_provider.close = AsyncMock()
     return mock_provider
 
