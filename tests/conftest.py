@@ -107,9 +107,6 @@ def sample_config() -> Config:
     """Fixture providing a standard test configuration."""
     return Config(
         ollama_host="http://localhost:11434",
-        model_a="llama3",
-        model_b="mistral",
-        topic="test conversation",
     )
 
 
@@ -124,10 +121,9 @@ def sample_provider() -> ModelProvider:
 
 
 @pytest.fixture
-def sample_conversation(sample_provider: ModelProvider) -> Conversation:
-    """Fixture providing a Conversation instance with mock provider."""
+def sample_conversation() -> Conversation:
+    """Fixture providing a Conversation instance."""
     return Conversation(
-        provider=sample_provider,
         model_a="llama3",
         model_b="mistral",
         topic="test",

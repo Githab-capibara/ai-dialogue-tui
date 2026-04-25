@@ -663,7 +663,7 @@ class DialogueApp(App[None]):
                 RichLog,
             )
             dialog_log.write(message)
-        except (NoMatches, LookupError, RuntimeError):
+        except (NoMatches, LookupError, RuntimeError, AttributeError):
             log.warning("Failed to write to log")
 
     def _handle_dialogue_error(self, model_name: str) -> None:

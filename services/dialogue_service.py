@@ -165,7 +165,6 @@ class DialogueService:
         except asyncio.CancelledError:
             log.info("Dialogue cycle cancelled")
             raise
-
         except ProviderError:
             log.warning("Provider error during dialogue cycle execution")
             raise

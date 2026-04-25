@@ -100,7 +100,7 @@ class DialogueRunner:
                     break
 
                 try:
-                    result = await self._process_turn()
+                    result = await self._service.run_dialogue_cycle()
                     if result and on_turn:
                         on_turn(result)
                 except ProviderError as exc:

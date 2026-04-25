@@ -90,8 +90,7 @@ class Conversation:
         config = self._config
         if config is None:
             return f"You are a helpful assistant. The topic of discussion is: {self.topic}"
-        _default_prompt = config.default_system_prompt
-        effective_prompt = self.system_prompt or _default_prompt
+        effective_prompt = self.system_prompt or config.default_system_prompt
 
         try:
             return effective_prompt.format(topic=self.topic)
@@ -101,7 +100,7 @@ class Conversation:
     def _trim_context_if_needed(
         self,
         context: list[MessageDict],
-        max_len: int = MAX_CONTEXT_LENGTH,
+        max_len: int | None = None,
     ) -> list[MessageDict]:
         """Trim context if it exceeds max_len.
 
@@ -116,13 +115,16 @@ class Conversation:
             Trimmed context if exceeded, otherwise original.
 
         """
-        if len(context) <= max_len:
+        if max_len is None:
+            max_len = MAX_CONTEXT_LENGTH
+        effective_max = max_len if max_len is not None else MAX_CONTEXT_LENGTH
+        if len(context) <= effective_max:
             return context
 
         if not context:
             return context
 
-        last_messages = context[-max_len:]
+        last_messages = context[-effective_max:]
         system_message = context[0]
 
         trimmed = list(last_messages) if system_message in last_messages else [system_message, *last_messages]

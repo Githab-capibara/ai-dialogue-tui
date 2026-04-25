@@ -35,7 +35,7 @@ from services.dialogue_service import DialogueService
 from tui.app import DialogueApp
 
 # =============================================================================
-# 1. Test: models/conversation.py:108-110 - remaining_messages = context[-max_len:]
+# 1. Test: models/conversation.py:108-110 - remaining_messages = context[-effective_max:]
 # =============================================================================
 
 
@@ -43,9 +43,9 @@ class TestTrimContextFix:
     """Tests for verifying fix in _trim_context_if_needed."""
 
     def test_trim_context_uses_negative_slicing(self):
-        """Verify that negative indexing context[-max_len:] is used."""
+        """Verify that negative indexing context[-effective_max:] is used."""
         source = inspect.getsource(Conversation._trim_context_if_needed)
-        assert "context[-max_len:]" in source
+        assert "context[-effective_max:]" in source
 
     def test_trim_context_no_meaningless_condition(self):
         """Verify that there is no meaningless condition."""

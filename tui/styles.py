@@ -1,6 +1,7 @@
 """CSS generation for TUI application.
 
-This module contains functions for generating CSS from constants.
+This module contains functions for generating CSS from constants
+and defining display styles and visual themes for the AI Dialogue TUI.
 """
 
 from __future__ import annotations

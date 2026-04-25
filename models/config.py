@@ -6,6 +6,7 @@ with full parameter validation.
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from typing import Final, TypeVar
@@ -66,19 +67,22 @@ def validate_ollama_url(url: str) -> bool:
         False
 
     """
-    if not url or not isinstance(url, str):
+    if not url:
         return False
 
-    parsed = urlparse(url)
+    try:
+        parsed = urlparse(url)
+    except (TypeError, AttributeError):
+        return False
     if not parsed.scheme or parsed.scheme not in ("http", "https"):
         return False
     return bool(parsed.netloc)
 
 
-T = TypeVar("T", int, float)
+T = TypeVar("T", int, float)  # noqa: VTStyle
 
 
-def _validate_range[T: (int, float)](
+def _validate_range[T: (int, float)](  # noqa: VTStyle
     value: T,
     min_value: T,
     max_value: T | None = None,
@@ -211,4 +215,9 @@ class Config:
                     value = type_func(env_value)
                     setattr(self, attr_name, value)
                 except (ValueError, TypeError):
-                    pass
+                    logging.warning(
+                        "Failed to apply environment override: %s=%s (expected %s)",
+                        env_var,
+                        env_value,
+                        type_func.__name__,
+                    )

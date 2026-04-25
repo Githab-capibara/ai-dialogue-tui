@@ -31,7 +31,7 @@ def create_ollama_provider(config: Config) -> ModelProvider:
     return OllamaClient(host=config.ollama_host)
 
 
-def create_provider_factory(config: Config) -> Callable[[], ModelProvider]:
+def create_provider_factory(config: Config) -> "Callable[[], ModelProvider]":
     """Create providers factory.
 
     Args:
@@ -41,8 +41,4 @@ def create_provider_factory(config: Config) -> Callable[[], ModelProvider]:
         Factory function for creating ModelProvider.
 
     """
-
-    def factory() -> ModelProvider:
-        return create_ollama_provider(config)
-
-    return factory
+    return lambda: create_ollama_provider(config)

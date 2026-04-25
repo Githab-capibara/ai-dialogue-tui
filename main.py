@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 
 from factories.provider_factory import create_provider_factory
@@ -18,7 +19,7 @@ from models.provider import (
 from tui.app import DialogueApp
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=int(os.environ.get("LOG_LEVEL", logging.INFO)),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 log = logging.getLogger(__name__)
@@ -45,17 +46,8 @@ def main() -> int:
         log.warning("Application cancelled")
     except KeyboardInterrupt:
         log.info("Application interrupted by user")
-    except ProviderConfigurationError:
-        log.exception("Configuration error")
-        exit_code = 1
-    except ProviderConnectionError:
-        log.exception("Connection error")
-        exit_code = 1
-    except ProviderGenerationError:
-        log.exception("Generation error")
-        exit_code = 1
-    except ProviderError:
-        log.exception("Provider error")
+    except (ProviderConfigurationError, ProviderConnectionError, ProviderGenerationError, ProviderError) as e:
+        log.exception("%s: %s", type(e).__name__, e)
         exit_code = 1
     except (RuntimeError, SystemError):
         log.exception("Critical application error")
