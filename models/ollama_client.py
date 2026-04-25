@@ -92,6 +92,9 @@ class _ResponseHandler:
     Encapsulates response processing and validation logic.
     """
 
+    # HTTP status code for successful response
+    HTTP_OK: int = 200
+
     @staticmethod
     def validate_status_code(status: int, operation: str) -> None:
         """Validate HTTP status code of response.
@@ -104,7 +107,7 @@ class _ResponseHandler:
             ProviderGenerationError: If status code is not 200.
 
         """
-        if status != 200:  # noqa: PLR2004
+        if status != _ResponseHandler.HTTP_OK:
             msg = f"Error {operation}: HTTP {status}"
             raise ProviderGenerationError(msg)
 
@@ -443,8 +446,8 @@ class OllamaClient:
             msg = f"API response validation error: {err}"
             raise ProviderGenerationError(msg) from err
         except OSError as err:
-            msg = f"IO error: {err}"
-            _logger.debug("OSError: %s", err)
+            msg = f"IO error communicating with Ollama ({self.host}): {err}"
+            _logger.warning("OSError during generation: %s", err)
             raise ProviderGenerationError(msg) from err
 
     def _build_request_payload(
@@ -457,9 +460,7 @@ class OllamaClient:
         options: dict[str, Any] = {
             "temperature": kwargs.get("temperature", self._config.temperature),
         }
-        max_tokens: int = self._config.max_tokens
-        if "max_tokens" in kwargs:
-            max_tokens = int(kwargs["max_tokens"])
+        max_tokens = self._config.max_tokens
         if max_tokens > 0:
             options["num_predict"] = max_tokens
 

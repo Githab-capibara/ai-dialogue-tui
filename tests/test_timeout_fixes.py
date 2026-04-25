@@ -72,7 +72,7 @@ class AsyncContextManagerMock:
             raise self._raise_on_enter
         return self._response
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    async def __aexit__(self, _exc_type: Any, _exc_val: Any, _exc_tb: Any) -> None:
         pass
 
 
