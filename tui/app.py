@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
+from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 import aiohttp
@@ -18,16 +21,7 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.screen import ModalScreen
-from textual.widgets import (
-    Button,
-    Footer,
-    Header,
-    Input,
-    Label,
-    RichLog,
-    Select,
-    Static,
-)
+from textual.widgets import Button, Footer, Header, Input, Label, RichLog, Select, Static
 
 from controllers.dialogue_controller import DialogueController, UIState
 from models.config import Config
@@ -40,28 +34,27 @@ from models.provider import (
     ProviderGenerationError,
 )
 from services.dialogue_service import DialogueService, DialogueTurnResult
+from services.dialogue_service import DialogueService, DialogueTurnResult
+from services.dialogue_service import DialogueService
 from services.model_style_mapper import ModelStyleMapper
-from tui.constants import MESSAGE_STYLES, UI_IDS
+from tui.constants import DEFAULT_NOTIFY_TIMEOUT, MESSAGE_STYLES, UI_IDS
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 from tui.styles import generate_main_css
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-# Timeout constant for notifications
-DEFAULT_NOTIFY_TIMEOUT: int = 10
 
-# =============================================================================
-# call_from_thread vs call_after_refresh in Textual
-# =============================================================================
-# call_from_thread: used for threading.Thread
-# call_after_refresh: used in asyncio.create_task, async def
-#
-# In this module all methods work in async context,
-# so call_after_refresh is used, NOT call_from_thread!
-# =============================================================================
+import sys
 
-# CSS is generated from centralized constants
+LOG_DIR = Path("/log")
+try:
+    LOG_DIR.mkdir(exist_ok=True)
+except PermissionError:
+    LOG_DIR = Path(sys.argv[0]).parent if sys.argv else Path.cwd()
+    LOG_DIR = LOG_DIR / "logs"
+    LOG_DIR.mkdir(exist_ok=True)
+
 CSS = generate_main_css()
 
 log = logging.getLogger(__name__)
@@ -310,6 +303,13 @@ class DialogueApp(App[None]):
         self._cleanup_done = False
         self._cleanup_lock = asyncio.Lock()
 
+        LOG_DIR.mkdir(exist_ok=True)
+        self._dialogue_log_file = open(
+            LOG_DIR / f"dialogue_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+            "w",
+            encoding="utf-8",
+        )
+
     def _create_default_provider(self) -> OllamaClient:
         """Create default Ollama provider."""
         return OllamaClient(host=self._config.ollama_host)
@@ -330,7 +330,7 @@ class DialogueApp(App[None]):
                 yield Label("Waiting...", id=UI_IDS.status_value)
 
             # Dialogue log
-            yield RichLog(id=UI_IDS.dialogue_log, highlight=True, markup=True)
+            yield RichLog(id=UI_IDS.dialogue_log, highlight=True, markup=True, wrap=True)
 
             # Control panel
             with (
@@ -614,7 +614,7 @@ class DialogueApp(App[None]):
                 except ProviderError as e:
                     # Unified handling of all ProviderError
                     log.warning("Provider error in dialogue loop: %s", e)
-                    self._handle_dialogue_error(style_info.model_name)
+                    self._handle_dialogue_error(style_info.model_name, str(e))
                     raise
 
                 await asyncio.sleep(self._config.pause_between_messages)
@@ -646,17 +646,43 @@ class DialogueApp(App[None]):
         style: str,
     ) -> DialogueTurnResult | None:
         """Process one dialogue turn and output result."""
+        thinking_msg = f"[dim]{_model_name} is thinking...[/]"
+        self.call_after_refresh(self._write_to_log, thinking_msg)
         result = await service.run_dialogue_cycle()
 
         if result:
-            formatted_response = sanitize_response_for_display(result.response)
-            message = f"\n[{style}]Turn {service.turn_count}: {result.model_name}[/]\n  {formatted_response}"
+            response_text = result.response
+            response_lines = []
+            if "[Think" in response_text and "]" in response_text:
+                start = response_text.find("[Think")
+                end = response_text.find("]", start) + 1
+                if start >= 0 and end > start:
+                    thinking_part = response_text[start:end]
+                    response_lines.append(f"[dim]{thinking_part}[/]")
+                    content_start = end
+                    newline_pos = response_text.find("\n\n", end)
+                    if newline_pos >= 0:
+                        content_start = newline_pos + 2
+                    response_text = response_text[content_start:].strip()
+            response_text = sanitize_response_for_display(response_text)
+            response_text = response_text.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"')
+            message = f"\n[{style}]Turn {service.turn_count}: {result.model_name}[/]\n  {response_text}"
+            if response_lines:
+                message = "\n" + response_lines[0] + message
             self.call_after_refresh(self._write_to_log, message)
 
         return result
 
     def _write_to_log(self, message: str) -> None:
-        """Safely write message to UI log."""
+        """Safely write message to UI log and file."""
+        import re
+        clean_msg = re.sub(r"\[/?\w+\]?", "", message)
+        try:
+            if hasattr(self, "_dialogue_log_file") and self._dialogue_log_file:
+                self._dialogue_log_file.write(clean_msg + "\n")
+                self._dialogue_log_file.flush()
+        except Exception:
+            pass
         try:
             dialog_log: RichLog = self.query_one(
                 f"#{UI_IDS.dialogue_log}",
@@ -666,20 +692,21 @@ class DialogueApp(App[None]):
         except (NoMatches, LookupError, RuntimeError, AttributeError):
             log.warning("Failed to write to log")
 
-    def _handle_dialogue_error(self, model_name: str) -> None:
+    def _handle_dialogue_error(self, model_name: str, error_detail: str = "") -> None:
         """Handle response generation error.
 
         This method is called from async context (_process_dialogue_turn),
         so we use call_after_refresh instead of call_from_thread.
         """
-        error_msg = f"\n[{MESSAGE_STYLES.error}]Error ({model_name})[/]"
+        error_text = error_detail if error_detail else "Generation failed"
+        error_msg = f"\n[{MESSAGE_STYLES.error}]Error ({model_name}): {error_text}[/]"
         # Use call_after_refresh since we are in async context, not
         # in a thread
         self.call_after_refresh(self._write_to_log, error_msg)
         if self._controller:
             self._controller.update_for_error(model_name)
         self.notify(
-            "Response generation error",
+            f"Error ({model_name}): {error_text}",
             title="Error",
             severity="error",
             timeout=DEFAULT_NOTIFY_TIMEOUT,
@@ -722,6 +749,11 @@ class DialogueApp(App[None]):
             finally:
                 self._controller = None
                 self._client = None
+
+            # Close dialogue log file
+            if hasattr(self, "_dialogue_log_file") and self._dialogue_log_file:
+                self._dialogue_log_file.close()
+                self._dialogue_log_file = None
 
         except RuntimeError:
             log.exception("Unexpected error during cleanup")

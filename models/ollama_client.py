@@ -96,12 +96,17 @@ class _ResponseHandler:
     HTTP_OK: int = 200
 
     @staticmethod
-    def validate_status_code(status: int, operation: str) -> None:
+    def validate_status_code(
+        status: int,
+        operation: str,
+        data: dict[str, Any] | None = None,
+    ) -> None:
         """Validate HTTP status code of response.
 
         Args:
             status: HTTP status code.
             operation: Operation name for error message.
+            data: Parsed response data for error extraction.
 
         Raises:
             ProviderGenerationError: If status code is not 200.
@@ -109,6 +114,10 @@ class _ResponseHandler:
         """
         if status != _ResponseHandler.HTTP_OK:
             msg = f"Error {operation}: HTTP {status}"
+            if data is not None and isinstance(data, dict) and "error" in data:
+                error_msg = data.get("error")
+                if isinstance(error_msg, str):
+                    msg = f"{operation}: {error_msg}"
             raise ProviderGenerationError(msg)
 
     @staticmethod
@@ -165,14 +174,17 @@ class _ResponseHandler:
             data: API response data.
 
         Returns:
-            Response text or empty string.
+            Response text with thinking (if present) or empty string.
 
         """
         message = data.get("message", {})
         if not isinstance(message, dict):
             return ""
         content = message.get("content", "")
+        thinking = message.get("thinking", "")
         if isinstance(content, str):
+            if isinstance(thinking, str) and thinking:
+                return f"[Thinking...]\n{thinking}\n[/]\n\n{content}"
             return content
         return ""
 
@@ -337,8 +349,9 @@ class OllamaClient:
         self.host = resolved_host
 
         self._http_manager = _HTTPSessionManager(
-            timeout=self._config.request_timeout,
-            sock_read_timeout=self._config.sock_read_timeout,
+            timeout=min(self._config.request_timeout, 30),
+            conn_timeout=10,
+            sock_read_timeout=min(self._config.sock_read_timeout, 120),
         )
 
         self._models_cache = _ModelsCache(ttl=_MODELS_CACHE_TTL)
@@ -373,24 +386,37 @@ class OllamaClient:
         session = await self._get_session()
         url = urljoin(self.host, "/api/tags")
 
-        try:
-            async with session.get(url) as response:
-                _ResponseHandler.validate_status_code(response.status, "list_models")
-                data = await self._parse_json_response(response)
-                _ResponseHandler.parse_json_response(data, "list_models")
-                models = _ResponseHandler.extract_models_list(data)
-                self._models_cache.set(models)
-                return models
+        for attempt in range(2):
+            try:
+                async with session.get(url) as response:
+                    data = await self._parse_json_response(response)
+                    _ResponseHandler.validate_status_code(response.status, "list_models", data)
+                    _ResponseHandler.parse_json_response(data, "list_models")
+                    models = _ResponseHandler.extract_models_list(data)
+                    self._models_cache.set(models)
+                    return models
 
-        except (aiohttp.ClientError, TimeoutError) as err:
-            msg = f"Could not connect to Ollama ({self.host})"
-            raise ProviderConnectionError(msg, err) from err
-        except ProviderError:
-            _logger.debug("ProviderError when getting models list", exc_info=True)
-            raise
-        except (json.JSONDecodeError, KeyError, TypeError) as err:
-            msg = f"API response validation error: {err}"
-            raise ProviderGenerationError(msg) from err
+            except (aiohttp.ClientError, TimeoutError) as err:
+                if attempt == 0:
+                    _logger.warning(f"Request failed: {err}, retrying...")
+                    try:
+                        await self.close()
+                    except Exception:
+                        pass
+                    session = await self._get_session()
+                    continue
+                msg = f"Could not connect to Ollama ({self.host}): {err}"
+                raise ProviderConnectionError(msg, err) from err
+            except ProviderError:
+                _logger.debug("ProviderError when getting models list", exc_info=True)
+                raise
+            except (json.JSONDecodeError, KeyError, TypeError) as err:
+                msg = f"API response validation error: {err}"
+                raise ProviderGenerationError(msg) from err
+
+        return []  # type: ignore[return]
+
+        return []  # type: ignore[return]
 
     async def _parse_json_response(self, response: aiohttp.ClientResponse) -> dict[str, Any]:
         """Parse JSON response with error handling."""
@@ -428,27 +454,39 @@ class OllamaClient:
         url = urljoin(self.host, "/api/chat")
         payload = self._build_request_payload(model, messages, kwargs)
 
-        try:
-            async with session.post(url, json=payload) as response:
-                _ResponseHandler.validate_status_code(response.status, "generate")
-                data = await self._parse_json_response(response)
-                _ResponseHandler.parse_json_response(data, "generate")
-                return _ResponseHandler.extract_generation_response(data)
+        for attempt in range(2):
+            try:
+                async with session.post(url, json=payload) as response:
+                    data = await self._parse_json_response(response)
+                    _ResponseHandler.validate_status_code(response.status, "generate", data)
+                    _ResponseHandler.parse_json_response(data, "generate")
+                    return _ResponseHandler.extract_generation_response(data)
 
-        except (aiohttp.ClientError, TimeoutError) as err:
-            timeout_info = f"Timeout: {self._config.sock_read_timeout}s"
-            msg = f"Failed to connect to Ollama ({self.host}). {timeout_info}. Check timeout settings."
-            raise ProviderConnectionError(msg, err) from err
-        except ProviderError:
-            _logger.debug("ProviderError during response generation")
-            raise
-        except (json.JSONDecodeError, KeyError, TypeError) as err:
-            msg = f"API response validation error: {err}"
-            raise ProviderGenerationError(msg) from err
-        except OSError as err:
-            msg = f"IO error communicating with Ollama ({self.host}): {err}"
-            _logger.warning("OSError during generation: %s", err)
-            raise ProviderGenerationError(msg) from err
+            except (aiohttp.ClientError, TimeoutError) as err:
+                if attempt == 0:
+                    _logger.warning(f"Request failed: {err}, retrying...")
+                    try:
+                        await self.close()
+                    except Exception:
+                        pass
+                    session = await self._get_session()
+                    continue
+                msg = f"Ollama request failed after {attempt+1} attempts. {err}. Check Ollama is running."
+                raise ProviderConnectionError(msg, err) from err
+            except ProviderError:
+                _logger.debug("ProviderError during response generation")
+                raise
+            except (json.JSONDecodeError, KeyError, TypeError) as err:
+                msg = f"API response validation error: {err}"
+                raise ProviderGenerationError(msg) from err
+            except OSError as err:
+                msg = f"IO error communicating with Ollama ({self.host}): {err}"
+                _logger.warning("OSError during generation: %s", err)
+                raise ProviderGenerationError(msg) from err
+
+        return ""  # type: ignore[return]
+
+        return ""  # type: ignore[return]
 
     def _build_request_payload(
         self,
