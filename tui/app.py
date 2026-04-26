@@ -11,7 +11,7 @@ import logging
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, TextIO
 
 import aiohttp
 from textual import on
@@ -34,8 +34,6 @@ from models.provider import (
     ProviderGenerationError,
 )
 from services.dialogue_service import DialogueService, DialogueTurnResult
-from services.dialogue_service import DialogueService, DialogueTurnResult
-from services.dialogue_service import DialogueService
 from services.model_style_mapper import ModelStyleMapper
 from tui.constants import DEFAULT_NOTIFY_TIMEOUT, MESSAGE_STYLES, UI_IDS
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
@@ -302,6 +300,7 @@ class DialogueApp(App[None]):
         self._style_mapper = ModelStyleMapper()
         self._cleanup_done = False
         self._cleanup_lock = asyncio.Lock()
+        self._dialogue_log_file: TextIO | None = None
 
         LOG_DIR.mkdir(exist_ok=True)
         self._dialogue_log_file = open(
@@ -676,6 +675,7 @@ class DialogueApp(App[None]):
     def _write_to_log(self, message: str) -> None:
         """Safely write message to UI log and file."""
         import re
+
         clean_msg = re.sub(r"\[/?\w+\]?", "", message)
         try:
             if hasattr(self, "_dialogue_log_file") and self._dialogue_log_file:

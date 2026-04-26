@@ -414,9 +414,7 @@ class OllamaClient:
                 msg = f"API response validation error: {err}"
                 raise ProviderGenerationError(msg) from err
 
-        return []  # type: ignore[return]
-
-        return []  # type: ignore[return]
+        return []
 
     async def _parse_json_response(self, response: aiohttp.ClientResponse) -> dict[str, Any]:
         """Parse JSON response with error handling."""
@@ -472,7 +470,7 @@ class OllamaClient:
                     session = await self._get_session()
                     continue
                 timeout_val = self._config.sock_read_timeout
-                msg = f"Ollama request failed after {attempt+1} attempts. {err}. Timeout: {timeout_val}s. Check timeout and increase if needed."
+                msg = f"Ollama request failed after {attempt + 1} attempts. {err}. Timeout: {timeout_val}s. Check timeout and increase if needed."
                 raise ProviderConnectionError(msg, err) from err
             except ProviderError:
                 _logger.debug("ProviderError during response generation")
@@ -485,9 +483,7 @@ class OllamaClient:
                 _logger.warning("OSError during generation: %s", err)
                 raise ProviderGenerationError(msg) from err
 
-        return ""  # type: ignore[return]
-
-        return ""  # type: ignore[return]
+        return ""
 
     def _build_request_payload(
         self,
