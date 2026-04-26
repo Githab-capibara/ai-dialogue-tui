@@ -7,6 +7,8 @@ import asyncio
 import logging
 import os
 import sys
+from datetime import datetime
+from pathlib import Path
 
 from factories.provider_factory import create_provider_factory
 from models.config import Config
@@ -18,11 +20,27 @@ from models.provider import (
 )
 from tui.app import DialogueApp
 
+LOG_DIR = Path("/log")
+try:
+    LOG_DIR.mkdir(exist_ok=True)
+except PermissionError:
+    LOG_DIR = Path(__file__).parent / "logs"
+    LOG_DIR.mkdir(exist_ok=True)
+
 logging.basicConfig(
     level=int(os.environ.get("LOG_LEVEL", logging.INFO)),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 log = logging.getLogger(__name__)
+
+file_handler = logging.FileHandler(
+    LOG_DIR / f"dialogue_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+)
+file_handler.setFormatter(logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+))
+logging.getLogger().addHandler(file_handler)
+logging.getLogger("aiohttp").setLevel(logging.WARNING)
 
 
 def main() -> int:

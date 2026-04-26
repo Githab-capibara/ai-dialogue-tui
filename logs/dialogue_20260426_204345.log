@@ -1,0 +1,45 @@
+2026-04-26 20:43:45,943 - main - ERROR - Critical application error
+Traceback (most recent call last):
+  File "/home/d/ai-dialogue-tui/main.py", line 62, in main
+    app.run()
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+RuntimeError: Test error
+2026-04-26 20:43:45,955 - models.ollama_client - WARNING - Request failed: Connection failed, retrying...
+2026-04-26 20:43:45,957 - models.ollama_client - WARNING - Request failed: Connection failed, retrying...
+2026-04-26 20:43:45,963 - models.ollama_client - WARNING - Request failed: Connection failed, retrying...
+2026-04-26 20:43:45,966 - models.ollama_client - WARNING - Request failed: Connection failed, retrying...
+2026-04-26 20:43:46,020 - models.conversation - WARNING - Context exceeded (60 messages), trimmed to 49
+2026-04-26 20:43:46,070 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7a2da68e5730>
+2026-04-26 20:43:46,082 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7a2da68e5f40>
+2026-04-26 20:43:46,085 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7a2da68e6000>
+2026-04-26 20:43:46,088 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7a2da68e6120>
+2026-04-26 20:43:46,110 - tui.app - WARNING - Error during resource cleanup: cleanup error
+2026-04-26 20:43:46,127 - models.conversation - WARNING - Context exceeded (50 messages), trimmed to 49
+2026-04-26 20:43:46,127 - models.conversation - WARNING - Context exceeded (50 messages), trimmed to 49
+2026-04-26 20:43:46,127 - models.conversation - WARNING - Context exceeded (50 messages), trimmed to 49
+2026-04-26 20:43:46,128 - models.conversation - WARNING - Context exceeded (50 messages), trimmed to 49
+2026-04-26 20:43:46,128 - models.conversation - WARNING - Context exceeded (50 messages), trimmed to 49
+2026-04-26 20:43:46,128 - models.conversation - WARNING - Context exceeded (50 messages), trimmed to 49
+2026-04-26 20:43:46,133 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7a2da67534a0>
+2026-04-26 20:43:46,165 - models.ollama_client - WARNING - Request failed: Timeout on reading data from socket, retrying...
+2026-04-26 20:43:46,169 - models.ollama_client - WARNING - Request failed: Timeout on reading data from socket, retrying...
+2026-04-26 20:43:46,185 - tui.app - ERROR - LookupError when updating UI state
+Traceback (most recent call last):
+  File "/home/d/ai-dialogue-tui/tui/app.py", line 357, in _on_ui_state_changed
+    status_label = self.query_one("#status-value", Label)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/d/ai-dialogue-tui/tests/test_ui_nomatches_handling.py", line 84, in mock_query_one
+    raise LookupError("Test lookup error")
+LookupError: Test lookup error

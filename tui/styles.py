@@ -25,7 +25,7 @@ def generate_main_css() -> str:
 
 #{UI_IDS.selection_title} {{
     text-align: center;
-    font-weight: bold;
+    text-style: bold;
     padding: 1 2;
     margin-bottom: 2;
 }}
@@ -78,7 +78,7 @@ def generate_main_css() -> str:
 
 #{UI_IDS.topic_label} {{
     text-align: center;
-    font-weight: bold;
+    text-style: bold;
     padding: 1 2;
     margin-bottom: 1;
 }}
@@ -145,22 +145,22 @@ def generate_main_css() -> str:
 
 .{CSS_CLASSES.model_a_message} {{
     color: $success;
-    font-weight: bold;
+    text-style: bold;
 }}
 
 .{CSS_CLASSES.model_b_message} {{
     color: $accent;
-    font-weight: bold;
+    text-style: bold;
 }}
 
 .{CSS_CLASSES.system_message} {{
     color: $warning;
-    font-style: italic;
+    text-style: italic;
 }}
 
 .{CSS_CLASSES.error_message} {{
     color: $error;
-    font-weight: bold;
+    text-style: bold;
 }}
 """
 

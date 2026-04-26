@@ -74,9 +74,11 @@ class CSSClasses:
 MESSAGE_STYLES: Final = MessageStyles()
 UI_IDS: Final = UIElementIDs()
 CSS_CLASSES: Final = CSSClasses()
+DEFAULT_NOTIFY_TIMEOUT: Final = 3
 
 __all__ = [
     "CSS_CLASSES",
+    "DEFAULT_NOTIFY_TIMEOUT",
     "MESSAGE_STYLES",
     "UI_IDS",
     "CSSClasses",

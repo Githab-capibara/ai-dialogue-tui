@@ -351,7 +351,7 @@ class OllamaClient:
         self._http_manager = _HTTPSessionManager(
             timeout=min(self._config.request_timeout, 30),
             conn_timeout=10,
-            sock_read_timeout=min(self._config.sock_read_timeout, 120),
+            sock_read_timeout=self._config.sock_read_timeout,
         )
 
         self._models_cache = _ModelsCache(ttl=_MODELS_CACHE_TTL)
@@ -471,7 +471,8 @@ class OllamaClient:
                         pass
                     session = await self._get_session()
                     continue
-                msg = f"Ollama request failed after {attempt+1} attempts. {err}. Check Ollama is running."
+                timeout_val = self._config.sock_read_timeout
+                msg = f"Ollama request failed after {attempt+1} attempts. {err}. Timeout: {timeout_val}s. Check timeout and increase if needed."
                 raise ProviderConnectionError(msg, err) from err
             except ProviderError:
                 _logger.debug("ProviderError during response generation")

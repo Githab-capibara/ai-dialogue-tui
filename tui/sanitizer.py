@@ -28,7 +28,7 @@ SANITIZE_CHARS: tuple[tuple[str, str], ...] = (
     ("~", "\\~"),
     ("|", "\\|"),
     ('"', '\\"'),
-    ("\n", " "),
+    ("\n", ""),
 )
 
 _BRACKET_TRANSLATION_TABLE = str.maketrans(
@@ -68,7 +68,7 @@ def sanitize_response_for_display(response: str) -> str:
     """Sanitize model response for safe display in TUI.
 
     Escapes Textual markup characters to prevent XSS-like attacks.
-    Truncates long responses to MAX_RESPONSE_PREVIEW_LENGTH characters.
+    Strips newlines and truncates long responses.
 
     """
     if not isinstance(response, str):
@@ -77,14 +77,20 @@ def sanitize_response_for_display(response: str) -> str:
     if not response:
         return ""
 
+    # Replace newlines with space
+    response = response.replace("\n", " ")
+
+    # Escape HTML
     response = html.escape(response, quote=True)
 
+    # Escape brackets and special characters
     trans_table = str.maketrans(
         {char: replacement for char, replacement in SANITIZE_CHARS if char != "\n"},
     )
     response = response.translate(trans_table)
-    response = response.replace("\n", " ")
 
+    # Truncate to max length
     if len(response) > MAX_RESPONSE_PREVIEW_LENGTH:
-        response = response[:MAX_RESPONSE_PREVIEW_LENGTH] + "..."
+        response = response[:MAX_RESPONSE_PREVIEW_LENGTH]
+
     return response

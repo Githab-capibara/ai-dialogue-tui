@@ -115,13 +115,13 @@ class TestIssue0007DuplicateCSSSelector:
 
 
 class TestIssue0008InvalidCSSProperty:
-    """Test ISSUE-0008: text-style changed to font-weight."""
+    """Test ISSUE-0008: CSS bold handling for Textual."""
 
     def test_font_weight_used(self) -> None:
-        """Verify font-weight is used instead of text-style."""
+        """Verify bold styling is present in CSS."""
         css = generate_main_css()
-        assert "font-weight: bold" in css
-        assert "text-style: bold" not in css
+        # Textual uses text-style: bold
+        assert "text-style: bold" in css
 
 
 class TestIssue0010RedundantStringOperations:
