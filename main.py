@@ -46,8 +46,8 @@ def main() -> int:
         log.warning("Application cancelled")
     except KeyboardInterrupt:
         log.info("Application interrupted by user")
-    except (ProviderConfigurationError, ProviderConnectionError, ProviderGenerationError, ProviderError) as e:
-        log.exception("%s: %s", type(e).__name__, e)
+    except (ProviderConfigurationError, ProviderConnectionError, ProviderGenerationError, ProviderError):
+        log.exception("Provider error occurred")
         exit_code = 1
     except (RuntimeError, SystemError):
         log.exception("Critical application error")

@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from typing import Final, TypeVar
 from urllib.parse import urlparse
 
+log = logging.getLogger(__name__)
+
 __all__ = [
     "DEFAULT_MAX_TOKENS",
     "DEFAULT_PAUSE_BETWEEN_MESSAGES",
@@ -79,13 +81,13 @@ def validate_ollama_url(url: str) -> bool:
     return bool(parsed.netloc)
 
 
-T = TypeVar("T", int, float)  # noqa: VTStyle
+TNum = TypeVar("TNum", int, float)
 
 
-def _validate_range[T: (int, float)](  # noqa: VTStyle
-    value: T,
-    min_value: T,
-    max_value: T | None = None,
+def _validate_range[TNum: (int, float)](  # pylint: disable=redefined-outer-name
+    value: TNum,
+    min_value: TNum,
+    max_value: TNum | None = None,
     param_name: str = "parameter",
 ) -> None:
     """Validate a numeric parameter in range.
@@ -215,7 +217,7 @@ class Config:
                     value = type_func(env_value)
                     setattr(self, attr_name, value)
                 except (ValueError, TypeError):
-                    logging.warning(
+                    log.warning(
                         "Failed to apply environment override: %s=%s (expected %s)",
                         env_var,
                         env_value,
