@@ -37,6 +37,7 @@ from models.provider import (
     ProviderError,
     ProviderGenerationError,
 )
+from tui.app import DialogueApp
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 
 # =============================================================================
@@ -775,3 +776,111 @@ class TestIntegration:
             assert "<script>" not in result  # HTML tags escaped
             # Verify escaping happened
             assert result != malicious  # Result differs from original
+
+
+# =============================================================================
+# Additional verification tests from test_audit_fixes_verification.py
+# =============================================================================
+
+
+class TestCloseIdempotency:
+    """HIGH 1: Test close() method idempotency."""
+
+    @pytest.mark.asyncio
+    async def test_close_can_be_called_multiple_times(self) -> None:
+        """Test that close() can be called multiple times without errors."""
+        client = OllamaClient(host="http://localhost:11434")
+
+        await client.close()
+        await client.close()
+        await client.close()
+
+    @pytest.mark.asyncio
+    async def test_close_handles_already_closed_session(self) -> None:
+        """Test that close() handles already closed session."""
+        client = OllamaClient(host="http://localhost:11434")
+
+        await client.close()
+
+        mock_session = AsyncMock()
+        mock_session.closed = True
+        client._http_manager._session = mock_session
+
+        await client.close()
+
+
+class TestContextManagementOptimization:
+    """HIGH 2: Test context management optimization."""
+
+    def test_trim_before_add_message(self) -> None:
+        """Test that context is trimmed before adding message."""
+        conversation = Conversation(
+            model_a="llama3",
+            model_b="mistral",
+            topic="Test",
+        )
+
+        for i in range(60):
+            conversation.add_message("A", "user", f"Message {i}")
+
+        context_a = conversation.get_context("A")
+        assert len(context_a) <= 51
+
+
+class TestOllamaClientNoExtraInstances:
+    """MEDIUM 2: Test no extra class instances."""
+
+    def test_no_validator_instance(self) -> None:
+        """Test that _RequestValidator is not instantiated."""
+        client = OllamaClient(host="http://localhost:11434")
+        assert not hasattr(client, "_request_validator")
+
+    def test_no_handler_instance(self) -> None:
+        """Test that _ResponseHandler is not instantiated."""
+        client = OllamaClient(host="http://localhost:11434")
+        assert not hasattr(client, "_response_handler")
+
+
+class TestConversationSystemPrompt:
+    """MEDIUM 4: Test system_prompt fix in Conversation."""
+
+    def test_conversation_accepts_system_prompt(self) -> None:
+        """Test that Conversation accepts system_prompt."""
+        custom_prompt = "Custom system prompt for testing"
+        conversation = Conversation(
+            model_a="llama3",
+            model_b="mistral",
+            topic="Test",
+            system_prompt=custom_prompt,
+        )
+        assert conversation.system_prompt == custom_prompt
+
+    def test_conversation_formats_system_prompt_with_topic(self) -> None:
+        """Test that Conversation formats system_prompt with topic in context."""
+        conversation = Conversation(
+            model_a="llama3",
+            model_b="mistral",
+            topic="Test Topic",
+        )
+        context_a = conversation.get_context("A")
+        assert len(context_a) > 0
+        assert context_a[0]["role"] == "system"
+        assert "Test Topic" in context_a[0]["content"]
+
+
+class TestModelIdExport:
+    """LOW 1: Test ModelId export."""
+
+    def test_model_id_in_all(self) -> None:
+        """Test that ModelId is exported."""
+        from models import conversation
+
+        assert "ModelId" in conversation.__all__
+
+
+class TestCSSLazyInitialization:
+    """LOW 2: Test CSS lazy initialization."""
+
+    def test_css_defined_in_class(self) -> None:
+        """Test that CSS is defined in class."""
+        assert hasattr(DialogueApp, "CSS")
