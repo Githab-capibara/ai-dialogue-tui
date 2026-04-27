@@ -71,9 +71,7 @@ class TestUINoMatchesHandling:
         self,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """
-        Test verifies that LookupError is logged at ERROR level.
-        """
+        """Test verifies that LookupError is logged at ERROR level."""
         config = Config()
         app = DialogueApp(config=config)
         test_state = UIState(status_text="Test", status_style="green")
@@ -96,9 +94,7 @@ class TestUINoMatchesHandling:
         self,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """
-        Test verifies that ScreenStackError is logged at DEBUG level.
-        """
+        """Test verifies that ScreenStackError is logged at DEBUG level."""
         from textual.app import ScreenStackError
 
         config = Config()

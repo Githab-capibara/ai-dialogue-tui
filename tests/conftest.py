@@ -7,7 +7,7 @@ multiple test files to reduce duplication.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Awaitable, Callable
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -30,17 +30,19 @@ class AsyncContextManagerMock:
         self._raise_on_enter = raise_on_enter
 
     async def __aenter__(self) -> Any:
+        """Enter the async context manager."""
         if self._raise_on_enter:
             raise self._raise_on_enter
         return self._response
 
     async def __aexit__(self, _exc_type: Any, _exc_val: Any, _exc_tb: Any) -> None:
+        """Exit the async context manager."""
         pass
 
 
 @pytest.fixture
-def mock_async_response():
-    """Factory fixture for creating async HTTP response mocks."""
+def mock_async_response() -> Callable[[int, Any, Exception | None], AsyncMock]:
+    """Create async HTTP response mocks."""
 
     def _create(
         status: int = 200,
@@ -69,8 +71,8 @@ def mock_async_response():
 
 
 @pytest.fixture
-def mock_session():
-    """Factory fixture for creating async HTTP session mocks."""
+def mock_session() -> Callable[[AsyncMock | None, Exception | None], AsyncMock]:
+    """Create async HTTP session mocks."""
 
     def _create(
         response: AsyncMock | None = None,
@@ -90,10 +92,10 @@ def mock_session():
 
 
 @pytest.fixture
-def mock_get_session():
-    """Factory fixture for mocking _get_session method on OllamaClient."""
+def mock_get_session() -> Callable[[AsyncMock], Callable[[OllamaClient], Awaitable[Any]]]:
+    """Create mock for _get_session method on OllamaClient."""
 
-    def _create(mock_session: AsyncMock):
+    def _create(mock_session: AsyncMock) -> Callable[[OllamaClient], Awaitable[Any]]:
         async def mock_get_session_method(_self: OllamaClient) -> Any:
             return mock_session
 

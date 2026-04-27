@@ -463,9 +463,7 @@ class TestSanitizerProtocol:
     """Tests for verifying sanitization functions."""
 
     def test_sanitize_topic_implements_protocol(self) -> None:
-        """
-        Verify that sanitize_topic has correct signature.
-        """
+        """Verify that sanitize_topic has correct signature."""
         import inspect
 
         sig = inspect.signature(sanitize_topic)
@@ -479,9 +477,7 @@ class TestSanitizerProtocol:
         assert isinstance(result, str)
 
     def test_sanitize_response_implements_protocol(self) -> None:
-        """
-        Verify that sanitize_response_for_display has correct signature.
-        """
+        """Verify that sanitize_response_for_display has correct signature."""
         import inspect
 
         sig = inspect.signature(sanitize_response_for_display)

@@ -25,7 +25,7 @@ class TestFixes:
     """Tests for verifying critical issue fixes."""
 
     @pytest.mark.asyncio
-    async def test_ollama_client_list_models_uses_list_comprehension(self):
+    async def test_ollama_client_list_models_uses_list_comprehension(self) -> None:
         """Test that list_models uses list comprehension for performance."""
         # Arrange
         # Create mock session and response like in existing tests
@@ -64,7 +64,7 @@ class TestFixes:
         assert models == ["model1", "model2"]
 
     @pytest.mark.asyncio
-    async def test_ollama_client_generate_uses_cached_default_options(self):
+    async def test_ollama_client_generate_uses_cached_default_options(self) -> None:
         """Test that generate uses cached default options."""
         # Arrange
         # Create mock session and response like in existing tests
@@ -100,7 +100,7 @@ class TestFixes:
         assert payload["options"]["temperature"] == 0.7
         # num_predict is not set when max_tokens=-1 (unlimited)
 
-    def test_conversation_handles_malformed_system_prompt(self):
+    def test_conversation_handles_malformed_system_prompt(self) -> None:
         """Test that Conversation correctly handles malformed system prompt."""
         # Arrange
         # Create conversation with custom system_prompt that has invalid format
@@ -119,7 +119,7 @@ class TestFixes:
         assert "helpful assistant" in context_a[0]["content"]
         assert "topic" in context_a[0]["content"]
 
-    def test_conversation_get_context_returns_copy_for_safety(self):
+    def test_conversation_get_context_returns_copy_for_safety(self) -> None:
         """Test that get_context returns tuple for safety and performance."""
         # Arrange
         conversation = Conversation("model_a", "model_b", "topic")
@@ -139,7 +139,7 @@ class TestFixes:
         # Tuple is immutable, so we can't modify it - this is the desired
         # behavior
 
-    def test_tui_app_uses_ui_constants_not_hardcoded_strings(self):
+    def test_tui_app_uses_ui_constants_not_hardcoded_strings(self) -> None:
         """Test that TUI application uses UI constants instead of hardcoded strings."""
         # This test verifies the fix by checking that the code no longer contains
         # hardcoded "#dialogue-log" strings
@@ -155,7 +155,7 @@ class TestFixes:
         assert 'f"#{UI_IDS.dialogue_log}"' in content
         assert "UI_IDS.dialogue_log" in content
 
-    def test_controller_handles_state_as_dataclass_properly(self):
+    def test_controller_handles_state_as_dataclass_properly(self) -> None:
         """Test that controller correctly handles UIState as dataclass."""
         # Arrange
 
@@ -185,7 +185,7 @@ class TestFixes:
         controller.handle_start()
         assert controller.state.is_dialogue_active is True
 
-    def test_config_validate_ollama_url_has_correct_exception_handling(self):
+    def test_config_validate_ollama_url_has_correct_exception_handling(self) -> None:
         """Test that validate_ollama_url has correct exception handling."""
         # Act & Assert
         # Should only catch ValueError, not TypeError
@@ -210,7 +210,7 @@ class TestFixes:
 class TestAsyncioAPICorrectness:
     """Tests for verifying correct asyncio API usage."""
 
-    def test_task_cancelled_method_exists(self):
+    def test_task_cancelled_method_exists(self) -> None:
         """Test that asyncio.Task has .cancelled attribute (Python 3.11+)."""
         import asyncio
 
@@ -220,7 +220,7 @@ class TestAsyncioAPICorrectness:
         assert hasattr(asyncio.Task, "cancelled")
         assert not hasattr(asyncio.Task, "is_cancelled")
 
-    def test_app_uses_correct_cancelled_method(self):
+    def test_app_uses_correct_cancelled_method(self) -> None:
         """Test that _is_task_cancelled uses correct method .cancelled()."""
         with open("/home/d/ai-dialogue-tui/tui/app.py", "r", encoding="utf-8") as f:
             content = f.read()

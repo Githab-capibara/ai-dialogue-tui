@@ -166,9 +166,7 @@ class TestDependencyInjection:
         assert service.provider is mock_provider
 
     def test_dialogue_controller_injects_service(self) -> None:
-        """
-        Verify that DialogueController receives service via constructor.
-        """
+        """Verify that DialogueController receives service via constructor."""
         mock_provider = AsyncMock(spec=ModelProvider)
         conversation = Conversation(
             model_a="test-a",
@@ -287,9 +285,7 @@ class TestServiceLayer:
         assert not service.is_paused
 
     def test_dialogue_service_clear_history(self) -> None:
-        """
-        Verify that DialogueService.clear_history works.
-        """
+        """Verify that DialogueService.clear_history works."""
         mock_provider = AsyncMock(spec=ModelProvider)
         conversation = Conversation(
             model_a="test-a",
@@ -314,9 +310,7 @@ class TestServiceLayer:
 
     @pytest.mark.asyncio
     async def test_dialogue_service_run_cycle(self) -> None:
-        """
-        Verify that DialogueService.run_dialogue_cycle works.
-        """
+        """Verify that DialogueService.run_dialogue_cycle works."""
         mock_provider = AsyncMock(spec=ModelProvider)
         mock_provider.generate.return_value = "Test response"
         mock_provider.close.return_value = None
@@ -348,9 +342,7 @@ class TestControllerLayer:
     """Tests for verifying controller layer."""
 
     def test_controller_handles_start(self) -> None:
-        """
-        Verify that DialogueController.handle_start works.
-        """
+        """Verify that DialogueController.handle_start works."""
         mock_provider = AsyncMock(spec=ModelProvider)
         conversation = Conversation(
             model_a="test-a",
@@ -371,9 +363,7 @@ class TestControllerLayer:
         assert service.is_running
 
     def test_controller_handles_pause(self) -> None:
-        """
-        Verify that DialogueController.handle_pause works.
-        """
+        """Verify that DialogueController.handle_pause works."""
         mock_provider = AsyncMock(spec=ModelProvider)
         conversation = Conversation(
             model_a="test-a",
@@ -395,9 +385,7 @@ class TestControllerLayer:
         assert service.is_paused
 
     def test_controller_handles_clear(self) -> None:
-        """
-        Verify that DialogueController.handle_clear works.
-        """
+        """Verify that DialogueController.handle_clear works."""
         mock_provider = AsyncMock(spec=ModelProvider)
         conversation = Conversation(
             model_a="test-a",

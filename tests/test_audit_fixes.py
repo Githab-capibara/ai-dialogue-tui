@@ -49,7 +49,7 @@ class TestBroadExceptionHandler:
     """Tests for verifying specific exception handling."""
 
     @pytest.mark.asyncio
-    async def test_json_decode_error_handling(self):
+    async def test_json_decode_error_handling(self) -> None:
         """
         Test: JSONDecodeError is caught and converted to ProviderGenerationError.
 
@@ -87,7 +87,7 @@ class TestBroadExceptionHandler:
             assert exc_info.value.__cause__ is not None
 
     @pytest.mark.asyncio
-    async def test_connection_error_handling(self):
+    async def test_connection_error_handling(self) -> None:
         """
         Test: ClientError is caught as ProviderConnectionError.
 
@@ -111,7 +111,7 @@ class TestBroadExceptionHandler:
             assert "could not connect" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_timeout_error_handling(self):
+    async def test_timeout_error_handling(self) -> None:
         """
         Test: asyncio.TimeoutError is caught as ProviderConnectionError.
 
@@ -141,7 +141,7 @@ class TestBroadExceptionHandler:
 class TestDependencyInjection:
     """Tests for verifying dependency injection via provider_factory."""
 
-    def test_provider_factory_can_be_injected(self):
+    def test_provider_factory_can_be_injected(self) -> None:
         """
         Test: provider_factory can be injected instead of concrete implementation.
 
@@ -163,7 +163,7 @@ class TestDependencyInjection:
         assert result is custom_provider
         assert result.list_models is custom_provider.list_models
 
-    def test_ollama_client_uses_injected_config(self):
+    def test_ollama_client_uses_injected_config(self) -> None:
         """
         Test: OllamaClient uses injected configuration.
 
@@ -191,7 +191,7 @@ class TestDependencyInjection:
 class TestSanitizerTypeValidation:
     """Tests for verifying type validation in sanitizer."""
 
-    def test_sanitize_topic_rejects_none(self):
+    def test_sanitize_topic_rejects_none(self) -> None:
         """
         Test: sanitize_topic raises TypeError on None.
 
@@ -203,7 +203,7 @@ class TestSanitizerTypeValidation:
 
         assert "string" in str(exc_info.value)
 
-    def test_sanitize_topic_rejects_non_string(self):
+    def test_sanitize_topic_rejects_non_string(self) -> None:
         """
         Test: sanitize_topic raises TypeError for non-string.
 
@@ -216,7 +216,7 @@ class TestSanitizerTypeValidation:
         with pytest.raises(TypeError):
             sanitize_topic(["topic"])  # type: ignore
 
-    def test_sanitize_response_rejects_none(self):
+    def test_sanitize_response_rejects_none(self) -> None:
         """
         Test: sanitize_response_for_display raises TypeError on None.
 
@@ -228,10 +228,8 @@ class TestSanitizerTypeValidation:
 
         assert "string" in str(exc_info.value)
 
-    def test_sanitize_response_rejects_non_string(self):
-        """
-        Test: sanitize_response_for_display raises TypeError for non-string.
-        """
+    def test_sanitize_response_rejects_non_string(self) -> None:
+        """Test: sanitize_response_for_display raises TypeError for non-string."""
         # Act & Assert
         with pytest.raises(TypeError):
             sanitize_response_for_display(123)  # type: ignore
@@ -245,7 +243,7 @@ class TestSanitizerTypeValidation:
 class TestAssertChecks:
     """Tests for verifying assert checks in code."""
 
-    def test_assert_validates_client_not_none(self):
+    def test_assert_validates_client_not_none(self) -> None:
         """
         Test: assert checks that client is not None.
 
@@ -262,7 +260,7 @@ class TestAssertChecks:
         # Assert - verify assert checks exist
         assert "assert" in source or "is not None" in source
 
-    def test_conversation_initialized_flag(self):
+    def test_conversation_initialized_flag(self) -> None:
         """
         Test: Conversation has required fields.
 
@@ -285,7 +283,7 @@ class TestAssertChecks:
 class TestProviderErrorUnifiedHandling:
     """Tests for verifying unified ProviderError handling."""
 
-    def test_all_provider_errors_inherit_from_base(self):
+    def test_all_provider_errors_inherit_from_base(self) -> None:
         """
         Test: all ProviderError exceptions inherit from base.
 
@@ -299,7 +297,7 @@ class TestProviderErrorUnifiedHandling:
         assert isinstance(connection_error, ProviderError)
         assert isinstance(generation_error, ProviderError)
 
-    def test_provider_error_has_message(self):
+    def test_provider_error_has_message(self) -> None:
         """
         Test: ProviderError preserves message.
 
@@ -311,7 +309,7 @@ class TestProviderErrorUnifiedHandling:
         # Act & Assert
         assert str(error) == "test message"
 
-    def test_provider_error_preserves_original_exception(self):
+    def test_provider_error_preserves_original_exception(self) -> None:
         """
         Test: ProviderError preserves original exception.
 
@@ -325,7 +323,7 @@ class TestProviderErrorUnifiedHandling:
         assert error.original_exception is original
 
     @pytest.mark.asyncio
-    async def test_unified_error_handling_in_client(self):
+    async def test_unified_error_handling_in_client(self) -> None:
         """
         Test: all errors in client are converted to ProviderError.
 
@@ -357,7 +355,7 @@ class TestExceptionChaining:
     """Tests for verifying exception chain preservation."""
 
     @pytest.mark.asyncio
-    async def test_exception_chain_preserved(self):
+    async def test_exception_chain_preserved(self) -> None:
         """
         Test: __cause__ is preserved when converting exceptions.
 
@@ -379,7 +377,7 @@ class TestExceptionChaining:
             # Assert
             assert exc_info.value.__cause__ is original_error
 
-    def test_provider_error_cause_property(self):
+    def test_provider_error_cause_property(self) -> None:
         """
         Test: ProviderError.original_exception returns passed exception.
 
@@ -403,7 +401,7 @@ class TestXSSProtection:
     """Tests for verifying XSS protection via markup escaping."""
 
     @pytest.mark.security
-    def test_square_brackets_escaped(self):
+    def test_square_brackets_escaped(self) -> None:
         """
         Test: square brackets are escaped.
 
@@ -422,7 +420,7 @@ class TestXSSProtection:
         assert "[[bold]]" in result
 
     @pytest.mark.security
-    def test_curly_braces_escaped(self):
+    def test_curly_braces_escaped(self) -> None:
         """
         Test: curly braces are escaped.
 
@@ -439,7 +437,7 @@ class TestXSSProtection:
         assert "}}" in result
 
     @pytest.mark.security
-    def test_html_entities_escaped(self):
+    def test_html_entities_escaped(self) -> None:
         """
         Test: HTML entities are escaped.
 
@@ -457,7 +455,7 @@ class TestXSSProtection:
         assert "&gt;" in result
 
     @pytest.mark.security
-    def test_special_characters_escaped(self):
+    def test_special_characters_escaped(self) -> None:
         """
         Test: special Textual characters are escaped.
 
@@ -477,7 +475,7 @@ class TestXSSProtection:
         assert "##" in result
 
     @pytest.mark.security
-    def test_sanitize_topic_escapes_injection(self):
+    def test_sanitize_topic_escapes_injection(self) -> None:
         """
         Test: sanitize_topic prevents prompt injection.
 
@@ -504,7 +502,7 @@ class TestXSSProtection:
 class TestContextDictionary:
     """Tests for verifying context dictionary in Conversation."""
 
-    def test_conversation_has_separate_contexts(self):
+    def test_conversation_has_separate_contexts(self) -> None:
         """
         Test: Conversation has separate contexts for models A and B.
 
@@ -518,7 +516,7 @@ class TestContextDictionary:
         assert hasattr(conversation, "_context_b")
         assert conversation._context_a is not conversation._context_b
 
-    def test_contexts_are_independent_lists(self):
+    def test_contexts_are_independent_lists(self) -> None:
         """
         Test: contexts are independent.
 
@@ -538,7 +536,7 @@ class TestContextDictionary:
         assert len(conversation._context_a) > 0
         assert len(conversation._context_b) == initial_len_b
 
-    def test_get_context_returns_correct_model_context(self):
+    def test_get_context_returns_correct_model_context(self) -> None:
         """
         Test: get_context returns correct context.
 
@@ -570,7 +568,7 @@ class TestContextDictionary:
 class TestTupleReturn:
     """Tests for verifying methods return tuple."""
 
-    def test_get_context_returns_tuple(self):
+    def test_get_context_returns_tuple(self) -> None:
         """
         Test: get_context returns tuple.
 
@@ -586,7 +584,7 @@ class TestTupleReturn:
         # Assert
         assert isinstance(result, tuple)
 
-    def test_list_models_returns_list(self):
+    def test_list_models_returns_list(self) -> None:
         """
         Test: list_models returns list.
 
@@ -612,7 +610,7 @@ class TestTupleReturn:
 class TestCacheSizeLimit:
     """Tests for verifying cache size limit."""
 
-    def test_models_cache_uses_ttl_only(self):
+    def test_models_cache_uses_ttl_only(self) -> None:
         """
         Test: _ModelsCache uses only TTL for invalidation.
 
@@ -641,7 +639,7 @@ class TestCacheSizeLimit:
 class TestMessageDictValidation:
     """Tests for verifying MessageDict validation."""
 
-    def test_message_dict_has_required_fields(self):
+    def test_message_dict_has_required_fields(self) -> None:
         """
         Test: MessageDict requires role and content.
 
@@ -654,7 +652,7 @@ class TestMessageDictValidation:
         assert "role" in MessageDict.__annotations__
         assert "content" in MessageDict.__annotations__
 
-    def test_message_dict_role_literal(self):
+    def test_message_dict_role_literal(self) -> None:
         """
         Test: role must be one of valid values.
 
@@ -673,7 +671,7 @@ class TestMessageDictValidation:
             or str(role_annotation).startswith("typing.Literal")
         )
 
-    def test_message_dict_content_str(self):
+    def test_message_dict_content_str(self) -> None:
         """
         Test: content must be string.
 
@@ -685,7 +683,7 @@ class TestMessageDictValidation:
         # Assert
         assert isinstance(content_annotation, type) or "str" in str(content_annotation)
 
-    def test_valid_message_dict(self):
+    def test_valid_message_dict(self) -> None:
         """
         Test: correct MessageDict is accepted.
 
@@ -699,7 +697,7 @@ class TestMessageDictValidation:
         assert message["content"] == "test"
 
     @pytest.mark.asyncio
-    async def test_ollama_client_validates_message_dict(self):
+    async def test_ollama_client_validates_message_dict(self) -> None:
         """
         Test: OllamaClient validates MessageDict.
 
@@ -726,7 +724,7 @@ class TestIntegration:
     """Integration tests for verifying component interaction."""
 
     @pytest.mark.asyncio
-    async def test_full_error_handling_chain(self):
+    async def test_full_error_handling_chain(self) -> None:
         """
         Test: full error handling chain.
 
@@ -751,7 +749,7 @@ class TestIntegration:
             assert exc_info.value.original_exception is original_error
 
     @pytest.mark.security
-    def test_xss_protection_end_to_end(self):
+    def test_xss_protection_end_to_end(self) -> None:
         """
         Test: XSS protection end-to-end.
 

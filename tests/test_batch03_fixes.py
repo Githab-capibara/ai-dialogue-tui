@@ -35,7 +35,7 @@ from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 class TestOllamaClientErrorHandling:
     """Tests for verifying proper exception logging in ollama_client.py."""
 
-    def test_provider_error_logging_uses_exc_info(self):
+    def test_provider_error_logging_uses_exc_info(self) -> None:
         """Verify ProviderError logging uses exc_info=True."""
         source = inspect.getsource(OllamaClient.list_models)
         assert "exc_info=True" in source
@@ -50,13 +50,13 @@ class TestOllamaClientErrorHandling:
 class TestConversationConfigInjection:
     """Tests for verifying config injection in Conversation class."""
 
-    def test_conversation_accepts_config_parameter(self):
+    def test_conversation_accepts_config_parameter(self) -> None:
         """Verify Conversation.__init__ accepts config parameter."""
         sig = inspect.signature(Conversation.__init__)
         params = list(sig.parameters.keys())
         assert "config" in params
 
-    def test_conversation_uses_injected_config(self):
+    def test_conversation_uses_injected_config(self) -> None:
         """Verify Conversation uses injected config instead of creating new."""
         custom_config = Config(default_system_prompt="Custom prompt: {topic}")
 
@@ -70,7 +70,7 @@ class TestConversationConfigInjection:
         context = conversation.get_context("A")
         assert "Custom prompt:" in context[0]["content"]
 
-    def test_conversation_uses_default_config_when_not_provided(self):
+    def test_conversation_uses_default_config_when_not_provided(self) -> None:
         """Verify Conversation creates default config when not provided."""
         conversation = Conversation(
             model_a="model_a",
@@ -81,7 +81,7 @@ class TestConversationConfigInjection:
         assert conversation._config is not None
         assert isinstance(conversation._config, Config)
 
-    def test_conversation_stores_config_instance(self):
+    def test_conversation_stores_config_instance(self) -> None:
         """Verify Conversation stores the config instance."""
         custom_config = Config(temperature=0.9)
         conversation = Conversation(
@@ -102,29 +102,29 @@ class TestConversationConfigInjection:
 class TestURLValidation:
     """Tests for verifying URL validation improvements."""
 
-    def test_validate_url_rejects_empty_scheme(self):
+    def test_validate_url_rejects_empty_scheme(self) -> None:
         """Verify validation rejects URLs with empty scheme."""
         assert validate_ollama_url("http:") is False
         assert validate_ollama_url("https:") is False
 
-    def test_validate_url_rejects_scheme_only(self):
+    def test_validate_url_rejects_scheme_only(self) -> None:
         """Verify validation rejects scheme-only URLs."""
         assert validate_ollama_url("http://") is False
         assert validate_ollama_url("https://") is False
 
-    def test_validate_url_accepts_valid_urls(self):
+    def test_validate_url_accepts_valid_urls(self) -> None:
         """Verify validation accepts valid URLs."""
         assert validate_ollama_url("http://localhost:11434") is True
         assert validate_ollama_url("https://example.com") is True
         assert validate_ollama_url("http://192.168.1.1:8080") is True
 
-    def test_validate_url_rejects_invalid_schemes(self):
+    def test_validate_url_rejects_invalid_schemes(self) -> None:
         """Verify validation rejects invalid schemes."""
         assert validate_ollama_url("ftp://localhost") is False
         assert validate_ollama_url("javascript://alert(1)") is False
         assert validate_ollama_url("data:text/html,<script>alert(1)</script>") is False
 
-    def test_validate_url_rejects_none_and_empty(self):
+    def test_validate_url_rejects_none_and_empty(self) -> None:
         """Verify validation rejects None and empty strings."""
         assert validate_ollama_url(None) is False
         assert validate_ollama_url("") is False
@@ -138,28 +138,28 @@ class TestURLValidation:
 class TestModelsCacheTTL:
     """Tests for verifying cache TTL handling."""
 
-    def test_cache_invalid_when_ttl_is_zero(self):
+    def test_cache_invalid_when_ttl_is_zero(self) -> None:
         """Verify cache is invalid when TTL is 0."""
         cache = _ModelsCache(ttl=0)
         cache.set(["model1", "model2"])
 
         assert cache._is_cache_valid() is False
 
-    def test_cache_invalid_when_ttl_is_negative(self):
+    def test_cache_invalid_when_ttl_is_negative(self) -> None:
         """Verify cache is invalid when TTL is negative."""
         cache = _ModelsCache(ttl=-1)
         cache.set(["model1", "model2"])
 
         assert cache._is_cache_valid() is False
 
-    def test_cache_valid_with_positive_ttl(self):
+    def test_cache_valid_with_positive_ttl(self) -> None:
         """Verify cache is valid with positive TTL."""
         cache = _ModelsCache(ttl=300)
         cache.set(["model1", "model2"])
 
         assert cache._is_cache_valid() is True
 
-    def test_cache_set_stores_models(self):
+    def test_cache_set_stores_models(self) -> None:
         """Verify set stores models correctly."""
         cache = _ModelsCache(ttl=300)
         cache.set(["model1", "model2"])
@@ -176,38 +176,38 @@ class TestModelsCacheTTL:
 class TestConfigEnvironmentVariables:
     """Tests for verifying environment variable support in Config."""
 
-    def test_config_reads_ollama_host_from_env(self):
+    def test_config_reads_ollama_host_from_env(self) -> None:
         """Verify Config reads OLLAMA_HOST from environment."""
         env_value = "http://custom-host:9999"
         with patch.dict(os.environ, {"OLLAMA_HOST": env_value}):
             config = Config()
             assert config.ollama_host == env_value
 
-    def test_config_reads_temperature_from_env(self):
+    def test_config_reads_temperature_from_env(self) -> None:
         """Verify Config reads OLLAMA_TEMPERATURE from environment."""
         with patch.dict(os.environ, {"OLLAMA_TEMPERATURE": "0.5"}):
             config = Config()
             assert config.temperature == 0.5
 
-    def test_config_reads_max_tokens_from_env(self):
+    def test_config_reads_max_tokens_from_env(self) -> None:
         """Verify Config reads OLLAMA_MAX_TOKENS from environment."""
         with patch.dict(os.environ, {"OLLAMA_MAX_TOKENS": "100"}):
             config = Config()
             assert config.max_tokens == 100
 
-    def test_config_reads_request_timeout_from_env(self):
+    def test_config_reads_request_timeout_from_env(self) -> None:
         """Verify Config reads OLLAMA_REQUEST_TIMEOUT from environment."""
         with patch.dict(os.environ, {"OLLAMA_REQUEST_TIMEOUT": "30"}):
             config = Config()
             assert config.request_timeout == 30
 
-    def test_config_ignores_invalid_env_values(self):
+    def test_config_ignores_invalid_env_values(self) -> None:
         """Verify Config ignores invalid environment variable values."""
         with patch.dict(os.environ, {"OLLAMA_TEMPERATURE": "invalid"}):
             config = Config()
             assert config.temperature == 0.7
 
-    def test_config_has_env_override_method(self):
+    def test_config_has_env_override_method(self) -> None:
         """Verify Config has _apply_env_overrides method."""
         config = Config()
         assert hasattr(config, "_apply_env_overrides")
@@ -222,25 +222,25 @@ class TestConfigEnvironmentVariables:
 class TestDialogueServiceCancellation:
     """Tests for verifying cancellation handling in DialogueService."""
 
-    def test_run_dialogue_cycle_handles_cancelled_error(self):
+    def test_run_dialogue_cycle_handles_cancelled_error(self) -> None:
         """Verify run_dialogue_cycle handles asyncio.CancelledError."""
         source = inspect.getsource(DialogueService.run_dialogue_cycle)
         assert "asyncio.CancelledError" in source
 
-    def test_cancelled_error_re_raised(self):
+    def test_cancelled_error_re_raised(self) -> None:
         """Verify CancelledError is re-raised after logging."""
         source = inspect.getsource(DialogueService.run_dialogue_cycle)
         cancelled_block = source[source.find("CancelledError") : source.find("CancelledError") + 200]
         assert "raise" in cancelled_block, "CancelledError should be re-raised"
 
-    def test_service_has_is_running_property(self):
+    def test_service_has_is_running_property(self) -> None:
         """Verify DialogueService has is_running property."""
         mock_conv = MagicMock()
         mock_provider = MagicMock()
         service = DialogueService(mock_conv, mock_provider)
         assert hasattr(service, "is_running")
 
-    def test_service_has_is_paused_property(self):
+    def test_service_has_is_paused_property(self) -> None:
         """Verify DialogueService has is_paused property."""
         mock_conv = MagicMock()
         mock_provider = MagicMock()
@@ -256,13 +256,13 @@ class TestDialogueServiceCancellation:
 class TestContextTrimming:
     """Tests for verifying context trimming logic fix."""
 
-    def test_trim_context_uses_instead_of_is(self):
+    def test_trim_context_uses_instead_of_is(self) -> None:
         """Verify _trim_context_if_needed uses 'in' instead of 'is'."""
         source = inspect.getsource(Conversation._trim_context_if_needed)
         assert "in last_messages" in source or "in" in source
         assert "is system_message" not in source
 
-    def test_trim_preserves_system_message_when_excluded(self):
+    def test_trim_preserves_system_message_when_excluded(self) -> None:
         """Verify system message is preserved when not in last_messages."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
@@ -274,7 +274,7 @@ class TestContextTrimming:
         assert result[0]["role"] == "system"
         assert len(result) <= 49
 
-    def test_trim_avoids_duplicate_system_message(self):
+    def test_trim_avoids_duplicate_system_message(self) -> None:
         """Verify no duplicate system message when context just exceeds limit."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
@@ -286,7 +286,7 @@ class TestContextTrimming:
         system_count = sum(1 for m in result if m["role"] == "system")
         assert system_count == 1, f"Expected 1 system message, got {system_count}"
 
-    def test_trim_at_max_context_boundary(self):
+    def test_trim_at_max_context_boundary(self) -> None:
         """Test trimming at MAX_CONTEXT_LENGTH boundary."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
@@ -299,7 +299,7 @@ class TestContextTrimming:
         system_count = sum(1 for m in result if m["role"] == "system")
         assert system_count == 1
 
-    def test_trim_does_not_modify_original_when_under_limit(self):
+    def test_trim_does_not_modify_original_when_under_limit(self) -> None:
         """Verify original context is not modified when under limit."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
@@ -319,70 +319,70 @@ class TestContextTrimming:
 class TestSanitizerInjectionProtection:
     """Tests for verifying HTML injection protection."""
 
-    def test_sanitize_topic_escapes_double_quotes(self):
+    def test_sanitize_topic_escapes_double_quotes(self) -> None:
         """Verify sanitize_topic escapes double quotes."""
         result = sanitize_topic('Hello "world"')
         assert "&quot;" in result
         assert '"' not in result
 
-    def test_sanitize_topic_escapes_html_entities(self):
+    def test_sanitize_topic_escapes_html_entities(self) -> None:
         """Verify sanitize_topic escapes HTML entities."""
         result = sanitize_topic("<script>alert(1)</script>")
         assert "&lt;" in result
         assert "&gt;" in result
         assert "<script>" not in result
 
-    def test_sanitize_topic_escapes_ampersand(self):
+    def test_sanitize_topic_escapes_ampersand(self) -> None:
         """Verify sanitize_topic escapes ampersands."""
         result = sanitize_topic("Tom & Jerry")
         assert "&amp;" in result
         assert result.count("&") == 1 and "&amp;" in result
 
-    def test_sanitize_topic_preserves_normal_text(self):
+    def test_sanitize_topic_preserves_normal_text(self) -> None:
         """Verify sanitize_topic preserves normal text."""
         result = sanitize_topic("Hello world")
         assert result == "Hello world"
 
-    def test_sanitize_response_escapes_double_quotes(self):
+    def test_sanitize_response_escapes_double_quotes(self) -> None:
         """Verify sanitize_response_for_display escapes double quotes."""
         result = sanitize_response_for_display('Hello "world"')
         assert "&quot;" in result
 
-    def test_sanitize_response_escapes_single_quotes(self):
+    def test_sanitize_response_escapes_single_quotes(self) -> None:
         """Verify sanitize_response_for_display escapes single quotes."""
         result = sanitize_response_for_display("Hello 'world'")
         assert "x27" in result or "&#39;" in result
         assert "'" not in result
 
-    def test_sanitize_response_escapes_angle_brackets(self):
+    def test_sanitize_response_escapes_angle_brackets(self) -> None:
         """Verify sanitize_response_for_display escapes angle brackets."""
         result = sanitize_response_for_display("<script>alert(1)</script>")
         assert "&lt;" in result
         assert "&gt;" in result
         assert "<script>" not in result
 
-    def test_sanitize_topic_html_entity_bypass(self):
+    def test_sanitize_topic_html_entity_bypass(self) -> None:
         """Verify sanitize_topic prevents HTML entity bypass attacks."""
         result = sanitize_topic("&lt;script&gt;alert(1)&lt;/script&gt;")
         assert "<" not in result
         assert ">" not in result
 
-    def test_sanitize_response_handles_empty_string(self):
+    def test_sanitize_response_handles_empty_string(self) -> None:
         """Verify sanitize_response handles empty string."""
         result = sanitize_response_for_display("")
         assert result == ""
 
-    def test_sanitize_topic_handles_empty_string(self):
+    def test_sanitize_topic_handles_empty_string(self) -> None:
         """Verify sanitize_topic handles empty string."""
         result = sanitize_topic("")
         assert result == ""
 
-    def test_sanitize_topic_handles_non_string(self):
+    def test_sanitize_topic_handles_non_string(self) -> None:
         """Verify sanitize_topic raises TypeError for non-string."""
         with pytest.raises(TypeError):
             sanitize_topic(123)
 
-    def test_sanitize_response_handles_non_string(self):
+    def test_sanitize_response_handles_non_string(self) -> None:
         """Verify sanitize_response raises TypeError for non-string."""
         with pytest.raises(TypeError):
             sanitize_response_for_display(123)
