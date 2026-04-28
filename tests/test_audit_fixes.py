@@ -153,7 +153,7 @@ class TestDependencyInjection:
         custom_provider.generate = AsyncMock(return_value="response")
         custom_provider.close = AsyncMock()
 
-        def provider_factory():
+        def provider_factory() -> MagicMock:
             return custom_provider
 
         # Act - verify factory returns our mock provider

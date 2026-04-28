@@ -4,7 +4,6 @@ This file documents all test files and their purposes.
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| test_audit_fixes.py | 886 | Verifies all code audit fixes (exception handling, XSS protection, context management) |
 | test_architecture.py | 499 | Architecture layer separation and dependency injection |
 | test_architecture_integrity.py | 942 | Comprehensive architecture integrity checks (42 tests) |
 | test_architecture_patterns.py | 201 | Architecture principles verification |
@@ -23,7 +22,7 @@ This file documents all test files and their purposes.
 | test_ui_nomatches_handling.py | 140 | UI error handling |
 | test_architecture_refactor.py | 172 | Architectural refactoring verification |
 
-**Total: 18 test files, 6218 lines, 371 tests**
+**Total: 17 test files, 6218 lines, 371 tests**
 
 Last updated: 2026-04-27
 

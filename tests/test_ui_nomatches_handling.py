@@ -54,10 +54,13 @@ class TestUINoMatchesHandling:
         test_state = UIState(status_text="Test", status_style="green")
 
         # Mock query_one to raise RuntimeError
+        runtime_error_msg = "Test runtime error"
+        no_matches_msg = "No nodes match {selector!r}"
+
         def mock_query_one(selector: str, widget_type: type) -> Label:
             if selector == "#status-value" and widget_type == Label:
-                raise RuntimeError("Test runtime error")
-            raise NoMatches(f"No nodes match {selector!r}")
+                raise RuntimeError(runtime_error_msg)
+            raise NoMatches(no_matches_msg)
 
         app.query_one = mock_query_one  # type: ignore[method-assign]
 
@@ -77,10 +80,13 @@ class TestUINoMatchesHandling:
         test_state = UIState(status_text="Test", status_style="green")
 
         # Mock query_one to raise LookupError
+        lookup_error_msg = "Test lookup error"
+        no_matches_msg = "No nodes match {selector!r}"
+
         def mock_query_one(selector: str, widget_type: type) -> Label:
             if selector == "#status-value" and widget_type == Label:
-                raise LookupError("Test lookup error")
-            raise NoMatches(f"No nodes match {selector!r}")
+                raise LookupError(lookup_error_msg)
+            raise NoMatches(no_matches_msg)
 
         app.query_one = mock_query_one  # type: ignore[method-assign]
 
@@ -102,10 +108,13 @@ class TestUINoMatchesHandling:
         test_state = UIState(status_text="Test", status_style="green")
 
         # Mock query_one to raise ScreenStackError
+        screen_stack_error_msg = "Test screen stack error"
+        no_matches_msg = "No nodes match {selector!r}"
+
         def mock_query_one(selector: str, widget_type: type) -> Label:
             if selector == "#status-value" and widget_type == Label:
-                raise ScreenStackError("Test screen stack error")
-            raise NoMatches(f"No nodes match {selector!r}")
+                raise ScreenStackError(screen_stack_error_msg)
+            raise NoMatches(no_matches_msg)
 
         app.query_one = mock_query_one  # type: ignore[method-assign]
 

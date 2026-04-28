@@ -51,10 +51,10 @@ def create_session_mock(
     return mock_session
 
 
-def create_mock_get_session(mock_session: AsyncMock):
+def create_mock_get_session(mock_session: AsyncMock) -> callable:
     """Create function for mocking _get_session method."""
 
-    async def mock_get_session(_self: OllamaClient) -> Any:
+    async def mock_get_session(_self: OllamaClient) -> AsyncMock:
         return mock_session
 
     return mock_get_session
@@ -67,12 +67,14 @@ class AsyncContextManagerMock:
         self._response = response
         self._raise_on_enter = raise_on_enter
 
-    async def __aenter__(self) -> Any:
+    async def __aenter__(self) -> AsyncMock | None:
+        """Enter async context manager."""
         if self._raise_on_enter:
             raise self._raise_on_enter
         return self._response
 
-    async def __aexit__(self, _exc_type: Any, _exc_val: Any, _exc_tb: Any) -> None:
+    async def __aexit__(self, _exc_type: type, _exc_val: BaseException, _exc_tb: object) -> None:
+        """Exit async context manager."""
         pass
 
 

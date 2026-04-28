@@ -29,13 +29,13 @@ class AsyncContextManagerMock:
         self._response = response
         self._raise_on_enter = raise_on_enter
 
-    async def __aenter__(self) -> Any:
+    async def __aenter__(self) -> AsyncMock | None:
         """Enter the async context manager."""
         if self._raise_on_enter:
             raise self._raise_on_enter
         return self._response
 
-    async def __aexit__(self, _exc_type: Any, _exc_val: Any, _exc_tb: Any) -> None:
+    async def __aexit__(self, _exc_type: type, _exc_val: BaseException, _exc_tb: object) -> None:
         """Exit the async context manager."""
         pass
 

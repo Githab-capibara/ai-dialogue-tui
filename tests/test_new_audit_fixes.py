@@ -151,7 +151,7 @@ class TestHTTPSessionManagerUsesLock:
         """Verify that get_session works with locking."""
         manager = _HTTPSessionManager(timeout=60)
 
-        async def get_sessions():
+        async def get_sessions() -> aiohttp.ClientSession:
             return await manager.get_session()
 
         results = await asyncio.gather(get_sessions(), get_sessions())
@@ -417,7 +417,7 @@ class TestIntegration:
         """Verify concurrent access safety to session manager."""
         manager = _HTTPSessionManager(timeout=60)
 
-        async def get_session_twice():
+        async def get_session_twice() -> tuple[aiohttp.ClientSession, aiohttp.ClientSession]:
             s1 = await manager.get_session()
             s2 = await manager.get_session()
             return s1, s2

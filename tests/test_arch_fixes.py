@@ -9,6 +9,8 @@ Note:
 
 import logging
 
+import pytest
+
 from models.conversation import Conversation
 
 
@@ -77,7 +79,7 @@ class TestConversationLogging:
 
         assert conversation_module.log.name == "models.conversation"
 
-    def test_conversation_add_message_logs(self, caplog) -> None:
+    def test_conversation_add_message_logs(self, caplog: pytest.LogCaptureFixture) -> None:
         """Тест, что add_message логирует добавление сообщения."""
         with caplog.at_level(logging.DEBUG):
             conv = Conversation("model_a", "model_b", "test_topic")
