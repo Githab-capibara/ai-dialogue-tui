@@ -13,7 +13,7 @@ import sys
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, TextIO
+from typing import ClassVar, TextIO
 
 import aiohttp
 from textual import on
@@ -40,9 +40,6 @@ from services.model_style_mapper import ModelStyleMapper
 from tui.constants import DEFAULT_NOTIFY_TIMEOUT, MESSAGE_STYLES, UI_IDS
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 from tui.styles import generate_main_css
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 # Компилируем regex на уровне модуля для производительности
 _LOG_CLEANUP_PATTERN = re.compile(r"\[/?\w+\]?")
@@ -695,7 +692,7 @@ class DialogueApp(App[None]):
         This method is called from async context (_process_dialogue_turn),
         so we use call_after_refresh instead of call_from_thread.
         """
-        error_text = error_detail if error_detail else "Generation failed"
+        error_text = error_detail or "Generation failed"
         error_msg = f"\n[{MESSAGE_STYLES.error}]Error ({model_name}): {error_text}[/]"
         # Use call_after_refresh since we are in async context, not
         # in a thread

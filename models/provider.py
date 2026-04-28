@@ -6,7 +6,7 @@ Allows replacing provider implementation without changing domain logic.
 
 from __future__ import annotations
 
-from typing import Literal, Protocol, TypeAlias, TypedDict, runtime_checkable
+from typing import Literal, Protocol, TypedDict, runtime_checkable
 
 
 class ProviderError(Exception):
@@ -120,4 +120,4 @@ __all__ = [
 ]
 
 # Type aliases для удобства
-UrlStr: TypeAlias = str
+type UrlStr = str

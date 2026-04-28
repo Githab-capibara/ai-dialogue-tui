@@ -158,7 +158,7 @@ class DialogueService:
             return DialogueTurnResult(
                 model_name=model_name,
                 model_id=model_id,
-                role="assistant",  # type: ignore[arg-type]
+                role="assistant",
                 response=response,
             )
 
