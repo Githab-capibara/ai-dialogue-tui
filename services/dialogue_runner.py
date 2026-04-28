@@ -7,15 +7,26 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from models.config import Config
 from models.provider import ProviderError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from services.dialogue_service import DialogueService, DialogueTurnResult
+
+
+class TurnCallback(Protocol):
+    """Protocol for turn result callback."""
+
+    def __call__(self, result: DialogueTurnResult) -> None: ...
+
+
+class ErrorCallback(Protocol):
+    """Protocol for error callback."""
+
+    def __call__(self, model_name: str) -> None: ...
+
 
 log = logging.getLogger(__name__)
 
@@ -55,8 +66,8 @@ class DialogueRunner:
 
     async def start(
         self,
-        on_turn: Callable[[DialogueTurnResult], None] | None = None,
-        on_error: Callable[[str], None] | None = None,
+        on_turn: TurnCallback | None = None,
+        on_error: ErrorCallback | None = None,
     ) -> None:
         """Start dialogue loop in background task.
 
@@ -84,8 +95,8 @@ class DialogueRunner:
 
     async def _run_loop(
         self,
-        on_turn: Callable[[DialogueTurnResult], None] | None = None,
-        on_error: Callable[[str], None] | None = None,
+        on_turn: TurnCallback | None = None,
+        on_error: ErrorCallback | None = None,
     ) -> None:
         """Run main dialogue loop.
 

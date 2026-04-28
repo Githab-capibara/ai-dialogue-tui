@@ -6,7 +6,7 @@ Allows replacing provider implementation without changing domain logic.
 
 from __future__ import annotations
 
-from typing import Literal, Protocol, TypedDict, runtime_checkable
+from typing import Literal, Protocol, TypeAlias, TypedDict, runtime_checkable
 
 
 class ProviderError(Exception):
@@ -67,7 +67,7 @@ class ProviderGenerationError(ProviderError):
     """
 
 
-class MessageDict(TypedDict, total=True):
+class MessageDict(TypedDict, total=False):
     """Message structure in Ollama-compatible format.
 
     Attributes:
@@ -118,3 +118,6 @@ __all__ = [
     "ProviderError",
     "ProviderGenerationError",
 ]
+
+# Type aliases для удобства
+UrlStr: TypeAlias = str

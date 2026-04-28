@@ -200,8 +200,13 @@ class Conversation:
 
         Command (command) - changes state, returns nothing.
         Use current_turn property to get the current turn.
+
+        Raises:
+            AssertionError: If current turn is invalid.
+
         """
         previous_turn = self._current_turn
+        assert previous_turn in ("A", "B"), f"Invalid turn: {previous_turn}"
         self._current_turn = "B" if self._current_turn == "A" else "A"
         log.debug(
             "Turn switched: model %s -> model %s",

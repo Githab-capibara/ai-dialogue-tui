@@ -9,3 +9,6 @@ build/
 .venv/
 venv/
 .env
+logs/
+_archived_reports/
+audit_reports/

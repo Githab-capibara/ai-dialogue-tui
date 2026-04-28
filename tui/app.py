@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
+import sys
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TextIO
 
@@ -42,8 +44,8 @@ from tui.styles import generate_main_css
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-
-import sys
+# Компилируем regex на уровне модуля для производительности
+_LOG_CLEANUP_PATTERN = re.compile(r"\[/?\w+\]?")
 
 LOG_DIR = Path("/log")
 try:
@@ -303,11 +305,8 @@ class DialogueApp(App[None]):
         self._dialogue_log_file: TextIO | None = None
 
         LOG_DIR.mkdir(exist_ok=True)
-        self._dialogue_log_file = open(
-            LOG_DIR / f"dialogue_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-            "w",
-            encoding="utf-8",
-        )
+        log_path = LOG_DIR / f"dialogue_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.txt"
+        self._dialogue_log_file = log_path.open("w", encoding="utf-8")
 
     def _create_default_provider(self) -> OllamaClient:
         """Create default Ollama provider."""
@@ -674,15 +673,13 @@ class DialogueApp(App[None]):
 
     def _write_to_log(self, message: str) -> None:
         """Safely write message to UI log and file."""
-        import re
-
-        clean_msg = re.sub(r"\[/?\w+\]?", "", message)
+        clean_msg = _LOG_CLEANUP_PATTERN.sub("", message)
         try:
             if hasattr(self, "_dialogue_log_file") and self._dialogue_log_file:
                 self._dialogue_log_file.write(clean_msg + "\n")
                 self._dialogue_log_file.flush()
-        except Exception:
-            pass
+        except OSError:
+            log.debug("Failed to write to log file: %s", message[:50])
         try:
             dialog_log: RichLog = self.query_one(
                 f"#{UI_IDS.dialogue_log}",

@@ -5,7 +5,7 @@ This module contains controllers for connecting business logic with UI.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
@@ -20,7 +20,7 @@ class StateChangeCallback(Protocol):
         ...
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class UIState:
     """UI state for display.
 
@@ -106,8 +106,7 @@ class DialogueController:
             style: Display style.
 
         """
-        self._state.status_text = text
-        self._state.status_style = style
+        self._state = replace(self._state, status_text=text, status_style=style)
         self._notify_state_changed()
 
     def handle_start(self) -> bool:
@@ -122,7 +121,7 @@ class DialogueController:
             return False
 
         self._service.start()
-        self._state.is_dialogue_active = True
+        self._state = replace(self._state, is_dialogue_active=True)
         self._update_status("Dialogue running...", "green")
         return True
 
@@ -152,7 +151,7 @@ class DialogueController:
         Clears dialogue contexts and resets turn counter.
         """
         self._service.clear_history()
-        self._state.turn_count = 0
+        self._state = replace(self._state, turn_count=0)
         self._update_status("History cleared", "dim")
 
     def handle_stop(self) -> None:
@@ -161,7 +160,7 @@ class DialogueController:
         Sets is_running and is_paused flags to False.
         """
         self._service.stop()
-        self._state.is_dialogue_active = False
+        self._state = replace(self._state, is_dialogue_active=False)
         self._update_status("Stopped", "dim")
 
     def update_for_turn(
@@ -176,8 +175,11 @@ class DialogueController:
             style: Display style (STYLE_MODEL_A or STYLE_MODEL_B).
 
         """
-        self._state.current_model = model_name
-        self._state.turn_count = self._service.turn_count
+        self._state = replace(
+            self._state,
+            current_model=model_name,
+            turn_count=self._service.turn_count,
+        )
         self._update_status(f"Turn: {model_name}", style)
 
     def update_for_error(self, model_name: str) -> None:

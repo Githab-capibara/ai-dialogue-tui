@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from models.config import Config
 from models.provider import ModelId, ModelProvider, ProviderError
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class DialogueTurnResult:
     """Result of one dialogue turn.
 
@@ -33,7 +33,7 @@ class DialogueTurnResult:
 
     model_name: str
     model_id: ModelId
-    role: str
+    role: Literal["assistant"]
     response: str
 
 
@@ -158,7 +158,7 @@ class DialogueService:
             return DialogueTurnResult(
                 model_name=model_name,
                 model_id=model_id,
-                role="assistant",
+                role="assistant",  # type: ignore[arg-type]
                 response=response,
             )
 

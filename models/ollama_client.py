@@ -86,14 +86,16 @@ class _RequestValidator:
                 raise TypeError(err_msg)
 
 
+# HTTP status code for successful response
+HTTP_OK: int = 200
+
+
 class _ResponseHandler:
     """Response handling from Ollama API.
 
     Encapsulates response processing and validation logic.
+    Uses module-level HTTP_OK constant.
     """
-
-    # HTTP status code for successful response
-    HTTP_OK: int = 200
 
     @staticmethod
     def validate_status_code(
@@ -112,7 +114,7 @@ class _ResponseHandler:
             ProviderGenerationError: If status code is not 200.
 
         """
-        if status != _ResponseHandler.HTTP_OK:
+        if status != HTTP_OK:
             msg = f"Error {operation}: HTTP {status}"
             if data is not None and isinstance(data, dict) and "error" in data:
                 error_msg = data.get("error")
@@ -255,10 +257,7 @@ class _HTTPSessionManager:
     async def close(self) -> None:
         """Close HTTP session."""
         if self._session and not self._session.closed:
-            with contextlib.suppress(
-                aiohttp.ClientError,
-                asyncio.TimeoutError,
-            ):
+            with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError):
                 await self._session.close()
 
 
@@ -398,11 +397,9 @@ class OllamaClient:
 
             except (aiohttp.ClientError, TimeoutError) as err:
                 if attempt == 0:
-                    _logger.warning(f"Request failed: {err}, retrying...")
-                    try:
+                    _logger.warning("Request failed: %s, retrying...", err)
+                    with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError):
                         await self.close()
-                    except Exception:
-                        pass
                     session = await self._get_session()
                     continue
                 msg = f"Could not connect to Ollama ({self.host}): {err}"
@@ -434,13 +431,17 @@ class OllamaClient:
     ) -> str:
         """Generate response from model.
 
+        Preconditions:
+            - model must be a non-empty string
+            - messages must be a non-empty list of valid MessageDict
+
         Args:
-            model: Model name.
+            model: Model name (must be non-empty string).
             messages: List of messages in Ollama format.
             **kwargs: Additional generation parameters.
 
         Returns:
-            Generated text.
+            Generated text (may be empty string on error).
 
         Raises:
             ProviderError: If generation failed.
@@ -462,15 +463,16 @@ class OllamaClient:
 
             except (aiohttp.ClientError, TimeoutError) as err:
                 if attempt == 0:
-                    _logger.warning(f"Request failed: {err}, retrying...")
-                    try:
+                    _logger.warning("Request failed: %s, retrying...", err)
+                    with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError):
                         await self.close()
-                    except Exception:
-                        pass
                     session = await self._get_session()
                     continue
                 timeout_val = self._config.sock_read_timeout
-                msg = f"Ollama request failed after {attempt + 1} attempts. {err}. Timeout: {timeout_val}s. Check timeout and increase if needed."
+                msg = (
+                    f"Ollama request failed after {attempt + 1} attempts. {err}. "
+                    f"Timeout: {timeout_val}s. Check timeout and increase if needed."
+                )
                 raise ProviderConnectionError(msg, err) from err
             except ProviderError:
                 _logger.debug("ProviderError during response generation")
