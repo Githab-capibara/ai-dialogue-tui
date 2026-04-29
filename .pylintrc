@@ -1,6 +1,7 @@
 [MAIN]
 ignore=venv,.git,__pycache__,.mypy_cache,.ruff_cache
-extension-pkg-whitelist=
+extension-pkg-allow-list=aiohttp,textual
+persistent=no
 
 [MESSAGES CONTROL]
 disable=design,refactoring,similarities,W2301

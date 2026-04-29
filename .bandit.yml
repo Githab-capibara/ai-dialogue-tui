@@ -3,6 +3,7 @@ exclude_dirs:
   - tests
   - docs
   - migrations
+  - .venv
   - venv
   - .git
   - __pycache__
