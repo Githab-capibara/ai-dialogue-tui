@@ -202,11 +202,13 @@ class Conversation:
         Use current_turn property to get the current turn.
 
         Raises:
-            AssertionError: If current turn is invalid.
+            ValueError: If current turn is invalid.
 
         """
         previous_turn = self._current_turn
-        assert previous_turn in ("A", "B"), f"Invalid turn: {previous_turn}"
+        if previous_turn not in ("A", "B"):
+            msg = f"Invalid turn: {previous_turn}"
+            raise ValueError(msg)
         self._current_turn = "B" if self._current_turn == "A" else "A"
         log.debug(
             "Turn switched: model %s -> model %s",

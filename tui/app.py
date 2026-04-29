@@ -10,10 +10,9 @@ import asyncio
 import logging
 import re
 import sys
-from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import ClassVar, TextIO
+from typing import TYPE_CHECKING, ClassVar, TextIO
 
 import aiohttp
 from textual import on
@@ -40,6 +39,9 @@ from services.model_style_mapper import ModelStyleMapper
 from tui.constants import DEFAULT_NOTIFY_TIMEOUT, MESSAGE_STYLES, UI_IDS
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 from tui.styles import generate_main_css
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Компилируем regex на уровне модуля для производительности
 _LOG_CLEANUP_PATTERN = re.compile(r"\[/?\w+\]?")
@@ -302,7 +304,7 @@ class DialogueApp(App[None]):
         self._dialogue_log_file: TextIO | None = None
 
         LOG_DIR.mkdir(exist_ok=True)
-        log_path = LOG_DIR / f"dialogue_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.txt"
+        log_path = LOG_DIR / f"dialogue_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}.txt"
         self._dialogue_log_file = log_path.open("w", encoding="utf-8")
 
     def _create_default_provider(self) -> OllamaClient:
