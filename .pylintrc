@@ -1,5 +1,5 @@
 [MAIN]
-ignore=venv,.git,__pycache__,.mypy_cache,.ruff_cache
+ignore=tests,venv,.git,__pycache__,.mypy_cache,.ruff_cache
 extension-pkg-allow-list=aiohttp,textual
 persistent=no
 
