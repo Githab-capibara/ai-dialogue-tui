@@ -746,29 +746,26 @@ class DialogueApp(App[None]):
             f"\n[{MESSAGE_STYLES.error}]Critical error[/]",
         )
 
-    async def on_unmount(self) -> None:
-        """Clean up on application close."""
-        async with self._cleanup_lock:
-            if self._cleanup_done:
-                return
-            self._cleanup_done = True
-
-        # Cancel dialogue task
-        if self._dialogue_task is not None:
-            if not self._dialogue_task.done():
-                self._dialogue_task.cancel()
-                try:
-                    await self._dialogue_task
-                except asyncio.CancelledError:
-                    pass
-                except Exception:
-                    log.debug("Error awaiting cancelled task")
+    async def _cleanup_dialogue_task(self) -> None:
+        """Cancel and await dialogue task."""
+        if self._dialogue_task is None or self._dialogue_task.done():
+            return
+        self._dialogue_task.cancel()
+        try:
+            await self._dialogue_task
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            log.debug("Error awaiting cancelled task")
+        finally:
             self._dialogue_task = None
 
-        # Clean up controller and client
+    async def _cleanup_controller(self) -> None:
+        """Clean up controller resources."""
+        if self._controller is None:
+            return
         try:
-            if self._controller is not None:
-                await self._controller.cleanup()
+            await self._controller.cleanup()
         except (aiohttp.ClientError, TimeoutError, OSError) as e:
             log.warning("Error during controller cleanup: %s", e)
         except Exception:
@@ -776,9 +773,12 @@ class DialogueApp(App[None]):
         finally:
             self._controller = None
 
+    async def _cleanup_client(self) -> None:
+        """Clean up client resources."""
+        if self._client is None:
+            return
         try:
-            if self._client is not None:
-                await self._client.close()
+            await self._client.close()
         except (aiohttp.ClientError, TimeoutError, OSError) as e:
             log.warning("Error during client cleanup: %s", e)
         except Exception:
@@ -786,14 +786,28 @@ class DialogueApp(App[None]):
         finally:
             self._client = None
 
-        # Close dialogue log file
+    def _cleanup_log_file(self) -> None:
+        """Close dialogue log file."""
+        if not hasattr(self, "_dialogue_log_file") or self._dialogue_log_file is None:
+            return
         try:
-            if hasattr(self, "_dialogue_log_file") and self._dialogue_log_file is not None:
-                self._dialogue_log_file.close()
+            self._dialogue_log_file.close()
         except Exception:
             log.debug("Error closing log file")
         finally:
             self._dialogue_log_file = None
+
+    async def on_unmount(self) -> None:
+        """Clean up on application close."""
+        async with self._cleanup_lock:
+            if self._cleanup_done:
+                return
+            self._cleanup_done = True
+
+        await self._cleanup_dialogue_task()
+        await self._cleanup_controller()
+        await self._cleanup_client()
+        self._cleanup_log_file()
 
 
 __all__ = [

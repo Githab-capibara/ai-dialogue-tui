@@ -286,15 +286,19 @@ class TestSeparateExceptionHandling:
 class TestCleanupOnUnmount:
     """Tests for verifying cleanup call on application stop."""
 
-    def test_on_unmount_calls_cleanup(self) -> None:
-        """Verify that on_unmount calls cleanup."""
+    def test_on_unmount_calls_cleanup_methods(self) -> None:
+        """Verify that on_unmount calls cleanup helper methods."""
         source = inspect.getsource(DialogueApp.on_unmount)
-        assert "await self._controller.cleanup()" in source
+        assert "_cleanup_dialogue_task" in source
+        assert "_cleanup_controller" in source
+        assert "_cleanup_client" in source
+        assert "_cleanup_log_file" in source
 
-    def test_on_unmount_cancels_dialogue_task(self) -> None:
-        """Verify that on_unmount cancels dialogue task."""
+    def test_on_unmount_uses_cleanup_lock(self) -> None:
+        """Verify that on_unmount uses cleanup lock."""
         source = inspect.getsource(DialogueApp.on_unmount)
-        assert "_dialogue_task.cancel()" in source or "cancel()" in source
+        assert "_cleanup_lock" in source
+        assert "_cleanup_done" in source
 
     @pytest.mark.asyncio
     async def test_on_unmount_handles_cleanup_error(self) -> None:
