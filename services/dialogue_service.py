@@ -177,8 +177,11 @@ class DialogueService:
         """
         try:
             await self._provider.close()
-        except Exception:
-            log.debug("Provider cleanup completed with non-critical error")
+        except AttributeError:
+            # Провайдер уже закрыт или None
+            log.debug("Provider already closed")
+        except Exception as e:
+            log.debug("Provider cleanup completed with non-critical error: %s", e)
 
 
 __all__ = [

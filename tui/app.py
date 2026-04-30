@@ -345,6 +345,21 @@ class DialogueApp(App[None]):
 
         yield Footer()
 
+    def _update_button_states(self) -> None:
+        """Update button enabled/disabled states based on app state."""
+        try:
+            start_btn = self.query_one(f"#{UI_IDS.start_btn}", Button)
+            pause_btn = self.query_one(f"#{UI_IDS.pause_btn}", Button)
+            clear_btn = self.query_one(f"#{UI_IDS.clear_btn}", Button)
+
+            # Start button enabled only after setup is complete
+            start_btn.disabled = not self._is_setup_complete
+            # Pause и Clear buttons enabled only when controller exists
+            pause_btn.disabled = self._controller is None
+            clear_btn.disabled = self._controller is None
+        except (NoMatches, LookupError, RuntimeError):
+            log.debug("Failed to update button states")
+
     def _on_ui_state_changed(self, state: UIState) -> None:
         """Handle UI state change.
 
@@ -514,6 +529,9 @@ class DialogueApp(App[None]):
                     status_style="green",
                 )
                 self._on_ui_state_changed(ready_state)
+
+                # Обновляем состояние кнопок после завершения настройки
+                self._update_button_states()
 
                 # Log initialization with error handling
                 try:

@@ -84,7 +84,7 @@ class TestSockReadTimeoutValidation:
     def test_default_sock_read_timeout(self) -> None:
         """Test that default sock_read_timeout is set correctly."""
         config = Config()
-        assert config.sock_read_timeout == 3600  # 1 час без ограничений
+        assert config.sock_read_timeout == 300  # 5 минут - разумный таймаут
 
     def test_custom_sock_read_timeout(self) -> None:
         """Test that custom sock_read_timeout value is accepted."""
@@ -134,7 +134,7 @@ class TestHTTPSessionManagerTimeout:
         """Test that OllamaClient uses default value from Config."""
         config = Config()
         client = OllamaClient(config=config)
-        assert client._http_manager._sock_read_timeout == 3600  # 1 час без ограничений
+        assert client._http_manager._sock_read_timeout == 300  # 5 минут - разумный таймаут
 
 
 class TestTimeoutErrorHandling:

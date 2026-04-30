@@ -201,8 +201,14 @@ class DialogueController:
         _log = logging.getLogger(__name__)
         try:
             await self._service.cleanup()
+        except AttributeError:
+            # Service already cleaned up
+            _log.debug("Controller cleanup: service already cleaned up")
         except Exception as e:
             _log.debug("Controller cleanup completed with non-critical error: %s", e)
+        finally:
+            # Гарантированно очищаем ссылку на сервис
+            self._service = None
 
 
 __all__ = ["DialogueController", "UIState"]

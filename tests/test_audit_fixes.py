@@ -811,18 +811,23 @@ class TestContextManagementOptimization:
     """HIGH 2: Test context management optimization."""
 
     def test_trim_before_add_message(self) -> None:
-        """Test that context is trimmed before adding message."""
+        """Test that context is trimmed before adding message.
+
+        With MAX_CONTEXT_LENGTH=128 and buffer=5, max is 123 messages + system = 124.
+        Add 130 to trigger trimming.
+        """
         conversation = Conversation(
             model_a="llama3",
             model_b="mistral",
             topic="Test",
         )
 
-        for i in range(60):
+        for i in range(130):
             conversation.add_message("A", "user", f"Message {i}")
 
         context_a = conversation.get_context("A")
-        assert len(context_a) <= 51
+        # Context should be trimmed to approximately 124 (MAX_CONTEXT_LENGTH - 5 + system message)
+        assert len(context_a) <= 125
 
 
 class TestOllamaClientNoExtraInstances:

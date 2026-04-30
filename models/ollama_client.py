@@ -256,17 +256,23 @@ class _HTTPSessionManager:
 
     async def close(self) -> None:
         """Close HTTP session and reset reference."""
-        if self._session and not self._session.closed:
-            with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError):
-                await self._session.close()
-        self._session = None
+        if self._session is not None:
+            if not self._session.closed:
+                try:
+                    await self._session.close()
+                except (aiohttp.ClientError, asyncio.CancelledError, RuntimeError):
+                    pass  # Игнорируем ошибки при закрытии
+            self._session = None
 
     async def close_session_only(self) -> None:
-        """Close current session without resetting reference or cache."""
-        if self._session and not self._session.closed:
-            with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError):
-                await self._session.close()
-        self._session = None
+        """Close current session without resetting reference."""
+        if self._session is not None:
+            if not self._session.closed:
+                try:
+                    await self._session.close()
+                except (aiohttp.ClientError, asyncio.CancelledError, RuntimeError):
+                    pass
+            self._session = None
 
 
 class _ModelsCache:
@@ -371,6 +377,14 @@ class OllamaClient:
         """Close HTTP session and clear cache."""
         await self._http_manager.close()
         self._models_cache.invalidate()
+
+    async def __aenter__(self) -> "OllamaClient":
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Async context manager exit - ensures proper cleanup."""
+        await self.close()
 
     async def list_models(self) -> list[str]:
         """Get list of available local models.

@@ -445,13 +445,13 @@ class TestContextLengthLimit:
         context = conversation.get_context("A")
         assert len(context) == initial_count + 5
 
-    def test_max_context_length_is_50(self) -> None:
+    def test_max_context_length_is_128(self) -> None:
         """
-        Verify that MAX_CONTEXT_LENGTH equals 50.
+        Verify that MAX_CONTEXT_LENGTH equals 128.
 
-        This value must be a constant.
+        This value was increased from 50 to 128 for longer dialogues.
         """
-        assert MAX_CONTEXT_LENGTH == 50
+        assert MAX_CONTEXT_LENGTH == 128
 
 
 # =============================================================================

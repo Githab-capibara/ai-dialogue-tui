@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 __all__ = ["Conversation", "ModelId"]
 
-MAX_CONTEXT_LENGTH: int = 50
+MAX_CONTEXT_LENGTH: int = 128  # Увеличиваем лимит для длинных диалогов
 
 
 @dataclass(slots=True)

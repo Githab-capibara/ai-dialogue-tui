@@ -33,8 +33,8 @@ __all__ = [
 # Default constants for generation parameters
 DEFAULT_TEMPERATURE: Final = 0.7
 DEFAULT_MAX_TOKENS: Final = -1  # No limit - модель думает сколько хочет
-DEFAULT_REQUEST_TIMEOUT: Final = 3600  # 1 час - модель думает сколько угодно
-DEFAULT_SOCK_READ_TIMEOUT: Final = 3600  # 1 час - без ограничений на размышления
+DEFAULT_REQUEST_TIMEOUT: Final = 300  # 5 минут - разумный таймаут для генерации
+DEFAULT_SOCK_READ_TIMEOUT: Final = 300  # 5 минут - достаточно для развёрнутых ответов
 DEFAULT_PAUSE_BETWEEN_MESSAGES: Final = 1.0  # seconds between messages
 
 # Системный промпт для развернутых ответов на русском языке
