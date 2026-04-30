@@ -361,6 +361,8 @@ class DialogueApp(App[None]):
             log.exception("LookupError when updating UI state")
         except RuntimeError:
             log.exception("RuntimeError when updating UI state")
+        except Exception:
+            log.debug("Unexpected error when updating UI state")
 
     async def on_mount(self) -> None:
         """Initialize on application start."""
@@ -537,6 +539,17 @@ class DialogueApp(App[None]):
             self.notify(
                 "Please select models and enter topic first!",
                 title="Not Ready",
+                severity="warning",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
+            )
+            return
+
+        # Проверяем, что предыдущая задача завершена или не запущена
+        if self._dialogue_task is not None and not self._dialogue_task.done():
+            log.warning("Dialogue task already running")
+            self.notify(
+                "Dialogue is already running!",
+                title="Already Running",
                 severity="warning",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
             )
@@ -740,36 +753,47 @@ class DialogueApp(App[None]):
                 return
             self._cleanup_done = True
 
-        try:
-            # Cancel dialogue task
-            if self._dialogue_task and not self._dialogue_task.done():
+        # Cancel dialogue task
+        if self._dialogue_task is not None:
+            if not self._dialogue_task.done():
                 self._dialogue_task.cancel()
                 try:
                     await self._dialogue_task
                 except asyncio.CancelledError:
                     pass
-                finally:
-                    self._dialogue_task = None
+                except Exception:
+                    log.debug("Error awaiting cancelled task")
+            self._dialogue_task = None
 
-            # Clean up controller and client
-            try:
-                if self._controller:
-                    await self._controller.cleanup()
-                elif self._client:
-                    await self._client.close()
-            except (aiohttp.ClientError, TimeoutError, OSError) as e:
-                log.warning("Error during resource cleanup: %s", e)
-            finally:
-                self._controller = None
-                self._client = None
+        # Clean up controller and client
+        try:
+            if self._controller is not None:
+                await self._controller.cleanup()
+        except (aiohttp.ClientError, TimeoutError, OSError) as e:
+            log.warning("Error during controller cleanup: %s", e)
+        except Exception:
+            log.debug("Unexpected error during controller cleanup")
+        finally:
+            self._controller = None
 
-            # Close dialogue log file
-            if hasattr(self, "_dialogue_log_file") and self._dialogue_log_file:
+        try:
+            if self._client is not None:
+                await self._client.close()
+        except (aiohttp.ClientError, TimeoutError, OSError) as e:
+            log.warning("Error during client cleanup: %s", e)
+        except Exception:
+            log.debug("Unexpected error during client cleanup")
+        finally:
+            self._client = None
+
+        # Close dialogue log file
+        try:
+            if hasattr(self, "_dialogue_log_file") and self._dialogue_log_file is not None:
                 self._dialogue_log_file.close()
-                self._dialogue_log_file = None
-
-        except RuntimeError:
-            log.exception("Unexpected error during cleanup")
+        except Exception:
+            log.debug("Error closing log file")
+        finally:
+            self._dialogue_log_file = None
 
 
 __all__ = [

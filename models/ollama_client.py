@@ -255,10 +255,11 @@ class _HTTPSessionManager:
             return self._session
 
     async def close(self) -> None:
-        """Close HTTP session."""
+        """Close HTTP session and reset reference."""
         if self._session and not self._session.closed:
             with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError):
                 await self._session.close()
+        self._session = None
 
 
 class _ModelsCache:

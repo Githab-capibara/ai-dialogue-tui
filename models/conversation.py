@@ -146,7 +146,9 @@ class Conversation:
         """Add message to model context."""
         context = self._context_a if model_id == "A" else self._context_b
 
-        if len(context) >= MAX_CONTEXT_LENGTH:
+        # Проверяем ДО добавления нового сообщения
+        # Оставляем место для нового сообщения (MAX_CONTEXT_LENGTH - 1)
+        if len(context) >= MAX_CONTEXT_LENGTH - 1:
             trimmed = self._trim_context_if_needed(context, MAX_CONTEXT_LENGTH - 2)
             if model_id == "A":
                 self._context_a = trimmed
