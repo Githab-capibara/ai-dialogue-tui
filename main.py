@@ -39,6 +39,22 @@ logging.getLogger().addHandler(file_handler)
 logging.getLogger("aiohttp").setLevel(logging.WARNING)
 
 
+async def _cleanup_app(app: DialogueApp) -> None:
+    """Cleanup application resources.
+
+    Args:
+        app: Application instance to cleanup.
+
+    """
+    try:
+        if hasattr(app, "_controller") and app._controller is not None:
+            await app._controller.cleanup()
+        if hasattr(app, "_client") and app._client is not None:
+            await app._client.close()
+    except Exception as e:
+        log.warning("Error during cleanup: %s", e)
+
+
 def main() -> int:
     """Run the TUI application with exception handling.
 
@@ -66,6 +82,24 @@ def main() -> int:
     except (RuntimeError, SystemError):
         log.exception("Critical application error")
         exit_code = 1
+    finally:
+        # Гарантированный cleanup ресурсов
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Если loop работает, создаём task для cleanup
+                # Задача будет выполнена при следующем цикле event loop
+                _cleanup_handle = loop.call_soon(
+                    lambda: asyncio.create_task(_cleanup_app(app))
+                )
+            else:
+                loop.run_until_complete(_cleanup_app(app))
+        except RuntimeError:
+            # Нет активного loop - пропускаем async cleanup
+            pass
+        except Exception as e:
+            log.warning("Error during final cleanup: %s", e)
+
     return exit_code
 
 

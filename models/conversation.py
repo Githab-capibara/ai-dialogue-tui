@@ -118,22 +118,31 @@ class Conversation:
         if max_len is None:
             max_len = MAX_CONTEXT_LENGTH
         effective_max = max_len if max_len is not None else MAX_CONTEXT_LENGTH
+
+        # Если контекст уже меньше или равен лимиту - не трогаем
         if len(context) <= effective_max:
             return context
 
         if not context:
             return context
 
-        last_messages = context[-effective_max:]
+        # Сохраняем system message и последние сообщения
         system_message = context[0]
+        last_messages = context[-effective_max:]
 
-        trimmed = list(last_messages) if system_message in last_messages else [system_message, *last_messages]
+        # Если system message уже в последних, не дублируем
+        if system_message in last_messages:
+            trimmed = list(last_messages)
+        else:
+            trimmed = [system_message, *last_messages]
 
-        log.warning(
-            "Context exceeded (%d messages), trimmed to %d",
-            len(context),
-            len(trimmed),
-        )
+        # Логируем только если реально обрезали
+        if len(trimmed) < len(context):
+            log.warning(
+                "Context exceeded (%d messages), trimmed to %d",
+                len(context),
+                len(trimmed),
+            )
 
         return trimmed
 
@@ -146,10 +155,13 @@ class Conversation:
         """Add message to model context."""
         context = self._context_a if model_id == "A" else self._context_b
 
+        # Целевой размер контекста после добавления нового сообщения
+        # Оставляем буфер в 5 сообщений для предотвращения частых trim
+        target_size = MAX_CONTEXT_LENGTH - 5
+
         # Проверяем ДО добавления нового сообщения
-        # Оставляем место для нового сообщения (MAX_CONTEXT_LENGTH - 1)
-        if len(context) >= MAX_CONTEXT_LENGTH - 1:
-            trimmed = self._trim_context_if_needed(context, MAX_CONTEXT_LENGTH - 2)
+        if len(context) >= target_size:
+            trimmed = self._trim_context_if_needed(context, target_size)
             if model_id == "A":
                 self._context_a = trimmed
                 context = trimmed

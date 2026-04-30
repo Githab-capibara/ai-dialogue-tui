@@ -261,6 +261,13 @@ class _HTTPSessionManager:
                 await self._session.close()
         self._session = None
 
+    async def close_session_only(self) -> None:
+        """Close current session without resetting reference or cache."""
+        if self._session and not self._session.closed:
+            with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError):
+                await self._session.close()
+        self._session = None
+
 
 class _ModelsCache:
     """Model list caching.
@@ -400,8 +407,8 @@ class OllamaClient:
                 error_msg = str(err) if str(err).strip() else repr(err) if err.args else type(err).__name__
                 if attempt == 0:
                     _logger.warning("Request failed: %s, retrying...", error_msg)
-                    with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError):
-                        await self.close()
+                    # Закрываем только текущую сессию без инвалидации кэша
+                    await self._http_manager.close_session_only()
                     session = await self._get_session()
                     continue
                 timeout_val = self._config.sock_read_timeout
@@ -468,8 +475,8 @@ class OllamaClient:
                 error_msg = str(err) if str(err).strip() else repr(err) if err.args else type(err).__name__
                 if attempt == 0:
                     _logger.warning("Request failed: %s, retrying...", error_msg)
-                    with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError):
-                        await self.close()
+                    # Закрываем только текущую сессию без инвалидации кэша
+                    await self._http_manager.close_session_only()
                     session = await self._get_session()
                     continue
                 timeout_val = self._config.sock_read_timeout

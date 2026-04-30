@@ -39,15 +39,15 @@ class TestUINoMatchesHandling:
         # Verify ERROR was not logged
         assert "Error updating UI state" not in caplog.text
 
-    def test_on_ui_state_changed_runtime_error_logged_as_error(
+    def test_on_ui_state_changed_runtime_error_logged_as_debug(
         self,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """
-        Test verifies that RuntimeError is logged at ERROR level.
+        Test verifies that RuntimeError is logged at DEBUG level.
 
-        Scenario: unexpected error during UI update should be
-        logged as ERROR with full traceback.
+        Scenario: RuntimeError during UI update (e.g., UI not mounted)
+        should be logged as DEBUG, not ERROR, since it's expected behavior.
         """
         config = Config()
         app = DialogueApp(config=config)
@@ -64,17 +64,17 @@ class TestUINoMatchesHandling:
 
         app.query_one = mock_query_one  # type: ignore[method-assign]
 
-        with caplog.at_level("ERROR"):
+        with caplog.at_level("DEBUG"):
             app._on_ui_state_changed(test_state)
 
-        # Verify ERROR was recorded
+        # Verify DEBUG was recorded
         assert "RuntimeError when updating UI state" in caplog.text
 
-    def test_on_ui_state_changed_lookup_error_logged_as_error(
+    def test_on_ui_state_changed_lookup_error_logged_as_debug(
         self,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Test verifies that LookupError is logged at ERROR level."""
+        """Test verifies that LookupError is logged at DEBUG level."""
         config = Config()
         app = DialogueApp(config=config)
         test_state = UIState(status_text="Test", status_style="green")
@@ -90,10 +90,10 @@ class TestUINoMatchesHandling:
 
         app.query_one = mock_query_one  # type: ignore[method-assign]
 
-        with caplog.at_level("ERROR"):
+        with caplog.at_level("DEBUG"):
             app._on_ui_state_changed(test_state)
 
-        # Verify ERROR was recorded
+        # Verify DEBUG was recorded
         assert "LookupError when updating UI state" in caplog.text
 
     def test_on_ui_state_changed_screen_stack_error_logged_as_debug(

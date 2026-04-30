@@ -195,8 +195,14 @@ class DialogueController:
         """Clean up controller and service resources.
 
         Calls dialogue service cleanup to release resources.
+        Suppresses all exceptions to ensure cleanup completes.
         """
-        await self._service.cleanup()
+        import logging
+        _log = logging.getLogger(__name__)
+        try:
+            await self._service.cleanup()
+        except Exception as e:
+            _log.debug("Controller cleanup completed with non-critical error: %s", e)
 
 
 __all__ = ["DialogueController", "UIState"]

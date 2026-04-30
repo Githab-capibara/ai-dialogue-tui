@@ -173,8 +173,12 @@ class DialogueService:
         """Clean up service resources.
 
         Closes connection to model provider.
+        All exceptions are suppressed to ensure cleanup completes.
         """
-        await self._provider.close()
+        try:
+            await self._provider.close()
+        except Exception:
+            log.debug("Provider cleanup completed with non-critical error")
 
 
 __all__ = [

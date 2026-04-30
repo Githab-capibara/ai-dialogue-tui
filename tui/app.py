@@ -356,12 +356,16 @@ class DialogueApp(App[None]):
             style_tag = f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
             status_label.update(style_tag)
         except (NoMatches, ScreenStackError):
+            # Элемент недоступен (модальное окно активно) - это нормально
             log.debug("Element #status-value not available for update")
         except LookupError:
-            log.exception("LookupError when updating UI state")
+            # Элемент не найден - логируем на debug уровне
+            log.debug("LookupError when updating UI state - element may not exist")
         except RuntimeError:
-            log.exception("RuntimeError when updating UI state")
+            # RuntimeError может быть при тестировании или неинициализированном UI
+            log.debug("RuntimeError when updating UI state - UI may not be mounted")
         except Exception:
+            # Все прочие ошибки также на debug уровне
             log.debug("Unexpected error when updating UI state")
 
     async def on_mount(self) -> None:
