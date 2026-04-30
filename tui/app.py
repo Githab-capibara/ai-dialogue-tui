@@ -309,6 +309,26 @@ class DialogueApp(App[None]):
         log_path = LOG_DIR / f"dialogue_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}.txt"
         self._dialogue_log_file = log_path.open("w", encoding="utf-8")
 
+    @property
+    def dialogue_task(self) -> asyncio.Task[None] | None:
+        """Get the dialogue task.
+
+        Returns:
+            The current dialogue task or None if not running.
+
+        """
+        return self._dialogue_task
+
+    @property
+    def controller(self) -> DialogueController | None:
+        """Get the dialogue controller.
+
+        Returns:
+            The current dialogue controller or None if not initialized.
+
+        """
+        return self._controller
+
     def _create_default_provider(self) -> OllamaClient:
         """Create default Ollama provider."""
         return OllamaClient(host=self._config.ollama_host)
@@ -804,7 +824,7 @@ class DialogueApp(App[None]):
             await self._dialogue_task
         except asyncio.CancelledError:
             pass
-        except Exception:
+        except RuntimeError:
             log.debug("Error awaiting cancelled task")
         finally:
             self._dialogue_task = None
@@ -815,10 +835,8 @@ class DialogueApp(App[None]):
             return
         try:
             await self._controller.cleanup()
-        except (aiohttp.ClientError, TimeoutError, OSError) as e:
+        except (aiohttp.ClientError, TimeoutError, OSError, AttributeError, asyncio.CancelledError) as e:
             log.warning("Error during controller cleanup: %s", e)
-        except Exception:
-            log.debug("Unexpected error during controller cleanup")
         finally:
             self._controller = None
 
@@ -828,10 +846,8 @@ class DialogueApp(App[None]):
             return
         try:
             await self._client.close()
-        except (aiohttp.ClientError, TimeoutError, OSError) as e:
+        except (aiohttp.ClientError, TimeoutError, OSError, AttributeError, asyncio.CancelledError) as e:
             log.warning("Error during client cleanup: %s", e)
-        except Exception:
-            log.debug("Unexpected error during client cleanup")
         finally:
             self._client = None
 
@@ -841,7 +857,7 @@ class DialogueApp(App[None]):
             return
         try:
             self._dialogue_log_file.close()
-        except Exception:
+        except OSError:
             log.debug("Error closing log file")
         finally:
             self._dialogue_log_file = None

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import logging
 import os
 import sys
@@ -41,30 +42,26 @@ logging.getLogger("aiohttp").setLevel(logging.WARNING)
 
 async def _cleanup_dialogue_task(app: DialogueApp) -> None:
     """Останавливаем dialogue task если он запущен."""
-    if not hasattr(app, "_dialogue_task") or app._dialogue_task is None:
+    if not hasattr(app, "dialogue_task") or app.dialogue_task is None:
         return
-    if app._dialogue_task.done():
+    if app.dialogue_task.done():
         return
 
-    app._dialogue_task.cancel()
+    app.dialogue_task.cancel()
     try:
-        await asyncio.wait_for(app._dialogue_task, timeout=5.0)
-    except (asyncio.CancelledError, asyncio.TimeoutError):
+        await asyncio.wait_for(app.dialogue_task, timeout=5.0)
+    except (TimeoutError, asyncio.CancelledError):
         pass
-    except Exception as e:
-        log.debug("Task cancellation: %s", e)
 
 
 async def _cleanup_controller(app: DialogueApp) -> None:
     """Очищаем controller."""
-    if not hasattr(app, "_controller") or app._controller is None:
+    if not hasattr(app, "controller") or app.controller is None:
         return
     try:
-        await asyncio.wait_for(app._controller.cleanup(), timeout=5.0)
-    except asyncio.TimeoutError:
-        log.debug("Controller cleanup timed out")
-    except Exception as e:
-        log.debug("Controller cleanup: %s", e)
+        await asyncio.wait_for(app.controller.cleanup(), timeout=5.0)
+    except (TimeoutError, asyncio.CancelledError, AttributeError):
+        log.debug("Controller cleanup timed out or cancelled")
 
 
 async def _cleanup_client(app: DialogueApp) -> None:
@@ -73,10 +70,8 @@ async def _cleanup_client(app: DialogueApp) -> None:
         return
     try:
         await asyncio.wait_for(app._client.close(), timeout=5.0)
-    except asyncio.TimeoutError:
-        log.debug("Client close timed out")
-    except Exception as e:
-        log.debug("Client close: %s", e)
+    except (TimeoutError, asyncio.CancelledError):
+        log.debug("Client close timed out or cancelled")
 
 
 def _cleanup_log_file(app: DialogueApp) -> None:
@@ -85,8 +80,8 @@ def _cleanup_log_file(app: DialogueApp) -> None:
         return
     try:
         app._dialogue_log_file.close()
-    except Exception as e:
-        log.debug("Log file close: %s", e)
+    except OSError:
+        log.debug("Log file close error")
 
 
 async def _cleanup_app(app: DialogueApp) -> None:
@@ -139,7 +134,6 @@ def main() -> int:
             try:
                 asyncio.get_running_loop()
                 # Если loop уже работает, запускаем cleanup в новом потоке
-                import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                     future = executor.submit(asyncio.run, _cleanup_app(app))
                     future.result(timeout=10.0)  # Ждём максимум 10 секунд

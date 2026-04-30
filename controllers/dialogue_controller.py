@@ -5,6 +5,8 @@ This module contains controllers for connecting business logic with UI.
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
@@ -195,16 +197,16 @@ class DialogueController:
         """Clean up controller and service resources.
 
         Calls dialogue service cleanup to release resources.
-        Suppresses all exceptions to ensure cleanup completes.
+        Suppresses specific exceptions to ensure cleanup completes.
         """
-        import logging
         _log = logging.getLogger(__name__)
         try:
             await self._service.cleanup()
         except AttributeError:
             # Service already cleaned up
             _log.debug("Controller cleanup: service already cleaned up")
-        except Exception as e:
+        except (asyncio.CancelledError, RuntimeError) as e:
+            # Handle cancellation or runtime errors during cleanup
             _log.debug("Controller cleanup completed with non-critical error: %s", e)
         finally:
             # Гарантированно очищаем ссылку на сервис
