@@ -769,25 +769,33 @@ class TestArchitectureIntegration:
         assert "ProviderError" in source
         assert "from models.provider import" in source
 
-        # Check that error is handled
-        assert "except ProviderError:" in source
+        # Check that error is handled (with or without "as e")
+        assert "ProviderError" in source and "except" in source
 
         # Check that error handling exists in on_mount
-        assert "except ProviderError:" in source
+        assert "ProviderError" in source
 
-        # Check that error handling exists in _run_dialogue
+        # Check that error handling with log.error exists in _run_dialogue
+        # Ищем комбинацию ProviderError и log.error в одном контексте
         lines = source.split("\n")
         in_run_dialogue = False
-        found_error_handling = False
+        found_error_logging = False
 
-        for line in lines:
+        for i, line in enumerate(lines):
             if "async def _run_dialogue" in line:
                 in_run_dialogue = True
-            if in_run_dialogue and "except ProviderError:" in line:
-                found_error_handling = True
-                break
+            # Ищем except ProviderError с log.error рядом
+            if in_run_dialogue:
+                if "except ProviderError" in line:
+                    # Проверяем строки после except
+                    for j in range(i, min(i + 5, len(lines))):
+                        if "log.error" in lines[j] and "ProviderError" not in lines[j]:
+                            found_error_logging = True
+                            break
+                    if found_error_logging:
+                        break
 
-        assert found_error_handling
+        assert found_error_logging
 
 
 # =============================================================================

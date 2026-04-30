@@ -6,6 +6,7 @@ Depends only on abstractions (protocols), not on concrete implementations.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from typing import Literal
@@ -301,7 +302,8 @@ class Conversation:
             self.add_message(other_id, "user", response)
             self.switch_turn()
 
-        except Exception:
+        except (AttributeError, TypeError, RuntimeError, asyncio.CancelledError):
+            # Откатываем состояние при ошибках генерации
             self._context_a = context_a_snapshot
             self._context_b = context_b_snapshot
             self._current_turn = turn_snapshot

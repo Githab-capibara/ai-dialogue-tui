@@ -67,7 +67,7 @@ class ProviderGenerationError(ProviderError):
     """
 
 
-class MessageDict(TypedDict, total=False):
+class MessageDict(TypedDict, total=True):
     """Message structure in Ollama-compatible format.
 
     Attributes:

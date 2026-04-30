@@ -164,18 +164,20 @@ class TestHTTPSessionManagerUsesLock:
 
 
 class TestDialogueServiceUsesLogException:
-    """Tests for verifying log.warning usage in DialogueService."""
+    """Tests for verifying log.error usage in DialogueService."""
 
-    def test_run_dialogue_cycle_uses_log_warning(self) -> None:
-        """Verify that log.warning is used for ProviderError handling."""
+    def test_run_dialogue_cycle_uses_log_error(self) -> None:
+        """Verify that log.error is used for ProviderError handling."""
         source = inspect.getsource(DialogueService.run_dialogue_cycle)
-        assert "log.warning" in source
+        # ProviderError теперь логируется на error уровне
+        assert "log.error" in source
 
-    def test_provider_error_caught_with_warning_logging(self) -> None:
-        """Verify ProviderError handling with log.warning."""
+    def test_provider_error_caught_with_error_logging(self) -> None:
+        """Verify ProviderError handling with log.error."""
         source = inspect.getsource(DialogueService.run_dialogue_cycle)
         assert "ProviderError" in source
-        assert "log.warning" in source
+        # После рефакторинга используется error уровень
+        assert "log.error" in source
 
 
 # =============================================================================

@@ -165,8 +165,8 @@ class DialogueService:
         except asyncio.CancelledError:
             log.info("Dialogue cycle cancelled")
             raise
-        except ProviderError:
-            log.warning("Provider error during dialogue cycle execution")
+        except ProviderError as e:
+            log.error("Provider error during dialogue cycle execution: %s", e)
             raise
 
     async def cleanup(self) -> None:
@@ -180,8 +180,9 @@ class DialogueService:
         except AttributeError:
             # Провайдер уже закрыт или None
             log.debug("Provider already closed")
-        except Exception as e:
-            log.debug("Provider cleanup completed with non-critical error: %s", e)
+        except (OSError, RuntimeError, asyncio.CancelledError) as e:
+            # Ожидаемые ошибки при cleanup - логируем на warning
+            log.warning("Provider cleanup completed with non-critical error: %s", e)
 
 
 __all__ = [

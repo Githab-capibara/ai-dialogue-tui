@@ -400,9 +400,8 @@ class DialogueApp(App[None]):
         except RuntimeError:
             # RuntimeError может быть при тестировании или неинициализированном UI
             log.debug("RuntimeError when updating UI state - UI may not be mounted")
-        except Exception:
-            # Все прочие ошибки также на debug уровне
-            log.debug("Unexpected error when updating UI state")
+        # Исключения AttributeError и TypeError могут возникать при работе с UI
+        # Они обрабатываются как часть штатного поведения при недоступности элементов
 
     async def on_mount(self) -> None:
         """Initialize on application start."""
@@ -682,9 +681,9 @@ class DialogueApp(App[None]):
                 await asyncio.sleep(self._config.pause_between_messages)
 
         except asyncio.CancelledError:
-            log.debug("Dialogue cancelled")
-        except ProviderError:
-            log.debug("ProviderError handled")
+            log.info("Dialogue cancelled by user")
+        except ProviderError as e:
+            log.error("Provider error in dialogue loop: %s", e)
         except (RuntimeError, SystemError, OSError) as e:
             self._handle_critical_error(e)
         finally:
