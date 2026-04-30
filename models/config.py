@@ -32,10 +32,25 @@ __all__ = [
 
 # Default constants for generation parameters
 DEFAULT_TEMPERATURE: Final = 0.7
-DEFAULT_MAX_TOKENS: Final = -1  # No limit
-DEFAULT_REQUEST_TIMEOUT: Final = 60  # seconds per request to Ollama
-DEFAULT_SOCK_READ_TIMEOUT: Final = 600  # 10 minutes for large models
+DEFAULT_MAX_TOKENS: Final = -1  # No limit - модель думает сколько хочет
+DEFAULT_REQUEST_TIMEOUT: Final = 3600  # 1 час - модель думает сколько угодно
+DEFAULT_SOCK_READ_TIMEOUT: Final = 3600  # 1 час - без ограничений на размышления
 DEFAULT_PAUSE_BETWEEN_MESSAGES: Final = 1.0  # seconds between messages
+
+# Системный промпт для развернутых ответов на русском языке
+DEFAULT_SYSTEM_PROMPT: Final = (
+    "Ты участвуешь в увлекательном диалоге на тему: '{topic}'. "
+    "Твоя задача — давать максимально развёрнутые, глубокие и подробные ответы. "
+    "Не ограничивай себя краткостью — раскрывай тему со всех сторон, приводи примеры, "
+    "рассуждай вслух, анализируй контраргументы, приводи аналогии и сравнения. "
+    "Используй сложные конструкции, передавай нюансы и оттенки смысла. "
+    "Если нужно — разбивай ответ на части, используй абзацы для логической структуры. "
+    "Выражай своё мнение аргументированно, ссылаясь на факты и логику. "
+    "Будь как настоящий эксперт в дискуссии — мысли вслух, сомневайся, исследуй, "
+    "а затем приходи к обоснованным выводам. "
+    "Всё общение ведётся на русском языке. "
+    "Отвечай так, будто пишешь развёрнутую статью или эссе, но сохраняя живость диалога."
+)
 
 # Validation ranges
 MIN_TEMPERATURE: Final = 0.0
@@ -159,12 +174,8 @@ class Config:
     sock_read_timeout: int = DEFAULT_SOCK_READ_TIMEOUT
     pause_between_messages: float = DEFAULT_PAUSE_BETWEEN_MESSAGES
 
-    # System prompt
-    default_system_prompt: str = (
-        "You are participating in a dialogue on the topic '{topic}'. "
-        "Respond briefly and to the point. Do not repeat yourself. "
-        "Behave like a live conversational partner."
-    )
+    # System prompt - развернутые ответы на русском
+    default_system_prompt: str = DEFAULT_SYSTEM_PROMPT
 
     # Ollama API URL (default is local)
     ollama_host: str = "http://localhost:11434"

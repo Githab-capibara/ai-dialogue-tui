@@ -98,7 +98,8 @@ async def test_generate_uses_self_config() -> None:
     mock_session.post.assert_called_once()
     payload = mock_session.post.call_args[1]["json"]
     assert payload["options"]["temperature"] == custom_temp
-    assert payload["options"]["num_predict"] == custom_tokens
+    # num_predict НЕ ограничиваем - пусть модель думает сколько хочет
+    assert "num_predict" not in payload["options"]
 
     await client.close()
 

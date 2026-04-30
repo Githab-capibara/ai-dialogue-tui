@@ -529,13 +529,14 @@ class OllamaClient:
         messages: list[MessageDict],
         kwargs: dict[str, float | int],
     ) -> dict[str, Any]:
-        """Build request payload for generate method."""
+        """Build request payload for generate method.
+
+        Не ограничиваем количество токенов - модель сама решает сколько думать.
+        """
         options: dict[str, Any] = {
             "temperature": kwargs.get("temperature", self._config.temperature),
         }
-        max_tokens = self._config.max_tokens
-        if max_tokens > 0:
-            options["num_predict"] = max_tokens
+        # НЕ ограничиваем max_tokens - пусть модель думает сколько хочет
 
         return {
             "model": model,
