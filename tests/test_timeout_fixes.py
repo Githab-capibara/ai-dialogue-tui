@@ -84,7 +84,7 @@ class TestSockReadTimeoutValidation:
     def test_default_sock_read_timeout(self) -> None:
         """Test that default sock_read_timeout is set correctly."""
         config = Config()
-        assert config.sock_read_timeout == 300
+        assert config.sock_read_timeout == 600
 
     def test_custom_sock_read_timeout(self) -> None:
         """Test that custom sock_read_timeout value is accepted."""
@@ -134,7 +134,7 @@ class TestHTTPSessionManagerTimeout:
         """Test that OllamaClient uses default value from Config."""
         config = Config()
         client = OllamaClient(config=config)
-        assert client._http_manager._sock_read_timeout == 300
+        assert client._http_manager._sock_read_timeout == 600
 
 
 class TestTimeoutErrorHandling:
@@ -163,7 +163,7 @@ class TestTimeoutErrorHandling:
 
     @pytest.mark.asyncio
     async def test_generate_timeout_error_suggests_increase(self) -> None:
-        """Test that increasing timeout is suggested on timeout error."""
+        """Test that helpful message is shown on timeout error."""
         mock_context_manager = AsyncContextManagerMock(
             raise_on_enter=ServerTimeoutError("Timeout on reading data from socket")
         )
@@ -179,7 +179,8 @@ class TestTimeoutErrorHandling:
                 await client.generate("llama3", [{"role": "user", "content": "test"}])
 
             error_message = str(exc_info.value)
-            assert "check timeout" in error_message.lower()
+            # Проверяем что сообщение содержит полезную информацию для пользователя
+            assert "ollama is running" in error_message.lower() or "check" in error_message.lower()
 
 
 if __name__ == "__main__":

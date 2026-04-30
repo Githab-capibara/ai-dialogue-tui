@@ -303,6 +303,7 @@ class DialogueApp(App[None]):
         self._cleanup_done = False
         self._cleanup_lock = asyncio.Lock()
         self._dialogue_log_file: TextIO | None = None
+        self._is_setup_complete = False  # Флаг для отслеживания завершения настройки
 
         LOG_DIR.mkdir(exist_ok=True)
         log_path = LOG_DIR / f"dialogue_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}.txt"
@@ -506,6 +507,7 @@ class DialogueApp(App[None]):
             # Update title and status via call_after_refresh
             # so UI has time to update after modal closes
             def _finalize_setup() -> None:
+                self._is_setup_complete = True  # Устанавливаем флаг после завершения настройки
                 self.sub_title = f"{model_a} <-> {model_b} | Topic: {sanitized_topic}"
                 ready_state = UIState(
                     status_text="Ready to start",
@@ -538,10 +540,11 @@ class DialogueApp(App[None]):
     @on(Button.Pressed, f"#{UI_IDS.start_btn}")
     def on_start_pressed(self) -> None:
         """Start dialogue."""
-        if self._controller is None:
-            log.error("Controller not initialized")
+        # Проверяем флаг завершения настройки
+        if not self._is_setup_complete or self._controller is None:
+            log.warning("Start pressed before setup complete")
             self.notify(
-                "Please select models and enter topic first!",
+                "Please wait for model selection and topic input to complete!",
                 title="Not Ready",
                 severity="warning",
                 timeout=DEFAULT_NOTIFY_TIMEOUT,
@@ -728,7 +731,21 @@ class DialogueApp(App[None]):
         This method is called from async context (_process_dialogue_turn),
         so we use call_after_refresh instead of call_from_thread.
         """
-        error_text = error_detail or "Generation failed"
+        # Улучшенное форматирование ошибки для пользователя
+        if "Timeout" in error_detail or "timeout" in error_detail.lower():
+            error_text = (
+                "Ollama timed out. The model may be slow or overloaded. "
+                "Try a smaller model or wait and restart."
+            )
+        elif "Connection" in error_detail or "connect" in error_detail.lower():
+            error_text = (
+                "Cannot connect to Ollama. Check that Ollama is running."
+            )
+        elif "failed" in error_detail.lower():
+            error_text = f"Generation failed: {error_detail}"
+        else:
+            error_text = error_detail or "Generation failed"
+
         error_msg = f"\n[{MESSAGE_STYLES.error}]Error ({model_name}): {error_text}[/]"
         # Use call_after_refresh since we are in async context, not
         # in a thread
@@ -736,18 +753,28 @@ class DialogueApp(App[None]):
         if self._controller:
             self._controller.update_for_error(model_name)
         self.notify(
-            f"Error ({model_name}): {error_text}",
-            title="Error",
+            error_text,
+            title=f"Error: {model_name}",
             severity="error",
-            timeout=DEFAULT_NOTIFY_TIMEOUT,
+            timeout=DEFAULT_NOTIFY_TIMEOUT * 2,  # Увеличиваем время показа
         )
 
     def _handle_critical_error(self, _e: BaseException) -> None:
         """Handle critical error in dialogue loop."""
         log.exception("Critical error in dialogue loop")
+        error_msg = (
+            f"\n[{MESSAGE_STYLES.error}]Critical error[/]: "
+            "An unexpected error occurred. Please restart the application."
+        )
         self.call_after_refresh(
             self._write_to_log,
-            f"\n[{MESSAGE_STYLES.error}]Critical error[/]",
+            error_msg,
+        )
+        self.notify(
+            "Critical error occurred. Please restart.",
+            title="Critical Error",
+            severity="error",
+            timeout=DEFAULT_NOTIFY_TIMEOUT * 2,
         )
 
     async def _cleanup_dialogue_task(self) -> None:

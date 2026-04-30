@@ -34,7 +34,7 @@ __all__ = [
 DEFAULT_TEMPERATURE: Final = 0.7
 DEFAULT_MAX_TOKENS: Final = -1  # No limit
 DEFAULT_REQUEST_TIMEOUT: Final = 60  # seconds per request to Ollama
-DEFAULT_SOCK_READ_TIMEOUT: Final = 300  # 5 minutes for reading response
+DEFAULT_SOCK_READ_TIMEOUT: Final = 600  # 10 minutes for large models
 DEFAULT_PAUSE_BETWEEN_MESSAGES: Final = 1.0  # seconds between messages
 
 # Validation ranges

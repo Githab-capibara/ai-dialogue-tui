@@ -393,7 +393,10 @@ class OllamaClient:
         session = await self._get_session()
         url = urljoin(self.host, "/api/tags")
 
-        for attempt in range(2):
+        max_retries = 3
+        base_delay = 1.0  # Начальная задержка в секундах
+
+        for attempt in range(max_retries):
             try:
                 async with session.get(url) as response:
                     data = await self._parse_json_response(response)
@@ -405,14 +408,23 @@ class OllamaClient:
 
             except (aiohttp.ClientError, TimeoutError) as err:
                 error_msg = str(err) if str(err).strip() else repr(err) if err.args else type(err).__name__
-                if attempt == 0:
-                    _logger.warning("Request failed: %s, retrying...", error_msg)
-                    # Закрываем только текущую сессию без инвалидации кэша
+                if attempt < max_retries - 1:
+                    # Экспоненциальная задержка: 1, 2, 4 секунды
+                    delay = base_delay * (2 ** attempt)
+                    _logger.warning(
+                        "Request failed (attempt %d/%d): %s, retrying in %.1fs...",
+                        attempt + 1,
+                        max_retries,
+                        error_msg,
+                        delay,
+                    )
+                    # Закрываем текущую сессию без инвалидации кэша
                     await self._http_manager.close_session_only()
                     session = await self._get_session()
+                    await asyncio.sleep(delay)
                     continue
                 timeout_val = self._config.sock_read_timeout
-                msg = f"Could not connect to Ollama ({self.host}): {error_msg}. Timeout: {timeout_val}s"
+                msg = f"Could not connect to Ollama ({self.host}): {error_msg}. Timeout: {timeout_val}s. Check that Ollama is running."
                 raise ProviderConnectionError(msg, err) from err
             except ProviderError:
                 _logger.debug("ProviderError when getting models list", exc_info=True)
@@ -463,7 +475,10 @@ class OllamaClient:
         url = urljoin(self.host, "/api/chat")
         payload = self._build_request_payload(model, messages, kwargs)
 
-        for attempt in range(2):
+        max_retries = 3
+        base_delay = 2.0  # Начальная задержка в секундах
+
+        for attempt in range(max_retries):
             try:
                 async with session.post(url, json=payload) as response:
                     data = await self._parse_json_response(response)
@@ -473,16 +488,26 @@ class OllamaClient:
 
             except (aiohttp.ClientError, TimeoutError) as err:
                 error_msg = str(err) if str(err).strip() else repr(err) if err.args else type(err).__name__
-                if attempt == 0:
-                    _logger.warning("Request failed: %s, retrying...", error_msg)
-                    # Закрываем только текущую сессию без инвалидации кэша
+                if attempt < max_retries - 1:
+                    # Экспоненциальная задержка: 2, 4, 8 секунд
+                    delay = base_delay * (2 ** attempt)
+                    _logger.warning(
+                        "Request failed (attempt %d/%d): %s, retrying in %.1fs...",
+                        attempt + 1,
+                        max_retries,
+                        error_msg,
+                        delay,
+                    )
+                    # Закрываем текущую сессию и создаём новую
                     await self._http_manager.close_session_only()
                     session = await self._get_session()
+                    await asyncio.sleep(delay)
                     continue
+                # Последняя попытка не удалась
                 timeout_val = self._config.sock_read_timeout
                 msg = (
-                    f"Ollama request failed after {attempt + 1} attempts. {error_msg}. "
-                    f"Timeout: {timeout_val}s. Check timeout and increase if needed."
+                    f"Ollama request failed after {max_retries} attempts. {error_msg}. "
+                    f"Timeout: {timeout_val}s. Check that Ollama is running and model is loaded."
                 )
                 raise ProviderConnectionError(msg, err) from err
             except ProviderError:

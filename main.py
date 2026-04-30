@@ -39,6 +39,56 @@ logging.getLogger().addHandler(file_handler)
 logging.getLogger("aiohttp").setLevel(logging.WARNING)
 
 
+async def _cleanup_dialogue_task(app: DialogueApp) -> None:
+    """Останавливаем dialogue task если он запущен."""
+    if not hasattr(app, "_dialogue_task") or app._dialogue_task is None:
+        return
+    if app._dialogue_task.done():
+        return
+
+    app._dialogue_task.cancel()
+    try:
+        await asyncio.wait_for(app._dialogue_task, timeout=5.0)
+    except (asyncio.CancelledError, asyncio.TimeoutError):
+        pass
+    except Exception as e:
+        log.debug("Task cancellation: %s", e)
+
+
+async def _cleanup_controller(app: DialogueApp) -> None:
+    """Очищаем controller."""
+    if not hasattr(app, "_controller") or app._controller is None:
+        return
+    try:
+        await asyncio.wait_for(app._controller.cleanup(), timeout=5.0)
+    except asyncio.TimeoutError:
+        log.debug("Controller cleanup timed out")
+    except Exception as e:
+        log.debug("Controller cleanup: %s", e)
+
+
+async def _cleanup_client(app: DialogueApp) -> None:
+    """Закрываем клиент."""
+    if not hasattr(app, "_client") or app._client is None:
+        return
+    try:
+        await asyncio.wait_for(app._client.close(), timeout=5.0)
+    except asyncio.TimeoutError:
+        log.debug("Client close timed out")
+    except Exception as e:
+        log.debug("Client close: %s", e)
+
+
+def _cleanup_log_file(app: DialogueApp) -> None:
+    """Закрываем log файл."""
+    if not hasattr(app, "_dialogue_log_file") or app._dialogue_log_file is None:
+        return
+    try:
+        app._dialogue_log_file.close()
+    except Exception as e:
+        log.debug("Log file close: %s", e)
+
+
 async def _cleanup_app(app: DialogueApp) -> None:
     """Cleanup application resources.
 
@@ -47,10 +97,10 @@ async def _cleanup_app(app: DialogueApp) -> None:
 
     """
     try:
-        if hasattr(app, "_controller") and app._controller is not None:
-            await app._controller.cleanup()
-        if hasattr(app, "_client") and app._client is not None:
-            await app._client.close()
+        await _cleanup_dialogue_task(app)
+        await _cleanup_controller(app)
+        await _cleanup_client(app)
+        _cleanup_log_file(app)
     except Exception as e:
         log.warning("Error during cleanup: %s", e)
 
@@ -85,20 +135,23 @@ def main() -> int:
     finally:
         # Гарантированный cleanup ресурсов
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Если loop работает, создаём task для cleanup
-                # Задача будет выполнена при следующем цикле event loop
-                _cleanup_handle = loop.call_soon(
-                    lambda: asyncio.create_task(_cleanup_app(app))
-                )
-            else:
-                loop.run_until_complete(_cleanup_app(app))
-        except RuntimeError:
-            # Нет активного loop - пропускаем async cleanup
-            pass
+            # Проверяем, есть ли уже запущенный event loop
+            try:
+                asyncio.get_running_loop()
+                # Если loop уже работает, запускаем cleanup в новом потоке
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(asyncio.run, _cleanup_app(app))
+                    future.result(timeout=10.0)  # Ждём максимум 10 секунд
+            except RuntimeError:
+                # Нет активного loop - создаём новый
+                asyncio.run(_cleanup_app(app))
+            except concurrent.futures.TimeoutError:
+                log.warning("Cleanup timed out after 10 seconds")
+            except Exception as e:
+                log.warning("Error during final cleanup: %s", e)
         except Exception as e:
-            log.warning("Error during final cleanup: %s", e)
+            log.warning("Error during final cleanup setup: %s", e)
 
     return exit_code
 
