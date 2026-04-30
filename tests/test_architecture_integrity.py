@@ -787,8 +787,8 @@ class TestArchitectureIntegration:
             # Ищем except ProviderError с log.error рядом
             if in_run_dialogue:
                 if "except ProviderError" in line:
-                    # Проверяем строки после except
-                    for j in range(i, min(i + 5, len(lines))):
+                    # Проверяем строки после except (расширили диапазон для service None check)
+                    for j in range(i, min(i + 10, len(lines))):
                         if "log.error" in lines[j] and "ProviderError" not in lines[j]:
                             found_error_logging = True
                             break

@@ -650,6 +650,9 @@ class DialogueApp(App[None]):
             return
 
         service = self._controller.service
+        if service is None:
+            log.error("Service not initialized")
+            return
         # Use cached style_mapper from __init__
         style_mapper = self._style_mapper
 
@@ -719,12 +722,12 @@ class DialogueApp(App[None]):
                 think_start = response_text.find("[Think")
                 # Ищем ] после [Think (может быть на той же или следующей стнии)
                 next_newline = response_text.find("\n", think_start)
-                search_range = response_text[think_start:next_newline if next_newline >= 0 else len(response_text)]
+                search_range = response_text[think_start : next_newline if next_newline >= 0 else len(response_text)]
                 think_end_idx = search_range.find("]")
 
                 if think_end_idx >= 0:
                     # Нашли закрывающую ] в той же строке/блоке
-                    thinking_part = search_range[:think_end_idx + 1]
+                    thinking_part = search_range[: think_end_idx + 1]
                     # Проверяем что thinking_part не пустой (не просто "[]")
                     min_thinking_length = 3  # Минимум "[X]" для валидного блока
                     if len(thinking_part) > min_thinking_length:
@@ -771,13 +774,10 @@ class DialogueApp(App[None]):
         # Улучшенное форматирование ошибки для пользователя
         if "Timeout" in error_detail or "timeout" in error_detail.lower():
             error_text = (
-                "Ollama timed out. The model may be slow or overloaded. "
-                "Try a smaller model or wait and restart."
+                "Ollama timed out. The model may be slow or overloaded. Try a smaller model or wait and restart."
             )
         elif "Connection" in error_detail or "connect" in error_detail.lower():
-            error_text = (
-                "Cannot connect to Ollama. Check that Ollama is running."
-            )
+            error_text = "Cannot connect to Ollama. Check that Ollama is running."
         elif "failed" in error_detail.lower():
             error_text = f"Generation failed: {error_detail}"
         else:

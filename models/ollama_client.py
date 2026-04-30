@@ -427,7 +427,7 @@ class OllamaClient:
                 error_msg = str(err) if str(err).strip() else repr(err) if err.args else type(err).__name__
                 if attempt < max_retries - 1:
                     # Экспоненциальная задержка: 1, 2, 4 секунды
-                    delay = base_delay * (2 ** attempt)
+                    delay = base_delay * (2**attempt)
                     _logger.warning(
                         "Request failed (attempt %d/%d): %s, retrying in %.1fs...",
                         attempt + 1,
@@ -507,7 +507,7 @@ class OllamaClient:
                 error_msg = str(err) if str(err).strip() else repr(err) if err.args else type(err).__name__
                 if attempt < max_retries - 1:
                     # Экспоненциальная задержка: 2, 4, 8 секунд
-                    delay = base_delay * (2 ** attempt)
+                    delay = base_delay * (2**attempt)
                     _logger.warning(
                         "Request failed (attempt %d/%d): %s, retrying in %.1fs...",
                         attempt + 1,

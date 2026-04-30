@@ -66,7 +66,7 @@ class DialogueController:
             on_state_changed: Callback called when UI state changes.
 
         """
-        self._service = service
+        self._service: DialogueService | None = service
         self._on_state_changed = on_state_changed
         self._state = UIState()
 
@@ -81,11 +81,11 @@ class DialogueController:
         return self._state
 
     @property
-    def service(self) -> DialogueService:
+    def service(self) -> DialogueService | None:
         """Get dialogue service.
 
         Returns:
-            Dialogue service.
+            Dialogue service or None if cleaned up.
 
         """
         return self._service
@@ -118,6 +118,8 @@ class DialogueController:
             True if dialogue started successfully, False if there are errors.
 
         """
+        if self._service is None:
+            return False
         if self._service.is_running and not self._service.is_paused:
             self._update_status("Dialogue already running", "yellow")
             return False
@@ -134,6 +136,8 @@ class DialogueController:
             True if toggled, False if not running.
 
         """
+        if self._service is None:
+            return False
         if not self._service.is_running:
             self._update_status("Dialogue not started", "red")
             return False
@@ -152,6 +156,8 @@ class DialogueController:
 
         Clears dialogue contexts and resets turn counter.
         """
+        if self._service is None:
+            return
         self._service.clear_history()
         self._state = replace(self._state, turn_count=0)
         self._update_status("History cleared", "dim")
@@ -161,6 +167,8 @@ class DialogueController:
 
         Sets is_running and is_paused flags to False.
         """
+        if self._service is None:
+            return
         self._service.stop()
         self._state = replace(self._state, is_dialogue_active=False)
         self._update_status("Stopped", "dim")
@@ -177,6 +185,8 @@ class DialogueController:
             style: Display style (STYLE_MODEL_A or STYLE_MODEL_B).
 
         """
+        if self._service is None:
+            return
         self._state = replace(
             self._state,
             current_model=model_name,
@@ -200,6 +210,8 @@ class DialogueController:
         Suppresses specific exceptions to ensure cleanup completes.
         """
         _log = logging.getLogger(__name__)
+        if self._service is None:
+            return
         try:
             await self._service.cleanup()
         except AttributeError:
