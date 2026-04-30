@@ -44,7 +44,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 # Компилируем regex на уровне модуля для производительности
-_LOG_CLEANUP_PATTERN = re.compile(r"\[/?\w+\]?")
+# Паттерн для удаления текстовых markup-тегов: [bold], [/], [red], [/red], [dim], [/dim]
+_LOG_CLEANUP_PATTERN = re.compile(r"\[/?[^\]]+\]")
 
 LOG_DIR = Path("/log")
 try:
@@ -533,6 +534,12 @@ class DialogueApp(App[None]):
         """Start dialogue."""
         if self._controller is None:
             log.error("Controller not initialized")
+            self.notify(
+                "Please select models and enter topic first!",
+                title="Not Ready",
+                severity="warning",
+                timeout=DEFAULT_NOTIFY_TIMEOUT,
+            )
             return
 
         if not self._controller.handle_start():
@@ -650,14 +657,24 @@ class DialogueApp(App[None]):
         if result:
             response_text = result.response
             response_lines = []
-            if "[Think" in response_text and "]" in response_text:
-                start = response_text.find("[Think")
-                end = response_text.find("]", start) + 1
-                if start >= 0 and end > start:
-                    thinking_part = response_text[start:end]
-                    response_lines.append(f"[dim]{thinking_part}[/]")
-                    content_start = end
-                    newline_pos = response_text.find("\n\n", end)
+            # Безопасный парсинг блока [Think...]: ищем закрывающую ] ПОСЛЕ [Think
+            if "[Think" in response_text:
+                think_start = response_text.find("[Think")
+                # Ищем ] после [Think (может быть на той же или следующей стнии)
+                next_newline = response_text.find("\n", think_start)
+                search_range = response_text[think_start:next_newline if next_newline >= 0 else len(response_text)]
+                think_end_idx = search_range.find("]")
+
+                if think_end_idx >= 0:
+                    # Нашли закрывающую ] в той же строке/блоке
+                    thinking_part = search_range[:think_end_idx + 1]
+                    # Проверяем что thinking_part не пустой (не просто "[]")
+                    min_thinking_length = 3  # Минимум "[X]" для валидного блока
+                    if len(thinking_part) > min_thinking_length:
+                        response_lines.append(f"[dim]{thinking_part}[/]")
+                    # Обрезаем response_text до конца блока [Think...]
+                    content_start = think_start + len(thinking_part)
+                    newline_pos = response_text.find("\n\n", content_start)
                     if newline_pos >= 0:
                         content_start = newline_pos + 2
                     response_text = response_text[content_start:].strip()

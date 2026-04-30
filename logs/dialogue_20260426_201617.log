@@ -1,4 +1,0 @@
-2026-04-26 20:16:20,740 - tui.app - ERROR - Controller not initialized
-2026-04-26 20:17:15,055 - models.ollama_client - WARNING - Request failed: , retrying...
-2026-04-26 20:17:46,052 - services.dialogue_service - WARNING - Provider error during dialogue cycle execution
-2026-04-26 20:17:46,052 - tui.app - WARNING - Provider error in dialogue loop: Ollama request failed after 2 attempts. . Check Ollama is running.

@@ -396,13 +396,15 @@ class OllamaClient:
                     return models
 
             except (aiohttp.ClientError, TimeoutError) as err:
+                error_msg = str(err) if str(err).strip() else repr(err) if err.args else type(err).__name__
                 if attempt == 0:
-                    _logger.warning("Request failed: %s, retrying...", err)
+                    _logger.warning("Request failed: %s, retrying...", error_msg)
                     with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError):
                         await self.close()
                     session = await self._get_session()
                     continue
-                msg = f"Could not connect to Ollama ({self.host}): {err}"
+                timeout_val = self._config.sock_read_timeout
+                msg = f"Could not connect to Ollama ({self.host}): {error_msg}. Timeout: {timeout_val}s"
                 raise ProviderConnectionError(msg, err) from err
             except ProviderError:
                 _logger.debug("ProviderError when getting models list", exc_info=True)
@@ -462,15 +464,16 @@ class OllamaClient:
                     return _ResponseHandler.extract_generation_response(data)
 
             except (aiohttp.ClientError, TimeoutError) as err:
+                error_msg = str(err) if str(err).strip() else repr(err) if err.args else type(err).__name__
                 if attempt == 0:
-                    _logger.warning("Request failed: %s, retrying...", err)
+                    _logger.warning("Request failed: %s, retrying...", error_msg)
                     with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError):
                         await self.close()
                     session = await self._get_session()
                     continue
                 timeout_val = self._config.sock_read_timeout
                 msg = (
-                    f"Ollama request failed after {attempt + 1} attempts. {err}. "
+                    f"Ollama request failed after {attempt + 1} attempts. {error_msg}. "
                     f"Timeout: {timeout_val}s. Check timeout and increase if needed."
                 )
                 raise ProviderConnectionError(msg, err) from err

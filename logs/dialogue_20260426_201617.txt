@@ -1,3 +1,0 @@
-nemotron-cascade-2:latest is thinking...[/]
-
- red]Error (nemotron-cascade-2:latest): Ollama request failed after 2 attempts. . Check Ollama is running.[/]

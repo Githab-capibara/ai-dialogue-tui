@@ -16,8 +16,8 @@ class MessageStyles:
 
     model_a: str = "bold green"
     model_b: str = "bold blue"
-    system: str = "dim italic yellow"
-    error: str = "bold red"
+    system: str = "yellow"
+    error: str = "red"
 
 
 @dataclass(frozen=True, slots=True)
