@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import contextlib
 import logging
 import os
 import sys
@@ -52,10 +53,8 @@ async def _cleanup_dialogue_task(app: DialogueApp) -> None:
         return
 
     app.dialogue_task.cancel()
-    try:
+    with contextlib.suppress(TimeoutError, asyncio.CancelledError):
         await asyncio.wait_for(app.dialogue_task, timeout=5.0)
-    except (TimeoutError, asyncio.CancelledError):
-        pass
 
 
 async def _cleanup_controller(app: DialogueApp) -> None:
@@ -110,15 +109,15 @@ def _run_cleanup(app: DialogueApp) -> None:
             future = executor.submit(asyncio.run, _cleanup_app(app))
             try:
                 future.result(timeout=10.0)
-            except (concurrent.futures.TimeoutError, Exception) as e:
+            except concurrent.futures.TimeoutError as e:
                 log.warning("Cleanup error: %s", e)
     except RuntimeError:
         # Нет активного loop - создаём новый
         try:
             asyncio.run(_cleanup_app(app))
-        except Exception as e:
+        except (RuntimeError, asyncio.CancelledError, OSError) as e:
             log.warning("Cleanup error: %s", e)
-    except Exception as e:
+    except (RuntimeError, asyncio.CancelledError, OSError) as e:
         log.warning("Cleanup setup error: %s", e)
 
 
@@ -147,10 +146,10 @@ def main() -> int:
         log.exception("Provider error occurred")
         exit_code = 1
     except RuntimeError as e:
-        log.exception("Runtime error in application: %s", e)
+        log.exception("Runtime error in application")
         exit_code = 1
     except SystemError as e:
-        log.exception("System error in application: %s", e)
+        log.exception("System error in application")
         exit_code = 1
     finally:
         _run_cleanup(app)

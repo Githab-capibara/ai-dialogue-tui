@@ -132,10 +132,7 @@ class Conversation:
         last_messages = context[-effective_max:]
 
         # Если system message уже в последних, не дублируем
-        if system_message in last_messages:
-            trimmed = list(last_messages)
-        else:
-            trimmed = [system_message, *last_messages]
+        trimmed = list(last_messages) if system_message in last_messages else [system_message, *last_messages]
 
         # Логируем только если реально обрезали
         if len(trimmed) < len(context):

@@ -10,6 +10,7 @@ import contextlib
 import json
 import logging
 import time
+import types
 from collections.abc import Mapping, Sequence
 from typing import Any, Final, Self
 from urllib.parse import urljoin
@@ -258,10 +259,8 @@ class _HTTPSessionManager:
         """Close HTTP session and reset reference."""
         if self._session is not None:
             if not self._session.closed:
-                try:
+                with contextlib.suppress(aiohttp.ClientError, asyncio.CancelledError, RuntimeError):
                     await self._session.close()
-                except (aiohttp.ClientError, asyncio.CancelledError, RuntimeError):
-                    pass  # Игнорируем ошибки при закрытии
             self._session = None
 
     async def close_session_only(self) -> None:
@@ -384,7 +383,7 @@ class OllamaClient:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        exc_tb: BaseException | None,
+        exc_tb: types.TracebackType | None,
     ) -> None:
         """Async context manager exit - ensures proper cleanup."""
         del exc_type, exc_val, exc_tb  # Unused but required by protocol
