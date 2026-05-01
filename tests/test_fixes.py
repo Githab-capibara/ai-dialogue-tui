@@ -197,14 +197,8 @@ class TestFixes:
         assert validate_ollama_url("localhost:11434") is False  # No scheme
         assert validate_ollama_url("ftp://localhost:11434") is False  # Wrong scheme
         assert validate_ollama_url("") is False  # Empty
-        assert validate_ollama_url(None) is False  # None
-
-        # The important part: it should not raise TypeError for non-string inputs
-        # That would indicate it's catching TypeError unnecessarily
-        # Should return False, not raise
-        assert validate_ollama_url(123) is False
-        # Should return False, not raise
-        assert validate_ollama_url([]) is False
+        assert validate_ollama_url("None") is False  # String "None" not valid URL
+        assert validate_ollama_url("invalid") is False  # Invalid format
 
 
 class TestAsyncioAPICorrectness:

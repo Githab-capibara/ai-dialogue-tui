@@ -50,10 +50,17 @@ def test_dialogueapp_can_be_instantiated() -> None:
 def test_app_has_required_bindings() -> None:
     """Тест что приложение имеет необходимые bindings."""
     app = DialogueApp()
-    binding_keys = [b.key for b in app.BINDINGS]
-    assert "ctrl+q" in binding_keys
-    assert "ctrl+p" in binding_keys
-    assert "ctrl+r" in binding_keys
+    # Проверяем что bindings это список
+    bindings_list: list = list(app.BINDINGS) if hasattr(app, "BINDINGS") else []  # type: ignore[assignment]
+    keys: list[str] = []
+    for b in bindings_list:
+        if hasattr(b, 'key'):
+            keys.append(b.key)  # type: ignore[attr-defined]
+        elif isinstance(b, tuple) and len(b) > 0:
+            keys.append(str(b[0]))  # type: ignore[union-attr]
+    assert "ctrl+q" in keys
+    assert "ctrl+p" in keys
+    assert "ctrl+r" in keys
 
 
 if __name__ == "__main__":

@@ -44,7 +44,7 @@ class AsyncMockService:
         self.is_paused = False
         self.turn_count = 0
         self.conversation = MagicMock()
-        self.conversation.current_turn = "model_a"
+        self.conversation.current_turn = "A"  # Используем правильный ModelId
         self.conversation.get_current_model_name = MagicMock(return_value="TestModel")
 
     async def run_dialogue_cycle(self) -> DialogueTurnResult | None:
@@ -57,7 +57,7 @@ class AsyncMockService:
 
         return DialogueTurnResult(
             model_name="TestModel",
-            model_id="model_a",
+            model_id="A",  # Используем правильный ModelId
             role="assistant",
             response="Тестовый ответ",
         )
@@ -88,14 +88,14 @@ class TestCallFromThreadFixtures:
         return app
 
     @pytest.fixture
-    def mock_rich_log(self, app_with_mocks: DialogueApp) -> MagicMock:
+    def mock_rich_log(self, app_with_mocks: DialogueApp) -> MagicMock:  # type: ignore[override]
         """Создать мок для RichLog."""
         mock_log = MagicMock()
         mock_log.write = MagicMock()
         mock_log.clear = MagicMock()
 
         with patch.object(app_with_mocks, "query_one", return_value=mock_log):
-            yield mock_log
+            yield mock_log  # type: ignore[misc]
 
 
 class TestHandleDialogueErrorUsesCallAfterRefresh(TestCallFromThreadFixtures):

@@ -80,6 +80,7 @@ class MessageDict(TypedDict, total=True):
     content: str
 
 
+RoleLiteral = Literal["system", "user", "assistant"]
 ModelId = Literal["A", "B"]
 
 

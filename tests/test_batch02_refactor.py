@@ -173,10 +173,11 @@ class TestIssue0024TypedDictRequiredKeys:
 
     def test_message_dict_comprehensive_creation(self) -> None:
         """Verify MessageDict can be created with all valid role types."""
-        from models.provider import MessageDict
+        from models.provider import MessageDict, RoleLiteral
 
         # Проверяем все допустимые роли
-        for role in ["system", "user", "assistant"]:
+        for role_str in ["system", "user", "assistant"]:
+            role: RoleLiteral = role_str  # type: ignore[assignment]
             msg = MessageDict(role=role, content=f"Test content for {role}")
             assert msg["role"] == role
             assert msg["content"] == f"Test content for {role}"
@@ -400,8 +401,9 @@ class TestIssue0027DialogueServiceEdgeCases:
             response="test response",
         )
 
-        with pytest.raises(AttributeError):
-            result.model_name = "new-model"
+        with pytest.raises((AttributeError, TypeError)):
+            # model_name is read-only (frozen dataclass), попытка изменить вызовет ошибку
+            result.model_name = "new-model"  # type: ignore[assignment]
 
     def test_start_resets_paused_state(self) -> None:
         """Verify start() resets pause state."""

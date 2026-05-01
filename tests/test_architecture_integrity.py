@@ -882,8 +882,8 @@ class TestConversationContextIsolation:
 
         # Try to modify returned context - must raise error
         try:
-            # type: ignore
-            context.append({"role": "user", "content": "Injected"})
+            # type: ignore[attr-defined] - tuple не имеет append, это ожидаемо
+            context.append({"role": "user", "content": "Injected"})  # type: ignore[attr-defined]
             assert False, "AttributeError expected for tuple"
         except AttributeError:
             pass  # Expected behavior

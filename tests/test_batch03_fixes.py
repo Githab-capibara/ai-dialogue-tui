@@ -126,7 +126,7 @@ class TestURLValidation:
 
     def test_validate_url_rejects_none_and_empty(self) -> None:
         """Verify validation rejects None and empty strings."""
-        assert validate_ollama_url(None) is False
+        assert validate_ollama_url(None) is False  # type: ignore[arg-type]
         assert validate_ollama_url("") is False
 
 
@@ -266,8 +266,8 @@ class TestContextTrimming:
         """Verify system message is preserved when not in last_messages."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
-        long_context = [{"role": "system", "content": "sys"}]
-        long_context.extend([{"role": "user", "content": f"msg{i}"} for i in range(55)])
+        long_context: list[MessageDict] = [{"role": "system", "content": "sys"}]  # type: ignore[assignment]
+        long_context.extend([{"role": "user", "content": f"msg{i}"} for i in range(55)])  # type: ignore[list-item]
 
         result = conversation._trim_context_if_needed(long_context, 48)
 
@@ -278,8 +278,8 @@ class TestContextTrimming:
         """Verify no duplicate system message when context just exceeds limit."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
-        context = [{"role": "system", "content": "sys"}]
-        context.extend([{"role": "user", "content": f"msg{i}"} for i in range(49)])
+        context: list[MessageDict] = [{"role": "system", "content": "sys"}]  # type: ignore[assignment]
+        context.extend([{"role": "user", "content": f"msg{i}"} for i in range(49)])  # type: ignore[list-item]
 
         result = conversation._trim_context_if_needed(context, 48)
 
@@ -290,8 +290,8 @@ class TestContextTrimming:
         """Test trimming at MAX_CONTEXT_LENGTH boundary."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
-        context = [{"role": "system", "content": "sys"}]
-        context.extend([{"role": "user", "content": f"msg{i}"} for i in range(MAX_CONTEXT_LENGTH)])
+        context: list[MessageDict] = [{"role": "system", "content": "sys"}]  # type: ignore[assignment]
+        context.extend([{"role": "user", "content": f"msg{i}"} for i in range(MAX_CONTEXT_LENGTH)])  # type: ignore[list-item]
 
         result = conversation._trim_context_if_needed(context, MAX_CONTEXT_LENGTH - 2)
 
@@ -303,7 +303,10 @@ class TestContextTrimming:
         """Verify original context is not modified when under limit."""
         conversation = Conversation("model_a", "model_b", "test_topic")
 
-        short_context = [{"role": "system", "content": "sys"}, {"role": "user", "content": "msg"}]
+        short_context: list[MessageDict] = [  # type: ignore[assignment]
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": "msg"},
+        ]
 
         result = conversation._trim_context_if_needed(short_context, 10)
 
@@ -380,9 +383,9 @@ class TestSanitizerInjectionProtection:
     def test_sanitize_topic_handles_non_string(self) -> None:
         """Verify sanitize_topic raises TypeError for non-string."""
         with pytest.raises(TypeError):
-            sanitize_topic(123)
+            sanitize_topic(123)  # type: ignore[arg-type]
 
     def test_sanitize_response_handles_non_string(self) -> None:
         """Verify sanitize_response raises TypeError for non-string."""
         with pytest.raises(TypeError):
-            sanitize_response_for_display(123)
+            sanitize_response_for_display(123)  # type: ignore[arg-type]

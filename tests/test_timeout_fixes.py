@@ -12,7 +12,7 @@ Note:
 
 # pylint: disable=protected-access,import-outside-toplevel
 
-from typing import Any
+from typing import Any, Callable
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -51,7 +51,7 @@ def create_session_mock(
     return mock_session
 
 
-def create_mock_get_session(mock_session: AsyncMock) -> callable:
+def create_mock_get_session(mock_session: AsyncMock) -> Callable[..., Any]:
     """Create function for mocking _get_session method."""
 
     async def mock_get_session(_self: OllamaClient) -> AsyncMock:
