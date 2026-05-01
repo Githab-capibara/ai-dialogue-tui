@@ -6,9 +6,12 @@ and defining display styles and visual themes for the AI Dialogue TUI.
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 from tui.constants import CSS_CLASSES, UI_IDS
 
 
+@lru_cache(maxsize=1)
 def generate_main_css() -> str:
     """Generate main CSS from centralized constants.
 
