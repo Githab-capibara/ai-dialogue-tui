@@ -17,21 +17,23 @@ if TYPE_CHECKING:
 
 
 class TurnCallback(Protocol):
-    """Protocol for turn result callback."""
+    """Протокол для callback-а результата хода."""
 
     def __call__(
         self,
         result: DialogueTurnResult,
-    ) -> None: ...
+    ) -> None:
+        ...
 
 
 class ErrorCallback(Protocol):
-    """Protocol for error callback."""
+    """Протокол для callback-а ошибки."""
 
     def __call__(
         self,
         model_name: str,
-    ) -> None: ...
+    ) -> None:
+        ...
 
 
 log = logging.getLogger(__name__)
@@ -83,7 +85,9 @@ class DialogueRunner:
 
         """
         loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
-        self._dialogue_task = loop.create_task(self._run_loop(on_turn, on_error))
+        self._dialogue_task = loop.create_task(
+            self._run_loop(on_turn, on_error),
+        )
 
     async def stop(self) -> None:
         """Stop dialogue loop.
@@ -123,7 +127,8 @@ class DialogueRunner:
                 except ProviderError as exc:
                     log.warning("Provider error in dialogue loop: %s", exc)
                     if on_error:
-                        model_name = self._service.conversation.get_current_model_name()
+                        conv = self._service.conversation
+                        model_name = conv.get_current_model_name()
                         on_error(model_name)
 
                     await asyncio.sleep(self._config.pause_between_messages)
