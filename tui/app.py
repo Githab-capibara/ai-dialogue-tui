@@ -22,7 +22,16 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.screen import ModalScreen
-from textual.widgets import Button, Footer, Header, Input, Label, RichLog, Select, Static
+from textual.widgets import (
+    Button,
+    Footer,
+    Header,
+    Input,
+    Label,
+    RichLog,
+    Select,
+    Static,
+)
 
 from controllers.dialogue_controller import DialogueController, UIState
 from models.config import Config
@@ -292,7 +301,9 @@ class DialogueApp(App[None]):
 
         """
         super().__init__()
-        self.sub_title = reactive("Dialogue between two AI models via Ollama")  # type: ignore[assignment]
+        self.sub_title = reactive(
+            "Dialogue between two AI models via Ollama",
+        )  # type: ignore[assignment]
         self._config = config or Config()
         self._provider_factory = provider_factory or self._create_default_provider
         self._client: ModelProvider | None = None
@@ -389,7 +400,8 @@ class DialogueApp(App[None]):
         """
         try:
             status_label = self.query_one("#status-value", Label)
-            style_tag = f"[{state.status_style}]{state.status_text}[/{state.status_style}]"
+            style_tag = f"[{state.status_style}]{state.status_text}"
+            style_tag += f"[/{state.status_style}]"
             status_label.update(style_tag)
         except (NoMatches, ScreenStackError):
             # Элемент недоступен (модальное окно активно) - это нормально
@@ -782,7 +794,14 @@ class DialogueApp(App[None]):
                         content_start = newline_pos + 2
                     response_text = response_text[content_start:].strip()
             response_text = sanitize_response_for_display(response_text)
-            response_text = response_text.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"')
+            response_text = (
+                response_text.replace(
+                    "&lt;",
+                    "<",
+                )
+                .replace("&gt;", ">")
+                .replace("&quot;", '"')
+            )
             message = f"\n[{style}]Turn {service.turn_count}: {result.model_name}[/]\n  {response_text}"
             if response_lines:
                 message = "\n" + response_lines[0] + message
