@@ -66,22 +66,23 @@ async def _cleanup_controller(app: DialogueApp) -> None:
 
 async def _cleanup_client(app: DialogueApp) -> None:
     """Закрываем клиент."""
-    if not hasattr(app, "_client") or app._client is None:
+    client = getattr(app, "_client", None)
+    if client is None:
         return
     try:
-        await asyncio.wait_for(app._client.close(), timeout=5.0)
+        await asyncio.wait_for(client.close(), timeout=5.0)
     except (TimeoutError, asyncio.CancelledError):
         log.debug("Client close timed out or cancelled")
 
 
-def _cleanup_log_file(app: DialogueApp) -> None:
+def _close_log_file(app: DialogueApp) -> None:
     """Закрываем log файл."""
-    if not hasattr(app, "_dialogue_log_file") or app._dialogue_log_file is None:
-        return
-    try:
-        app._dialogue_log_file.close()
-    except OSError:
-        log.debug("Log file close error")
+    log_file = getattr(app, "_dialogue_log_file", None)
+    if log_file is not None:
+        try:
+            log_file.close()
+        except OSError:
+            log.debug("Log file close error")
 
 
 async def _cleanup_app(app: DialogueApp) -> None:
@@ -91,13 +92,30 @@ async def _cleanup_app(app: DialogueApp) -> None:
         app: Application instance to cleanup.
 
     """
+    await _cleanup_dialogue_task(app)
+    await _cleanup_controller(app)
+    await _cleanup_client(app)
+    _close_log_file(app)
+
+
+def _run_cleanup(app: DialogueApp) -> None:
+    """Run cleanup in a thread if event loop is running."""
     try:
-        await _cleanup_dialogue_task(app)
-        await _cleanup_controller(app)
-        await _cleanup_client(app)
-        _cleanup_log_file(app)
+        loop = asyncio.get_running_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(asyncio.run, _cleanup_app(app))
+            try:
+                future.result(timeout=10.0)
+            except (concurrent.futures.TimeoutError, Exception) as e:
+                log.warning("Cleanup error: %s", e)
+    except RuntimeError:
+        # Нет активного loop - создаём новый
+        try:
+            asyncio.run(_cleanup_app(app))
+        except Exception as e:
+            log.warning("Cleanup error: %s", e)
     except Exception as e:
-        log.warning("Error during cleanup: %s", e)
+        log.warning("Cleanup setup error: %s", e)
 
 
 def main() -> int:
@@ -124,28 +142,14 @@ def main() -> int:
     except (ProviderConfigurationError, ProviderConnectionError, ProviderGenerationError, ProviderError):
         log.exception("Provider error occurred")
         exit_code = 1
-    except (RuntimeError, SystemError):
-        log.exception("Critical application error")
+    except RuntimeError as e:
+        log.exception("Runtime error in application: %s", e)
+        exit_code = 1
+    except SystemError as e:
+        log.exception("System error in application: %s", e)
         exit_code = 1
     finally:
-        # Гарантированный cleanup ресурсов
-        try:
-            # Проверяем, есть ли уже запущенный event loop
-            try:
-                asyncio.get_running_loop()
-                # Если loop уже работает, запускаем cleanup в новом потоке
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                    future = executor.submit(asyncio.run, _cleanup_app(app))
-                    future.result(timeout=10.0)  # Ждём максимум 10 секунд
-            except RuntimeError:
-                # Нет активного loop - создаём новый
-                asyncio.run(_cleanup_app(app))
-            except concurrent.futures.TimeoutError:
-                log.warning("Cleanup timed out after 10 seconds")
-            except Exception as e:
-                log.warning("Error during final cleanup: %s", e)
-        except Exception as e:
-            log.warning("Error during final cleanup setup: %s", e)
+        _run_cleanup(app)
 
     return exit_code
 

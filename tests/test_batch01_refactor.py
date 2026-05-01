@@ -58,10 +58,10 @@ class TestBLE001ExceptionHandling:
         assert "asyncio.CancelledError" in source
 
     def test_main_cleanup_log_file_exception_types(self) -> None:
-        """Verify main._cleanup_log_file catches OSError."""
+        """Verify main._close_log_file catches OSError."""
         import main
 
-        source = inspect.getsource(main._cleanup_log_file)
+        source = inspect.getsource(main._close_log_file)
         # Не должно быть except Exception:
         assert "except Exception" not in source
         # Должен быть OSError

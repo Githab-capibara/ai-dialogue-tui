@@ -36,6 +36,12 @@ class DialogueTurnResult:
     role: Literal["assistant"]
     response: str
 
+    def __post_init__(self) -> None:
+        """Validate the role field."""
+        if self.role != "assistant":
+            msg = "role must be 'assistant'"
+            raise ValueError(msg)
+
 
 class DialogueService:
     """Service for managing dialogue business logic.

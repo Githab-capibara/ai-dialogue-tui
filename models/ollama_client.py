@@ -387,6 +387,7 @@ class OllamaClient:
         exc_tb: BaseException | None,
     ) -> None:
         """Async context manager exit - ensures proper cleanup."""
+        del exc_type, exc_val, exc_tb  # Unused but required by protocol
         await self.close()
 
     async def list_models(self) -> list[str]:
@@ -441,7 +442,11 @@ class OllamaClient:
                     await asyncio.sleep(delay)
                     continue
                 timeout_val = self._config.sock_read_timeout
-                msg = f"Could not connect to Ollama ({self.host}): {error_msg}. Timeout: {timeout_val}s. Check that Ollama is running."
+                msg = (
+                    f"Could not connect to Ollama ({self.host}): "
+                    f"{error_msg}. Timeout: {timeout_val}s. "
+                    f"Check that Ollama is running."
+                )
                 raise ProviderConnectionError(msg, err) from err
             except ProviderError:
                 _logger.debug("ProviderError when getting models list", exc_info=True)
