@@ -101,7 +101,7 @@ async def _cleanup_app(app: DialogueApp) -> None:
 def _run_cleanup(app: DialogueApp) -> None:
     """Run cleanup in a thread if event loop is running."""
     try:
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(asyncio.run, _cleanup_app(app))
             try:

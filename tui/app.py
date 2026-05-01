@@ -505,74 +505,117 @@ class DialogueApp(App[None]):
             model_b: Second model name.
 
         """
+        self._handle_topic_input(model_a, model_b)
+
+    def _handle_topic_input(self, model_a: str, model_b: str) -> None:
+        """Handle topic input after model selection.
+
+        Args:
+            model_a: First model name.
+            model_b: Second model name.
+
+        """
 
         def on_topic_entered(topic: str | None) -> None:
             if topic is None:
                 self.exit()
                 return
 
-            # Sanitize topic before use
-            sanitized_topic = sanitize_topic(topic)
-
-            # Format system prompt
-            system_prompt = self._config.default_system_prompt.format(
-                topic=sanitized_topic,
-            )
-
-            if self._client is None:
-                log.error("Client not initialized")
-                return
-            conversation = Conversation(
-                model_a=model_a,
-                model_b=model_b,
-                topic=sanitized_topic,
-                system_prompt=system_prompt,
-            )
-            service = DialogueService(
-                conversation=conversation,
-                provider=self._client,
-                config=self._config,
-            )
-            self._controller = DialogueController(
-                service=service,
-                on_state_changed=self._on_ui_state_changed,
-            )
-
-            # Update title and status via call_after_refresh
-            # so UI has time to update after modal closes
-            def _finalize_setup() -> None:
-                self._is_setup_complete = True  # Устанавливаем флаг после завершения настройки
-                self.sub_title = f"{model_a} <-> {model_b} | Topic: {sanitized_topic}"
-                ready_state = UIState(
-                    status_text="Ready to start",
-                    status_style="green",
-                )
-                self._on_ui_state_changed(ready_state)
-
-                # Обновляем состояние кнопок после завершения настройки
-                self._update_button_states()
-
-                # Log initialization with error handling
-                try:
-                    dialog_log: RichLog = self.query_one(
-                        f"#{UI_IDS.dialogue_log}",
-                        RichLog,
-                    )
-                    dialog_log.write(
-                        f"[bold]=== Dialogue started ===[/bold]\n"
-                        f"[bold]Model A:[/bold] [{MESSAGE_STYLES.model_a}]"
-                        f"{model_a}[/{MESSAGE_STYLES.model_a}]\n"
-                        f"[bold]Model B:[/bold] [{MESSAGE_STYLES.model_b}]"
-                        f"{model_b}[/{MESSAGE_STYLES.model_b}]\n"
-                        f"[bold]Topic:[/bold] {sanitized_topic}\n"
-                        "[dim]Press 'Start' to begin dialogue[/dim]",
-                    )
-                except (NoMatches, LookupError, RuntimeError):
-                    log.warning("Failed to write to log during initialization")
-
-            self.call_after_refresh(_finalize_setup)
+            self._initialize_dialogue(model_a, model_b, topic)
 
         self.push_screen(TopicInputScreen(), callback=on_topic_entered)
+
+    def _initialize_dialogue(self, model_a: str, model_b: str, topic: str) -> None:
+        """Initialize dialogue with selected models and topic.
+
+        Args:
+            model_a: First model name.
+            model_b: Second model name.
+            topic: Dialogue topic.
+
+        """
+        sanitized_topic = sanitize_topic(topic)
+        system_prompt = self._config.default_system_prompt.format(topic=sanitized_topic)
+        self._create_dialogue_context(model_a, model_b, sanitized_topic, system_prompt)
+        self.call_after_refresh(self._finalize_setup, model_a, model_b, sanitized_topic)
+
+    def _create_dialogue_context(
+        self,
+        model_a: str,
+        model_b: str,
+        topic: str,
+        system_prompt: str,
+    ) -> None:
+        """Create dialogue context with conversation and controller.
+
+        Args:
+            model_a: First model name.
+            model_b: Second model name.
+            topic: Dialogue topic.
+            system_prompt: System prompt for the conversation.
+
+        """
+        if self._client is None:
+            log.error("Client not initialized")
+            return
+
+        conversation = Conversation(
+            model_a=model_a,
+            model_b=model_b,
+            topic=topic,
+            system_prompt=system_prompt,
+        )
+        service = DialogueService(
+            conversation=conversation,
+            provider=self._client,
+            config=self._config,
+        )
+        self._controller = DialogueController(
+            service=service,
+            on_state_changed=self._on_ui_state_changed,
+        )
+
+    def _finalize_setup(self, model_a: str, model_b: str, topic: str) -> None:
+        """Finalize UI setup after dialogue initialization.
+
+        Args:
+            model_a: First model name.
+            model_b: Second model name.
+            topic: Dialogue topic.
+
+        """
+        self._is_setup_complete = True
+        self.sub_title = f"{model_a} <-> {model_b} | Topic: {topic}"
+        ready_state = UIState(
+            status_text="Ready to start",
+            status_style="green",
+        )
+        self._on_ui_state_changed(ready_state)
+        self._update_button_states()
+        self._log_initialization(model_a, model_b, topic)
+
+    def _log_initialization(self, model_a: str, model_b: str, topic: str) -> None:
+        """Write initialization info to dialogue log.
+
+        Args:
+            model_a: First model name.
+            model_b: Second model name.
+            topic: Dialogue topic.
+
+        """
+        try:
+            dialog_log: RichLog = self.query_one(f"#{UI_IDS.dialogue_log}", RichLog)
+            dialog_log.write(
+                f"[bold]=== Dialogue started ===[/bold]\n"
+                f"[bold]Model A:[/bold] [{MESSAGE_STYLES.model_a}]"
+                f"{model_a}[/{MESSAGE_STYLES.model_a}]\n"
+                f"[bold]Model B:[/bold] [{MESSAGE_STYLES.model_b}]"
+                f"{model_b}[/{MESSAGE_STYLES.model_b}]\n"
+                f"[bold]Topic:[/bold] {topic}\n"
+                "[dim]Press 'Start' to begin dialogue[/dim]",
+            )
+        except (NoMatches, LookupError, RuntimeError):
+            log.warning("Failed to write to log during initialization")
 
     @on(Button.Pressed, f"#{UI_IDS.start_btn}")
     def on_start_pressed(self) -> None:
