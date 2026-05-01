@@ -96,11 +96,7 @@ class DialogueController:
             callback: StateChangeCallback = self._on_state_changed
             callback(self._state)
 
-    def _update_status(
-        self,
-        text: str,
-        style: str,
-    ) -> None:
+    def _update_status(self, text: str, style: str) -> None:
         """Update status and notify change.
 
         Args:
@@ -215,13 +211,10 @@ class DialogueController:
         try:
             await self._service.cleanup()
         except AttributeError:
-            # Service already cleaned up
-            _log.debug("Controller cleanup: service already cleaned up")
+            pass  # Service already cleaned up
         except (asyncio.CancelledError, RuntimeError) as e:
-            # Handle cancellation or runtime errors during cleanup
             _log.debug("Controller cleanup completed with non-critical error: %s", e)
         finally:
-            # Гарантированно очищаем ссылку на сервис
             self._service = None
 
 

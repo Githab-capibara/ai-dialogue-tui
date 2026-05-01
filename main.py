@@ -34,8 +34,12 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-file_handler = logging.FileHandler(LOG_DIR / f"dialogue_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}.log")
-file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+file_handler = logging.FileHandler(
+    LOG_DIR / f"dialogue_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}.log",
+)
+file_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"),
+)
 logging.getLogger().addHandler(file_handler)
 logging.getLogger("aiohttp").setLevel(logging.WARNING)
 
