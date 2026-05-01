@@ -439,37 +439,67 @@ class TestMainExceptionHandling:
         """Тест что main возвращает 0 при успехе."""
         from main import main  # pylint: disable=import-outside-toplevel
 
-        with patch("main.DialogueApp") as mock_app_class:
-            mock_app = MagicMock()
-            mock_app_class.return_value = mock_app
-            mock_app.run.return_value = None
+        mock_config = MagicMock(spec=Config)
+        with patch("main.Config", return_value=mock_config):
+            with patch("main.create_provider_factory", return_value=MagicMock()):
+                with patch("main.DialogueApp") as mock_app_class:
+                    mock_app = MagicMock()
+                    mock_app_class.return_value = mock_app
+                    mock_app.run.return_value = None
+                    # Мокаем cleanup чтобы избежать проблем с asyncio
+                    mock_controller = MagicMock()
+                    mock_controller.cleanup = AsyncMock()
+                    mock_app.controller = mock_controller
+                    mock_app.dialogue_task = None
+                    mock_app._client = None
+                    mock_app._dialogue_log_file = None
 
-            result = main()
-            assert result == 0
+                    result = main()
+                    assert result == 0
 
     def test_main_returns_zero_on_keyboard_interrupt(self) -> None:
         """Тест что main возвращает 0 при KeyboardInterrupt."""
         from main import main  # pylint: disable=import-outside-toplevel
 
-        with patch("main.DialogueApp") as mock_app_class:
-            mock_app = MagicMock()
-            mock_app_class.return_value = mock_app
-            mock_app.run.side_effect = KeyboardInterrupt()
+        mock_config = MagicMock(spec=Config)
+        with patch("main.Config", return_value=mock_config):
+            with patch("main.create_provider_factory", return_value=MagicMock()):
+                with patch("main.DialogueApp") as mock_app_class:
+                    mock_app = MagicMock()
+                    mock_app_class.return_value = mock_app
+                    mock_app.run.side_effect = KeyboardInterrupt()
+                    # Мокаем cleanup чтобы избежать проблем с asyncio
+                    mock_controller = MagicMock()
+                    mock_controller.cleanup = AsyncMock()
+                    mock_app.controller = mock_controller
+                    mock_app.dialogue_task = None
+                    mock_app._client = None
+                    mock_app._dialogue_log_file = None
 
-            result = main()
-            assert result == 0
+                    result = main()
+                    assert result == 0
 
     def test_main_returns_one_on_exception(self) -> None:
         """Тест что main возвращает 1 при исключении."""
         from main import main  # pylint: disable=import-outside-toplevel
 
-        with patch("main.DialogueApp") as mock_app_class:
-            mock_app = MagicMock()
-            mock_app_class.return_value = mock_app
-            mock_app.run.side_effect = RuntimeError("Test error")
+        mock_config = MagicMock(spec=Config)
+        with patch("main.Config", return_value=mock_config):
+            with patch("main.create_provider_factory", return_value=MagicMock()):
+                with patch("main.DialogueApp") as mock_app_class:
+                    mock_app = MagicMock()
+                    mock_app_class.return_value = mock_app
+                    mock_app.run.side_effect = RuntimeError("Test error")
+                    # Мокаем cleanup чтобы избежать проблем с asyncio
+                    mock_controller = MagicMock()
+                    mock_controller.cleanup = AsyncMock()
+                    mock_app.controller = mock_controller
+                    mock_app.dialogue_task = None
+                    mock_app._client = None
+                    mock_app._dialogue_log_file = None
 
-            result = main()
-            assert result == 1
+                    result = main()
+                    assert result == 1
 
 
 class TestModelSelectionScreen:

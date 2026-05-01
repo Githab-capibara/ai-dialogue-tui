@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from typing import Any
 
 import pytest
 
@@ -220,14 +219,14 @@ class TestTypeAnnotationGaps:
         assert "None" in annotation_str
 
     def test_ollama_client_aexit_exc_tb_annotation(self) -> None:
-        """Verify __aexit__ exc_tb has BaseException | None annotation."""
+        """Verify __aexit__ exc_tb has TracebackType | None annotation."""
         from models.ollama_client import OllamaClient
 
         sig = inspect.signature(OllamaClient.__aexit__)
         exc_tb_param = sig.parameters["exc_tb"]
 
         annotation_str = str(exc_tb_param.annotation)
-        assert "BaseException" in annotation_str
+        assert "TracebackType" in annotation_str
         assert "None" in annotation_str
 
     def test_ollama_client_aexit_returns_none(self) -> None:
