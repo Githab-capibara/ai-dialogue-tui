@@ -775,27 +775,27 @@ class TestArchitectureIntegration:
         # Check that error handling exists in on_mount
         assert "ProviderError" in source
 
-        # Check that error handling with log.error exists in _run_dialogue
-        # Ищем комбинацию ProviderError и log.error в одном контексте
+        # Check that error handling with log.exception exists in _run_dialogue
+        # Ищем комбинацию ProviderError и log.exception в одном контексте
         lines = source.split("\n")
         in_run_dialogue = False
-        found_error_logging = False
+        found_exception_logging = False
 
         for i, line in enumerate(lines):
             if "async def _run_dialogue" in line:
                 in_run_dialogue = True
-            # Ищем except ProviderError с log.error рядом
+            # Ищем except ProviderError с log.exception рядом
             if in_run_dialogue:
                 if "except ProviderError" in line:
                     # Проверяем строки после except (расширили диапазон для service None check)
                     for j in range(i, min(i + 10, len(lines))):
-                        if "log.error" in lines[j] and "ProviderError" not in lines[j]:
-                            found_error_logging = True
+                        if "log.exception" in lines[j] and "ProviderError" not in lines[j]:
+                            found_exception_logging = True
                             break
-                    if found_error_logging:
+                    if found_exception_logging:
                         break
 
-        assert found_error_logging
+        assert found_exception_logging
 
 
 # =============================================================================

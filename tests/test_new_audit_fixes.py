@@ -164,20 +164,20 @@ class TestHTTPSessionManagerUsesLock:
 
 
 class TestDialogueServiceUsesLogException:
-    """Tests for verifying log.error usage in DialogueService."""
+    """Tests for verifying log.exception usage in DialogueService."""
 
-    def test_run_dialogue_cycle_uses_log_error(self) -> None:
-        """Verify that log.error is used for ProviderError handling."""
+    def test_run_dialogue_cycle_uses_log_exception(self) -> None:
+        """Verify that log.exception is used for ProviderError handling."""
         source = inspect.getsource(DialogueService.run_dialogue_cycle)
-        # ProviderError теперь логируется на error уровне
-        assert "log.error" in source
+        # ProviderError теперь логируется с traceback через log.exception
+        assert "log.exception" in source
 
-    def test_provider_error_caught_with_error_logging(self) -> None:
-        """Verify ProviderError handling with log.error."""
+    def test_provider_error_caught_with_exception_logging(self) -> None:
+        """Verify ProviderError handling with log.exception."""
         source = inspect.getsource(DialogueService.run_dialogue_cycle)
         assert "ProviderError" in source
-        # После рефакторинга используется error уровень
-        assert "log.error" in source
+        # После рефакторинга используется exception уровень (с traceback)
+        assert "log.exception" in source
 
 
 # =============================================================================

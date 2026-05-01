@@ -88,18 +88,18 @@ class TestIssue0022ErrorLevelLogging:
             with pytest.raises(ProviderGenerationError):
                 await service.run_dialogue_cycle()
 
-            # Проверяем, что ProviderError логируется на ERROR уровне
-            error_calls = [c for c in mock_log.error.call_args_list]
-            assert len(error_calls) > 0, "ProviderError should be logged at error level"
+            # Проверяем, что ProviderError логируется с traceback (log.exception)
+            exception_calls = [c for c in mock_log.exception.call_args_list]
+            assert len(exception_calls) > 0, "ProviderError should be logged with traceback"
 
     @pytest.mark.asyncio
-    async def test_tui_app_provider_error_logged_at_error_level(self) -> None:
-        """Verify ProviderError is logged at error level in _run_dialogue."""
+    async def test_tui_app_provider_error_logged_with_exception(self) -> None:
+        """Verify ProviderError is logged with traceback in _run_dialogue."""
         from tui.app import DialogueApp
 
         source = inspect.getsource(DialogueApp._run_dialogue)
-        # Проверяем, что ProviderError логируется на error уровне
-        assert "log.error" in source
+        # Проверяем, что ProviderError логируется с traceback
+        assert "log.exception" in source
         assert "ProviderError" in source
 
 

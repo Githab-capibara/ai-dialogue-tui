@@ -166,7 +166,7 @@ class DialogueService:
             log.info("Dialogue cycle cancelled")
             raise
         except ProviderError as e:
-            log.error("Provider error during dialogue cycle execution: %s", e)
+            log.exception("Provider error during dialogue cycle execution: %s", e)
             raise
 
     async def cleanup(self) -> None:
