@@ -740,10 +740,10 @@ class DialogueApp(App[None]):
 
         except asyncio.CancelledError:
             log.info("Dialogue cancelled by user")
-        except ProviderError as e:
-            log.exception("Provider error in dialogue loop: %s", e)
-        except (RuntimeError, SystemError, OSError) as e:
-            self._handle_critical_error(e)
+        except ProviderError:
+            log.exception("Provider error in dialogue loop")
+        except (RuntimeError, SystemError, OSError) as err:
+            self._handle_critical_error(err)
         finally:
             self._controller.handle_stop()
             if self._controller:

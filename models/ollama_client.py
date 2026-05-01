@@ -10,9 +10,12 @@ import contextlib
 import json
 import logging
 import time
-import types
 from collections.abc import Mapping, Sequence
-from typing import Any, Final, Self
+from typing import TYPE_CHECKING, Any, Final, Self
+
+if TYPE_CHECKING:
+    import types
+
 from urllib.parse import urljoin
 
 import aiohttp

@@ -109,16 +109,16 @@ def _run_cleanup(app: DialogueApp) -> None:
             future = executor.submit(asyncio.run, _cleanup_app(app))
             try:
                 future.result(timeout=10.0)
-            except concurrent.futures.TimeoutError as e:
-                log.warning("Cleanup error: %s", e)
+            except concurrent.futures.TimeoutError as err:
+                log.warning("Cleanup error: %s", err)
     except RuntimeError:
         # Нет активного loop - создаём новый
         try:
             asyncio.run(_cleanup_app(app))
-        except (RuntimeError, asyncio.CancelledError, OSError) as e:
-            log.warning("Cleanup error: %s", e)
-    except (RuntimeError, asyncio.CancelledError, OSError) as e:
-        log.warning("Cleanup setup error: %s", e)
+        except (asyncio.CancelledError, OSError) as err:
+            log.warning("Cleanup error: %s", err)
+    except (asyncio.CancelledError, OSError) as err:
+        log.warning("Cleanup setup error: %s", err)
 
 
 def main() -> int:
@@ -145,10 +145,10 @@ def main() -> int:
     except (ProviderConfigurationError, ProviderConnectionError, ProviderGenerationError, ProviderError):
         log.exception("Provider error occurred")
         exit_code = 1
-    except RuntimeError as e:
+    except RuntimeError:
         log.exception("Runtime error in application")
         exit_code = 1
-    except SystemError as e:
+    except SystemError:
         log.exception("System error in application")
         exit_code = 1
     finally:

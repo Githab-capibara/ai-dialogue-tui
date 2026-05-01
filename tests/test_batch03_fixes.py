@@ -24,6 +24,7 @@ import pytest
 from models.config import Config, validate_ollama_url
 from models.conversation import MAX_CONTEXT_LENGTH, Conversation
 from models.ollama_client import OllamaClient, _ModelsCache
+from models.provider import MessageDict
 from services.dialogue_service import DialogueService
 from tui.sanitizer import sanitize_response_for_display, sanitize_topic
 

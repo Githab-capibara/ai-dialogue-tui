@@ -171,8 +171,8 @@ class DialogueService:
         except asyncio.CancelledError:
             log.info("Dialogue cycle cancelled")
             raise
-        except ProviderError as e:
-            log.exception("Provider error during dialogue cycle execution: %s", e)
+        except ProviderError:
+            log.exception("Provider error during dialogue cycle execution")
             raise
 
     async def cleanup(self) -> None:
