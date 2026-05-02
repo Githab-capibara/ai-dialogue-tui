@@ -12,10 +12,6 @@ import logging
 import time
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Final, Self
-
-if TYPE_CHECKING:
-    import types
-
 from urllib.parse import urljoin
 
 import aiohttp
@@ -32,6 +28,9 @@ from models.provider import (
     ProviderError,
     ProviderGenerationError,
 )
+
+if TYPE_CHECKING:
+    import types
 
 _logger = logging.getLogger(__name__)
 
