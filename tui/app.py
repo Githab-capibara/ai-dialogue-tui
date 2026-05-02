@@ -940,4 +940,6 @@ __all__ = [
     "DialogueApp",
     "ModelSelectionScreen",
     "TopicInputScreen",
+    "sanitize_response_for_display",
+    "sanitize_topic",
 ]

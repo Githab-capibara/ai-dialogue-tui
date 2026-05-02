@@ -16,7 +16,7 @@ from models.provider import MessageDict, ModelId, ModelProvider
 
 log = logging.getLogger(__name__)
 
-__all__ = ["Conversation", "ModelId"]
+__all__ = ["Conversation", "MessageDict", "ModelId"]
 
 MAX_CONTEXT_LENGTH: int = 128  # Увеличиваем лимит для длинных диалогов
 

@@ -11,10 +11,11 @@ import json
 import logging
 import time
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Final, Self
+from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urljoin
 
 import aiohttp
+from typing_extensions import Self
 
 from models.config import (
     DEFAULT_MAX_TOKENS,

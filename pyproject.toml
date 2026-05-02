@@ -38,9 +38,9 @@ select = [
 ]
 ignore = [
     "E501",      # line too long
-    "RUF001",    # string without f-string
-    "RUF002",    # ambiguous character
-    "RUF003",    # datetime instead of time
+    "RUF001",    # ambiguous character in Russian strings
+    "RUF002",    # ambiguous character in docstrings
+    "RUF003",    # ambiguous character in comments
     "D102",      # missing docstring in public method
     "D107",      # missing docstring in __init__
     "D212",      # multi-line docstring summary on first line
@@ -55,6 +55,7 @@ ignore = [
     "LOG015",    # logging f-string
     "PLR0911",   # too many returns
     "UP047",     # use a version of class without subscript
+    "PERF203",   # try-except in retry loop (intentional for resilience)
 ]
 
 [tool.ruff.format]
