@@ -25,6 +25,9 @@ class TurnCallback(Protocol):
     ) -> None: ...
 
 
+log = logging.getLogger(__name__)
+
+
 class ErrorCallback(Protocol):
     """Protocol for error callback."""
 
@@ -32,9 +35,6 @@ class ErrorCallback(Protocol):
         self,
         model_name: str,
     ) -> None: ...
-
-
-log = logging.getLogger(__name__)
 
 
 class DialogueRunner:
