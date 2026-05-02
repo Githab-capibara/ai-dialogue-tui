@@ -22,8 +22,7 @@ class TurnCallback(Protocol):
     def __call__(
         self,
         result: DialogueTurnResult,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class ErrorCallback(Protocol):
@@ -32,8 +31,7 @@ class ErrorCallback(Protocol):
     def __call__(
         self,
         model_name: str,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 log = logging.getLogger(__name__)
