@@ -17,21 +17,23 @@ if TYPE_CHECKING:
 
 
 class TurnCallback(Protocol):
-    """Протокол для callback-а результата хода."""
+    """Protocol for turn result callback."""
 
     def __call__(
         self,
         result: DialogueTurnResult,
-    ) -> None: ...
+    ) -> None:
+        ...
 
 
 class ErrorCallback(Protocol):
-    """Протокол для callback-а ошибки."""
+    """Protocol for error callback."""
 
     def __call__(
         self,
         model_name: str,
-    ) -> None: ...
+    ) -> None:
+        ...
 
 
 log = logging.getLogger(__name__)
