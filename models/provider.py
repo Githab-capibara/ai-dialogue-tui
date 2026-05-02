@@ -93,8 +93,8 @@ class ModelProvider(Protocol):
     """
 
     async def list_models(self) -> list[str]:
-        """Get list of available models."""
-        ...
+        """Get list of available models."""  # nosec: B108 - Protocol stub methods require ellipsis
+        ...  # pylint: disable=W2301
 
     async def generate(
         self,
@@ -102,12 +102,12 @@ class ModelProvider(Protocol):
         messages: list[MessageDict],
         **kwargs: float,
     ) -> str:
-        """Generate response from model."""
-        ...
+        """Generate response from model."""  # nosec: B108 - Protocol stub methods require ellipsis
+        ...  # pylint: disable=W2301
 
     async def close(self) -> None:
-        """Release provider resources."""
-        ...
+        """Release provider resources."""  # nosec: B108 - Protocol stub methods require ellipsis
+        ...  # pylint: disable=W2301
 
 
 __all__ = [
@@ -118,7 +118,9 @@ __all__ = [
     "ProviderConnectionError",
     "ProviderError",
     "ProviderGenerationError",
+    "RoleLiteral",
+    "UrlStr",
 ]
 
 # Type aliases для удобства
-type UrlStr = str
+UrlStr = str

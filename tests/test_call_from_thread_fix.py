@@ -341,7 +341,7 @@ class TestIntegrationCallFromThreadFix(TestCallFromThreadFixtures):
                 # Ожидается что ProviderError будет проброшен
                 # Обработка ошибки (_handle_dialogue_error) происходит в
                 # _run_dialogue
-                pass
+                ...  # pylint: disable=W2301
             except RuntimeError as e:
                 if "call_from_thread" in str(e):
                     runtime_error_occurred = True

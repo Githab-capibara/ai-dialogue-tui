@@ -9,7 +9,7 @@ import contextlib
 import logging
 import os
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from factories.provider_factory import create_provider_factory
@@ -36,7 +36,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 file_handler = logging.FileHandler(
-    LOG_DIR / f"dialogue_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}.log",
+    LOG_DIR / f"dialogue_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.log",
 )
 file_handler.setFormatter(
     logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"),

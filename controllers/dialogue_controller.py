@@ -17,9 +17,9 @@ if TYPE_CHECKING:
 class StateChangeCallback(Protocol):
     """Protocol for UI state change callbacks."""
 
-    def __call__(self, state: UIState) -> None:
+    def __call__(self, state: UIState) -> None:  # pylint: disable=W2301
         """Handle state change."""
-        ...
+        ...  # pylint: disable=W2301
 
 
 @dataclass(frozen=True, slots=True)

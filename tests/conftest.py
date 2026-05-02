@@ -35,9 +35,9 @@ class AsyncContextManagerMock:
             raise self._raise_on_enter
         return self._response
 
-    async def __aexit__(self, _exc_type: type, _exc_val: BaseException, _exc_tb: object) -> None:
+    async def __aexit__(self, _exc_type: type, _exc_val: BaseException, _exc_tb: object) -> None:  # noqa: B008
         """Exit the async context manager."""
-        pass
+        ...  # pylint: disable=W2301
 
 
 @pytest.fixture
@@ -78,13 +78,13 @@ def mock_session() -> Callable[[AsyncMock | None, Exception | None], AsyncMock]:
         response: AsyncMock | None = None,
         raise_on_enter: Exception | None = None,
     ) -> AsyncMock:
-        mock_context_manager = AsyncContextManagerMock(
+        ctx = AsyncContextManagerMock(
             response=response,
             raise_on_enter=raise_on_enter,
         )
         mock_sess = AsyncMock()
-        mock_sess.get = MagicMock(return_value=mock_context_manager)
-        mock_sess.post = MagicMock(return_value=mock_context_manager)
+        mock_sess.get = MagicMock(return_value=ctx)
+        mock_sess.post = MagicMock(return_value=ctx)
         mock_sess.closed = False
         return mock_sess
 

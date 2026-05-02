@@ -10,7 +10,7 @@ import asyncio
 import logging
 import re
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TextIO
 
@@ -317,7 +317,7 @@ class DialogueApp(App[None]):
         self._is_setup_complete = False  # Флаг для отслеживания завершения настройки
 
         LOG_DIR.mkdir(exist_ok=True)
-        log_path = LOG_DIR / f"dialogue_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}.txt"
+        log_path = LOG_DIR / f"dialogue_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.txt"
         self._dialogue_log_file = log_path.open("w", encoding="utf-8")
 
     @property

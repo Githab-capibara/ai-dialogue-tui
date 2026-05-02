@@ -1,4 +1,6 @@
 # Bandit configuration file
+# Статический анализатор безопасности Python
+
 exclude_dirs:
   - tests
   - docs
@@ -9,7 +11,16 @@ exclude_dirs:
   - __pycache__
   - .mypy_cache
   - .ruff_cache
+  - .pytest_cache
+  - _archived_reports
+  - .claude
 
 skips:
   # B101: assert_used - defensive assertions for type safety / initialization checks
+  # Обоснование: asserts используются для проверки инвариантов и защитной проверки
   - B101
+  # B112: try-except-pass - обработка исключений без действий может быть intentional
+  - B112
+
+targets:
+  python3

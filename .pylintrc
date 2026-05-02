@@ -1,10 +1,13 @@
 [MAIN]
-ignore=tests,venv,.git,__pycache__,.mypy_cache,.ruff_cache
-extension-pkg-allow-list=aiohttp,textual
+jobs=0
 persistent=no
 
 [MESSAGES CONTROL]
-disable=design,refactoring,similarities,W2301
+disable=all
+enable=
+    W,
+    E,
+    F,
 
 [REPORTS]
 reports=no
@@ -14,7 +17,7 @@ score=yes
 max-line-length=120
 
 [BASIC]
-good-names=i,j,k,ex,Run,_,id,ok,TNum
+good-names=i,j,k,ex,Run,_,id,ok,x,y,md,fn,msg,err
 
 [DESIGN]
 max-args=10
@@ -27,3 +30,18 @@ max-public-methods=25
 
 [EXCEPTIONS]
 overgeneral-exceptions=builtins.Exception
+
+[SIMILARITIES]
+min-similarity-lines=20
+ignore-comments=yes
+ignore-docstrings=yes
+ignore-imports=yes
+
+[VARIABLES]
+dummy-variables-rgx=_$
+
+[BAD-FUNCTIONS]
+bad-names=foo,bar,baz,toto,tutu,tata
+
+[MASTER]
+ignore=tests

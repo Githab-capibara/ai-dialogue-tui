@@ -133,9 +133,9 @@ class AsyncContextManagerMock:  # pylint: disable=too-few-public-methods
             raise self._raise_on_enter
         return self._response
 
-    async def __aexit__(self, _exc_type: type, _exc_val: BaseException, _exc_tb: object) -> None:
+    async def __aexit__(self, _exc_type: type, _exc_val: BaseException, _exc_tb: object) -> None:  # noqa: B008
         """Выйти из контекстного менеджера."""
-        pass
+        ...  # pylint: disable=W2301
 
 
 class TestConfigValidation:

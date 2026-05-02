@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py310"
 line-length = 120
 exclude = [
     "tests/",
@@ -21,26 +21,40 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "D", "RUF", "TRY", "LOG", "PLC", "PLR", "ANN"]
+select = [
+    "E",     # pycodestyle errors
+    "F",     # pyflakes
+    "W",     # pycodestyle warnings
+    "I",     # isort
+    "D",     # docstrings
+    "RUF",   # Ruff-specific rules
+    "TRY",   # tryceratops
+    "LOG",   # logging rules
+    "PLC",   # Pylint conventions
+    "PLR",   # Pylint refactoring
+    "ANN",   # annotations
+    "UP",    # pyupgrade
+    "S",     # bandit
+]
 ignore = [
-    "E501",
-    "RUF001",
-    "RUF002",
-    "RUF003",
-    "D102",
-    "D107",
-    "ANN401",
-    "RUF012",
-    "S101",
-    "ARG002",
-    "PLC0415",
-    "TRY300",
-    "TRY401",
-    "LOG015",
-    "PLR0911",
-    "D212",
-    "D213",
-    "UP047",
+    "E501",      # line too long
+    "RUF001",    # string without f-string
+    "RUF002",    # ambiguous character
+    "RUF003",    # datetime instead of time
+    "D102",      # missing docstring in public method
+    "D107",      # missing docstring in __init__
+    "D212",      # multi-line docstring summary on first line
+    "D213",      # multi-line docstring summary on different line
+    "ANN401",    # dynamically typed attribute
+    "RUF012",    # mutable class attributes
+    "S101",      # assert used (bandit)
+    "ARG002",    # unused variable in lambda
+    "PLC0415",   # import outside toplevel
+    "TRY300",    # consider try-instead of else-return
+    "TRY401",    # verbose exception
+    "LOG015",    # logging f-string
+    "PLR0911",   # too many returns
+    "UP047",     # use a version of class without subscript
 ]
 
 [tool.ruff.format]
@@ -50,17 +64,40 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.10"
 strict = true
 ignore_missing_imports = true
 disallow_untyped_defs = true
 warn_return_any = true
 warn_unused_ignores = true
 explicit_package_bases = true
-exclude = ["tests/", "audit_reports/"]
-disable_error_code = ["misc", "untyped-decorator"]
+exclude = [
+    "tests/",
+    "audit_reports/",
+]
+
+[tool.pylint]
+max-line-length = 120
 
 [tool.pylint.messages_control]
 disable = [
-    "W2301",  # unnecessary-ellipsis - false positive for Protocol methods
+    "design",         # subjective design rules
+    "refactoring",   # subjective refactoring rules
+    "similarities",   # line similarity checks
+    "W2301",         # unnecessary-ellipsis false positive
 ]
+
+[tool.pylint.basic]
+good-names-rgxs = "^[i-jk]$|^[a-z][a-z0-9_]*[a-z]$|^ex$|^Run$|^id$|^ok$"
+
+[tool.pylint.design]
+max-args = 10
+max-locals = 20
+max-returns = 10
+max-branches = 15
+max-statements = 60
+max-attributes = 15
+max-public-methods = 25
+
+[tool.pylint.exceptions]
+overgeneral-exceptions = "builtins.Exception"

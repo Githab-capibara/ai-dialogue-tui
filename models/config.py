@@ -100,10 +100,10 @@ def validate_ollama_url(url: str) -> bool:
 TNum = TypeVar("TNum", int, float)
 
 
-def _validate_range[TNum: (int, float)](  # pylint: disable=redefined-outer-name
-    value: TNum,
-    min_value: TNum,
-    max_value: TNum | None = None,
+def _validate_range(
+    value: int | float,
+    min_value: int | float,
+    max_value: int | float | None = None,
     param_name: str = "parameter",
 ) -> None:
     """Validate a numeric parameter in range.
