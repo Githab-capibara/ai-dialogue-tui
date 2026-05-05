@@ -22,6 +22,7 @@ exclude = [
 
 [tool.ruff.lint]
 select = [
+    # D203 conflicts with D211 - we prefer D211 (no blank line before class)
     "E",     # pycodestyle errors
     "F",     # pyflakes
     "W",     # pycodestyle warnings
@@ -40,8 +41,8 @@ ignore = [
     "E501",      # line too long
     "D102",      # missing docstring in public method
     "D107",      # missing docstring in __init__
+    "D203",      # conflicts with D211 (we prefer D211)
     "D212",      # multi-line docstring summary on first line
-    "D213",      # multi-line docstring summary on different line
     "ANN401",    # dynamically typed attribute
     "RUF001",    # ambiguous character in Russian strings
     "RUF002",    # ambiguous character in docstrings
