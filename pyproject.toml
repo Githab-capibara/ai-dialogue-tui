@@ -43,6 +43,7 @@ ignore = [
     "D107",      # missing docstring in __init__
     "D203",      # conflicts with D211 (we prefer D211)
     "D212",      # multi-line docstring summary on first line
+    "D213",      # conflicts with D212 (we use D212)
     "ANN401",    # dynamically typed attribute
     "RUF001",    # ambiguous character in Russian strings
     "RUF002",    # ambiguous character in docstrings
