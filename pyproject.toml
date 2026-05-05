@@ -55,7 +55,6 @@ ignore = [
     "LOG015",    # logging f-string
     "PLR0911",   # too many returns
     "UP047",     # use a version of class without subscript
-    "PERF203",   # try-except in retry loop (intentional for resilience)
 ]
 
 [tool.ruff.format]
